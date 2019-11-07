@@ -62,3 +62,126 @@ arma::vec genpois(
 	tg = tg.head(l);
 	return tg;
 }
+
+
+// [[Rcpp::export]]
+arma::vec sampleChild(
+	double tstart,
+	double T,
+	double lam,
+	double b
+	){
+	double dt, bar, u;
+	int size = 2;
+	arma::vec child(size);
+	int l = 0;
+	double tcurr = tstart;
+	while (tcurr <= T){
+		dt = myrexp(lam*b);
+		tcurr += dt;
+		bar = exp(-lam * (tcurr - tstart));
+		u = myrunif();
+		if(tcurr <= T && u < bar){
+			if (l >= size) {
+				size = 2 * size;
+				child.resize(size);
+			}
+			child(l) = tcurr;
+			l++;
+		}			 
+	}
+	child = child.head(l);
+	return child;
+}
+
+
+// generate pair of nodes 
+
+// [[Rcpp::export]]
+arma::vec sampleHak(
+	double T,
+	double mu,
+	double b,
+	double lam
+	){
+	arma::vec parents = genpois(0, T, mu);
+	arma::vec pts_all = parents;
+	int loop = 0;
+	int N = parents.n_elem;
+	if (N == 0) {
+		return pts_all;
+	} else {
+		// printf("loop: %d, number: %d \n", loop, N);
+		arma::vec pts_cur = parents;
+		int n_curr = pts_cur.n_elem;
+		double tcurr;
+		while (n_curr > 0){
+			arma::vec pts_new, temp;
+			for (int i = 0; i < n_curr; i++){
+				tcurr = pts_cur(i);
+				temp = sampleChild(tcurr,T,lam,b);
+				pts_new = vecadd(pts_new, temp);
+			}
+			pts_all = vecadd(pts_all, pts_new);
+			pts_cur = pts_new;
+			loop++;
+			n_curr = pts_cur.n_elem;
+			// printf("loop: %d, number: %d \n", loop, n_curr);
+		}
+		return arma::sort(pts_all);
+	}
+}
+
+// generate for all nodes
+
+// [[Rcpp::export]]
+arma::mat sampleBlockHak(
+	double T,
+	Rcpp::List A,
+	arma::vec Z,
+	arma::mat Mu,
+	arma::mat B,
+	double lam
+	){
+	int count = 0, size = 2;
+	arma::mat alltimes(size, 3);
+	int m = A.size();
+	printf("m: %d", m);
+	int z1, z2, n_edge, n_temp;
+	double mu, b;
+	int i,j,k,p;
+	arma::vec temp;
+	for (i = 0; i < m; i++){
+		//printf("count: %d", count);
+		arma::rowvec edge = A[i];
+		n_edge = edge.n_elem;
+		for (p = 0; p < n_edge; p++) {
+			j = edge(p);
+			z1 = Z(i), z2 = Z(j);
+			mu = Mu(z1, z2), b = B(z1, z2);
+			temp = sampleHak(T, mu, b, lam);
+			n_temp = temp.n_elem;
+			//printf("n_temp: %d", n_temp);
+			if(count + n_temp > size){
+				size = max(2*size, count + n_temp);
+				alltimes.resize(size,3);
+			}
+			for (k = 0; k < n_temp; k++){
+				alltimes(count+k,0) = i;
+				alltimes(count+k,1) = j;
+				alltimes(count+k,2) = temp(k);
+			}
+			count += n_temp;
+		}
+	}
+	alltimes = alltimes.head_rows(count); // throw away useless rows
+	arma::mat alltimes_sort = alltimes; // sort by the third column
+	arma::uvec indices = arma::sort_index(alltimes.col(2));
+	for (i = 0; i < count; i++) {
+		alltimes_sort(i,0) = alltimes(indices(i),0);
+		alltimes_sort(i,1) = alltimes(indices(i),1);
+		alltimes_sort(i,2) = alltimes(indices(i),2);
+	}
+	return alltimes_sort;
+}
+
