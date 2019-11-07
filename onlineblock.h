@@ -112,8 +112,7 @@ void testmap(arma::mat alltimes){
 	mapprint(datamap);
 }
 
-<<<<<<< HEAD
-=======
+
 
 // split string to two numbers separated by ","
 // [[Rcpp::export]]
@@ -127,10 +126,7 @@ arma::vec split(string x){
 }
 
 
-// =====================================
-// Update function for homo Poisson
-// =====================================
->>>>>>> b35b3bcdc39d01b46f6fa7327e3f0c6a982df8c6
+
 
 
 // =====================================
