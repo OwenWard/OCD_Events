@@ -65,9 +65,6 @@ void testmap(arma::mat alltimes){
 	mapprint(datamap);
 }
 
-// =====================================
-// Update function for homo Poisson
-// =====================================
 
 
 // =====================================
