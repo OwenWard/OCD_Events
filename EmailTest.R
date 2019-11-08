@@ -6,6 +6,7 @@ m = length(all_users)
 
 # fit the model?
 # construct A
+##
 A = list()
 
 
