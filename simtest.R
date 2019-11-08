@@ -38,4 +38,24 @@ for (k in 1:K){
 }
 paralist <- test(alltimes,tau,Mu,B,Pi,S,0,50,m,K,A,1,1/dim(alltimes)[1])
 
+### Poisson Simulation ###
+T = 100
+dT = 0.5
+K <- 3
+Mu <- matrix(c(0.6,0.2,0.3,0.1,1.0,0.4,0.5,0.4,0.8),K,K,byrow = TRUE)
+B <- matrix(0,K,K,byrow = TRUE)
+m <- 100
+Pi <- matrix(c(0.4,0.3,0.3),1,3)
+Z <- c(rep(0,m*Pi[1]),rep(1,m*Pi[2]),rep(2,m*Pi[3]))
 
+system.time(alltimes <- sampleBlockHak(T, A, Z, Mu, B, lam = 1))
+
+Pi = c(0.3,0.3,0.4)
+B = matrix(c(1.2,0.5,0.5,0.5,1.1,.65,0.75,0.85,1.15),nrow = K,ncol = K,byrow = T)
+tau = matrix(runif(m*K),nrow=m,ncol=K)
+tau = tau/rowSums(tau)
+S = matrix(0,nrow = m,ncol = K)
+
+
+results <- estimate_Poisson(full_data = alltimes,tau,B,Pi,S,A,m,K,dT,T)
+results$B

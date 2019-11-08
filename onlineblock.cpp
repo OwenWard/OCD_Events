@@ -5,6 +5,7 @@
 
 
 #include "blockhawkes.h"
+#include "blockPoisson.h"
 
 // // [[Rcpp::export]]
 // Rcpp::List test(
