@@ -14,6 +14,9 @@ for(i in 1:m){
   A[[i]] <- edge
 }
 
+
+library(Rcpp)
+library(RcppArmadillo)
 sourceCpp("onlineblock.cpp")
 
 system.time(alltimes <- sampleBlockHak(T, A, Z, Mu, B, lam = 1))
