@@ -24,10 +24,9 @@ for(i in 1:nrow(time_data)){
 A_test = lapply(A,unique)
 
 dim(time_data)
-B[[3568]]
+#B[[3568]]
 
 
-A_list = B
 
 
 library(Rcpp)
@@ -52,6 +51,9 @@ system.time(alltimes <- sampleBlockHak(T, A, Z, Mu, B, lam = 1))
 
 
 ###
+T = 90
+dT = 0.5
+m = length(all_users)
 Pi = c(0.3,0.3,0.4)
 B = matrix(c(1.2,0.5,0.5,0.5,1.1,.65,0.75,0.85,1.15),nrow = K,ncol = K,byrow = T)
 tau = matrix(runif(m*K),nrow=m,ncol=K)
@@ -61,3 +63,4 @@ S = matrix(0,nrow = m,ncol = K)
 
 
 results <- estimate_Poisson(full_data = as.matrix(time_data),tau,B,Pi,S,A_test,m,K,dT,T)
+results$B
