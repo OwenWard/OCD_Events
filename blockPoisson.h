@@ -171,7 +171,7 @@ double computeELBO(
     int j = event(1);
     for(int k = 0; k <K; ++k){
       for(int l =0; l<K; l++){
-        elbo =+ tau(i,k)*tau(j,l)*log(B(k,l));
+        elbo += tau(i,k)*tau(j,l)*log(B(k,l));
       }
     }
   }
@@ -181,12 +181,13 @@ double computeELBO(
     for(int k=0; k< K; ++k){
       for(int j=0; j<n; ++j){
         int j_loc = edge(j);
-        for(int l =0; l<K; ++l){
-          elbo += -tau(i,k)*tau(j_loc,l)*B(k,l)*dT;
+        if(i != j_loc){
+          for(int l =0; l<K; ++l){
+            elbo += -tau(i,k)*tau(j_loc,l)*B(k,l)*dT;
+          }
         }
-        
       }
-      elbo += tau(i,k)*(log(Pi(k)))-log(tau(i,k)+epsilon);
+      elbo += tau(i,k)*(log(Pi(k))-log(tau(i,k)+epsilon));
     }
   }
   return elbo;
