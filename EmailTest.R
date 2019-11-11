@@ -65,3 +65,12 @@ S = matrix(0,nrow = m,ncol = K)
 
 results <- estimate_Poisson(full_data = as.matrix(time_data),tau,B,Pi,S,A_test,m,K,dT,T)
 results$B
+
+
+Mu <- matrix(c(0.6,0.2,0.3,0.1,1.0,0.4,0.5,0.4,0.8),K,K,byrow = TRUE)
+B <- matrix(c(0.5,0.1,0.3,0.4,0.4,0.4,0.2,0.3,0.6),K,K,byrow = TRUE)
+
+results_hawkes <- online_estimator(alltimes = as.matrix(time_data),
+                                   A_test, m, K, T, dT, lam = 1, B, Mu, tau)
+results_hawkes$Mu
+results_hawkes$B
