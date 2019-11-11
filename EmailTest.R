@@ -53,6 +53,7 @@ system.time(alltimes <- sampleBlockHak(T, A, Z, Mu, B, lam = 1))
 ###
 T = 90
 dT = 0.5
+K = 3
 m = length(all_users)
 Pi = c(0.3,0.3,0.4)
 B = matrix(c(1.2,0.5,0.5,0.5,1.1,.65,0.75,0.85,1.15),nrow = K,ncol = K,byrow = T)

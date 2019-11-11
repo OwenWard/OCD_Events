@@ -105,9 +105,12 @@ arma::mat updateB(arma::mat data, arma::mat tau, arma::mat B, int K,
     int n = edge.n_elem;
     for(int j=0; j< n; ++j){
       int j_loc = edge(j);
-      for(int k=0; k<K; ++k){
-        for(int l =0; l<K; ++l){
-          X2(k,l) += tau(i,k)*tau(j_loc,l)*dT;
+      //cout<<i<<" is i index "<<j_loc<<" is j index"<<endl;
+      if( i != j_loc){
+        for(int k=0; k<K; ++k){
+          for(int l =0; l<K; ++l){
+            X2(k,l) += tau(i,k)*tau(j_loc,l)*dT;
+          }
         }
       }
     }
