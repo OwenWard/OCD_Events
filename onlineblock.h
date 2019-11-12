@@ -12,6 +12,9 @@ using namespace std;
 using namespace Rcpp;
 // [[Rcpp::depends(RcppArmadillo)]]
 
+// define some constants
+const double eps = 0.000001;
+
 
 // ===============================
 // miscellaneous functions

@@ -59,6 +59,9 @@ Rcpp::List update_on(
         arma::vec index = split(key);
         int i = (int) index(0), j = (int) index(1);
 
+        if (i == j)
+            continue;
+        
         P1_mu_tp.fill(0.0), P2_mu_tp.fill(0.0), P1_B_tp.fill(0.0), P2_B_tp.fill(0.0), P_S_tp.fill(0.0);
         P2_mu_tp = P2_mu_tp + t_end - t_start;
         ln = timevec.n_elem;
@@ -254,4 +257,91 @@ Rcpp::List online_estimator(
                           Rcpp::Named("Mu") = Mu,
                           Rcpp::Named("B") = B,
                           Rcpp::Named("Pi") = Pi);
+}
+
+
+
+double ELBO_Hak(
+    unordered_map<string, arma::vec> datamap,
+    double t_start,
+    double t_end,
+    arma::mat tau,
+    arma::mat Mu,
+    arma::mat B,
+    arma::rowvec Pi,
+    Rcpp::List A,
+    int m,
+    int K,
+    double lam
+    ){
+    double elbo = 0;
+
+    int l, k, n_edge;
+    arma::vec timevec;
+    string key;
+    int ln,n;
+    double intensity;
+    unordered_map<string, arma::vec>:: iterator itr; 
+
+    arma::mat part1(K,K), part2(K,K), Lambda(K,K);
+
+    for (itr = datamap.begin(); itr != datamap.end(); itr++) {
+        key = itr->first;
+        timevec = itr->second;
+        arma::vec index = split(key);
+        int i = (int) index(0), j = (int) index(1);
+        ln = timevec.n_elem;
+
+        part1.fill(0.0), part2.fill(0.0);
+        for (n = ln - 1; n >= 0; n--){
+            double t_current = timevec(n);
+            if (t_current > t_start) {
+                intensity = 0.0;
+                Lambda.fill(0.0); // store temporary intensity values
+                for (int n1 = 0; n1 < n; n1++) {
+                    double t1 = timevec(n1);
+                    intensity += trigger(t1, t_current, lam);
+                }
+                for (k = 0; k < K; k++){
+                    for (l = 0; l < K; l++){
+                        Lambda(k,l) = Mu(k,l) + B(k,l) * intensity;
+                    }
+                }
+                part1 = part1 + arma::log(Lambda);
+                part2 = part2 + B * integral(t_current, t_end, lam);
+            } else {
+                part2 = part2 + B * integral2(t_current, t_start, t_end, lam);
+            }
+        }
+
+        for (k = 0; k < K; k++) {
+            for (l = 0; l < K; l++) {
+                elbo += tau(i,k) * tau(j,l) * (part1(k,l) - part2(k,l));
+            }
+        }
+    }
+
+    // mu * T
+    for (int i = 0; i < m; i++) {
+        arma::rowvec edge = A[i];
+        n_edge = edge.n_elem;
+        for (int p = 0; p < n_edge; p++) {
+            int j = (int) edge(p);
+            for (k = 0; k < K; k++) {
+                for (l = 0; l < K; l++) {
+                    elbo -= tau(i,k) * tau(j,l) * (t_end - t_start);
+                }
+            }
+        }
+        
+    }
+
+    // tau
+    for (int i = 0; i < m; i++) {
+        for (k = 0; k < K; k++) {
+            elbo += tau(i,k) * (log(tau(i,k) + eps) - log(tau(i,k) + eps));
+        }
+    }
+
+    return elbo;
 }
