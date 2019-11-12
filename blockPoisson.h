@@ -105,21 +105,33 @@ arma::mat updateB(arma::mat data, arma::mat tau, arma::mat B, int K,
     int n = edge.n_elem;
     for(int j=0; j< n; ++j){
       int j_loc = edge(j);
-      for(int k=0; k<K; ++k){
-        for(int l =0; l<K; ++l){
-          X2(k,l) += tau(i,k)*tau(j_loc,l)*dT;
+      //cout<<i<<" is i index "<<j_loc<<" is j index"<<endl;
+      if( i != j_loc){
+        for(int k=0; k<K; ++k){
+          for(int l =0; l<K; ++l){
+            X2(k,l) += tau(i,k)*tau(j_loc,l)*dT;
+          }
         }
       }
     }
   }
   gradB = X1/B - X2;
   //cout << gradB << endl;
-  B = B + eta*gradB/nrow;
+  B_new = B + eta*gradB/nrow;
   // create matrix of 0.001 then take max element wise
+  // prevent large updates
+  // for (int k = 0; k < K; k++) {
+  //   for (int l = 0; l < K; l++) {
+  //     if (B_new(k,l) <= 0.0) 
+  //       B_new(k,l) = B(k,l) / 2.0;
+  //     if (B_new(k,l) > 2 * B(k,l))
+  //       B_new(k,l) = B(k,l) * 2.0;
+  //   }
+  // }
   arma::mat eps(K,K);
   eps.fill(0.001);
-  B = arma::max(eps,B);
-  return B;
+  B_new = arma::max(eps,B_new);
+  return B_new;
 }
 
 
@@ -159,7 +171,7 @@ double computeELBO(
     int j = event(1);
     for(int k = 0; k <K; ++k){
       for(int l =0; l<K; l++){
-        elbo =+ tau(i,k)*tau(j,l)*log(B(k,l));
+        elbo += tau(i,k)*tau(j,l)*log(B(k,l));
       }
     }
   }
@@ -169,12 +181,13 @@ double computeELBO(
     for(int k=0; k< K; ++k){
       for(int j=0; j<n; ++j){
         int j_loc = edge(j);
-        for(int l =0; l<K; ++l){
-          elbo += -tau(i,k)*tau(j_loc,l)*B(k,l)*dT;
+        if(i != j_loc){
+          for(int l =0; l<K; ++l){
+            elbo += -tau(i,k)*tau(j_loc,l)*B(k,l)*dT;
+          }
         }
-        
       }
-      elbo += tau(i,k)*(log(Pi(k)))-log(tau(i,k)+epsilon);
+      elbo += tau(i,k)*(log(Pi(k))-log(tau(i,k)+epsilon));
     }
   }
   return elbo;
@@ -221,8 +234,11 @@ Rcpp::List estimate_Poisson(
     start_pos = curr_pos;
     eta = 1/sqrt(1+n);
     S = updateS(sub_data,tau,B,A,S,K,m,dT);
+    //cout<<"S works"<<endl;
     tau = updateTau(S,Pi,m,K); 
+    //cout<<"update tau"<<endl;
     B = updateB(sub_data,tau,B,K,A,m,dT,eta);
+    //cout<<"update B"<<endl;
     Pi = updatePi(tau,K);
     curr_elbo(n) = computeELBO(elbo_dat,tau,B,Pi,A,m,K,dT);
     ave_elbo(n) = curr_elbo(n)/cum_events;
