@@ -243,6 +243,11 @@ Rcpp::List estimate_Poisson(
     curr_elbo(n) = computeELBO(elbo_dat,tau,B,Pi,A,m,K,dT);
     ave_elbo(n) = curr_elbo(n)/cum_events;
     //cout<<B<<endl;
+    printf("iter: %d; \n", n); 
+    B.print();
+    Pi.print();
+    //S.print();
+    printf("=============\n");
     
   }
   
