@@ -52,11 +52,11 @@ system.time(alltimes <- sampleBlockHak(T, A, Z, Mu, B, lam = 1))
 
 ###
 T = 90
-dT = 0.5
+dT = 0.25
 K = 3
 m = length(all_users)
 Pi = c(0.3,0.3,0.4)
-B = matrix(c(1.2,0.5,0.5,0.5,1.1,.65,0.75,0.85,1.15),nrow = K,ncol = K,byrow = T)
+B = matrix(c(2,0.5,0.5,0.5,1.1,.65,0.75,0.85,1.15),nrow = K,ncol = K,byrow = T)
 tau = matrix(runif(m*K),nrow=m,ncol=K)
 tau = tau/rowSums(tau)
 S = matrix(0,nrow = m,ncol = K)
@@ -65,12 +65,17 @@ S = matrix(0,nrow = m,ncol = K)
 
 results <- estimate_Poisson(full_data = as.matrix(time_data),tau,B,Pi,S,A_test,m,K,dT,T)
 results$B
+plot(x=c(1:360),y=results$AveELBO,type = 'l')
 
 
 Mu <- matrix(c(0.6,0.2,0.3,0.1,1.0,0.4,0.5,0.4,0.8),K,K,byrow = TRUE)
 B <- matrix(c(0.5,0.1,0.3,0.4,0.4,0.4,0.2,0.3,0.6),K,K,byrow = TRUE)
 
 results_hawkes <- online_estimator(alltimes = as.matrix(time_data),
-                                   A_test, m, K, T, dT, lam = 1, B, Mu, tau)
+                                   A_test, m, K, T, dT, lam = 0.01, B, Mu, tau)
 results_hawkes$Mu
 results_hawkes$B
+
+
+#hawkes_lam1_Mu = results_hawkes$Mu
+#hawkes_lam1_B = results_hawkes$B
