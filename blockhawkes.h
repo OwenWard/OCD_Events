@@ -9,7 +9,117 @@ double integral2(double t, double T1, double T2, double lam){
 }
 
 double trigger(double t, double T, double lam){
-	return lam * exp( - lam*(T - t));
+	return lam * exp( - lam * (T - t));
+}
+
+double trigger_lam(double t, double T, double lam){
+    return exp( - lam * (T - t));
+}
+
+
+
+double ELBO_Hak(
+    unordered_map<string, arma::vec> datamap,
+    double t_start,
+    double t_end,
+    arma::mat tau,
+    arma::mat Mu,
+    arma::mat B,
+    arma::rowvec Pi,
+    Rcpp::List A,
+    double lam,
+    int m,
+    int K
+    ){
+    double elbo = 0;
+
+    int l, k, n_edge;
+    arma::vec timevec;
+    string key;
+    int ln,n;
+    double intensity;
+    unordered_map<string, arma::vec>:: iterator itr; 
+
+    arma::mat part1(K,K), part2(K,K), Lambda(K,K);
+
+    for (itr = datamap.begin(); itr != datamap.end(); itr++) {
+        key = itr->first;
+        timevec = itr->second;
+        arma::vec index = split(key);
+        int i = (int) index(0), j = (int) index(1);
+        ln = timevec.n_elem;
+
+        part1.fill(0.0), part2.fill(0.0);
+        for (n = ln - 1; n >= 0; n--){
+            double t_current = timevec(n);
+            if (t_current > t_start) {
+                intensity = 0.0;
+                Lambda.fill(0.0); // store temporary intensity values
+                for (int n1 = 0; n1 < n; n1++) {
+                    double t1 = timevec(n1);
+                    intensity += trigger(t1, t_current, lam);
+                }
+                for (k = 0; k < K; k++){
+                    for (l = 0; l < K; l++){
+                        Lambda(k,l) = Mu(k,l) + B(k,l) * intensity;
+                    }
+                }
+                part1 = part1 + arma::log(Lambda);
+                part2 = part2 + B * integral(t_current, t_end, lam);
+            } else {
+                part2 = part2 + B * integral2(t_current, t_start, t_end, lam);
+            }
+        }
+
+        for (k = 0; k < K; k++) {
+            for (l = 0; l < K; l++) {
+                elbo += tau(i,k) * tau(j,l) * (part1(k,l) - part2(k,l));
+            }
+        }
+    }
+
+    // mu * T
+    for (int i = 0; i < m; i++) {
+        arma::rowvec edge = A[i];
+        n_edge = edge.n_elem;
+        for (int p = 0; p < n_edge; p++) {
+            int j = (int) edge(p);
+            for (k = 0; k < K; k++) {
+                for (l = 0; l < K; l++) {
+                    elbo -= tau(i,k) * tau(j,l) * Mu(k,l)* (t_end - t_start);
+                }
+            }
+        }
+        
+    }
+
+    // tau
+    for (int i = 0; i < m; i++) {
+        for (k = 0; k < K; k++) {
+            elbo += tau(i,k) * (log(tau(i,k) + eps) - log(tau(i,k) + eps));
+        }
+    }
+
+    return elbo;
+}
+
+// [[Rcpp::export]]
+double get_elbo_hak(
+    arma::mat alltimes,
+    double t_start,
+    double t_end,
+    arma::mat tau,
+    arma::mat Mu,
+    arma::mat B,
+    arma::rowvec Pi,
+    Rcpp::List A,
+    double lam,
+    int m,
+    int K
+    ){
+    unordered_map<string, arma::vec> datamap = transfer(alltimes);
+    double elbo = ELBO_Hak(datamap, t_start, t_end, tau, Mu, B, Pi, A, lam, m, K);
+    return elbo;
 }
 
 
@@ -61,7 +171,7 @@ Rcpp::List update_on(
 
         if (i == j)
             continue;
-        
+
         P1_mu_tp.fill(0.0), P2_mu_tp.fill(0.0), P1_B_tp.fill(0.0), P2_B_tp.fill(0.0), P_S_tp.fill(0.0);
         P2_mu_tp = P2_mu_tp + t_end - t_start;
         ln = timevec.n_elem;
@@ -139,14 +249,18 @@ Rcpp::List update_on(
     // handle negative values and large gradient
     for (k = 0; k < K; k++) {
     	for (l = 0; l < K; l++) {
-    		if (B_new(k,l) <= 0.0) 
+    		if (B_new(k,l) <= 0.0) {
     			B_new(k,l) = B(k,l) / 2.0;
-    		if (B_new(k,l) > 2 * B(k,l))
-    			B_new(k,l) = B(k,l) * 2.0;
-    		if (Mu_new(k,l) <= 0.0)
+            } else if (B_new(k,l) > 2 * B(k,l)) {
+                B_new(k,l) = B(k,l) * 2.0;
+            }
+    		
+    		if (Mu_new(k,l) <= 0.0) {
     			Mu_new(k,l) = Mu(k,l) / 2.0;
-    		if (Mu_new(k,l) > 2 * Mu(k,l))
-    			Mu_new(k,l) = Mu(k,l) * 2.0;
+            } else if (Mu_new(k,l) > 2 * Mu(k,l)) {
+                Mu_new(k,l) = Mu(k,l) * 2.0;
+            }
+
     	}
     }
 
@@ -173,6 +287,24 @@ Rcpp::List update_on(
 }
 
 
+// declaration
+Rcpp::List update_lam(
+    arma::mat tau,
+    arma::mat Mu,
+    arma::mat B,
+    arma::rowvec Pi,
+    arma::mat S,
+    unordered_map<string, arma::vec> datamap,
+    double t_start,
+    double t_end,
+    int m,
+    int K,
+    Rcpp::List A,
+    double lam,
+    double eta
+    );
+
+
 // [[Rcpp::export]]
 Rcpp::List online_estimator(
 	arma::mat alltimes,
@@ -191,7 +323,14 @@ Rcpp::List online_estimator(
 	Pi.fill(1.0 / K);
 	arma::mat B(K,K), Mu(K,K), S(m,K);
 	arma::mat tau(m,K);
-	B.fill(0.5), Mu.fill(0.5), S.fill(0.0);
+	for (int k = 0; k < K; k++) {
+        for (int l=0; l < K; l++) {
+            B(k,l) = myrunif();
+            Mu(k,l) = myrunif();
+        }
+    }
+    //B.fill(0.5), Mu.fill(0.5); 
+    S.fill(0.0);
 	//B = B_start, Mu = Mu_start;
 	for (int i = 0; i < m; i++) {
 		arma::rowvec tt(K);
@@ -208,6 +347,10 @@ Rcpp::List online_estimator(
 	int N = floor(T / dT);
 	int nsave = floor(5.0 / dT);
 	queue<double> trunc_pos_queue;
+    
+    arma::vec elbo_vec(N);
+    double elbo = 0;
+    arma::mat prevdata;
 
 	double Tn, t_current, t_start, eta;
 	arma::rowvec event; 
@@ -238,17 +381,26 @@ Rcpp::List online_estimator(
 		ln_curr = end_pos;
 		n_t = ln_curr - ln_prev;
 		eta = 1.0/sqrt(1 + n/10.0)/n_t * (K * K);
-		paralist = update_on(tau, Mu, B, Pi, S, datamap, t_start, Tn, m, K, A, lam, eta);
+		// paralist = update_on(tau, Mu, B, Pi, S, datamap, t_start, Tn, m, K, A, lam, eta);
+        paralist = update_lam(tau, Mu, B, Pi, S, datamap, t_start, Tn, m, K, A, lam, eta);
 		arma::mat tau_new = paralist["tau"], Mu_new = paralist["Mu"], B_new = paralist["B"], S_new = paralist["S"];
 		arma::rowvec Pi_new = paralist["Pi"];
+        double lam_new = paralist["lam"];
 		tau = tau_new; 
 		Mu = Mu_new, B = B_new, S = S_new, Pi = Pi_new;
+        lam = lam_new;
 		trunc_pos_queue.push(start_pos);
   		start_pos = curr_pos;
   		ln_prev = ln_curr;
   		printf("iter: %d; number: %d \n", n, n_t); 
   		B.print();
   		Mu.print();
+        printf("lam: %2.3f", lam);
+
+        prevdata = alltimes.rows(0, end_pos - 1); // head_rows()
+        elbo = get_elbo_hak(prevdata, 0.0, Tn, tau, Mu, B, Pi, A, lam, m, K);
+        elbo_vec(n) = elbo / ln_curr;
+
   		//S.print();
   		printf("=============\n");
 	}
@@ -256,92 +408,281 @@ Rcpp::List online_estimator(
 	return Rcpp::List::create(
                           Rcpp::Named("Mu") = Mu,
                           Rcpp::Named("B") = B,
-                          Rcpp::Named("Pi") = Pi);
+                          Rcpp::Named("Pi") = Pi,
+                          Rcpp::Named("lam") = lam,
+                          Rcpp::Named("tau") = tau,
+                          Rcpp::Named("elbo") = elbo_vec);
 }
 
 
 
-double ELBO_Hak(
-    unordered_map<string, arma::vec> datamap,
-    double t_start,
-    double t_end,
+
+
+Rcpp::List update_lam(
     arma::mat tau,
     arma::mat Mu,
     arma::mat B,
     arma::rowvec Pi,
-    Rcpp::List A,
+    arma::mat S,
+    unordered_map<string, arma::vec> datamap,
+    double t_start,
+    double t_end,
     int m,
     int K,
-    double lam
+    Rcpp::List A,
+    double lam,
+    double eta
     ){
-    double elbo = 0;
+    arma::mat P1_mu(K,K), P2_mu(K,K), P1_B(K,K), P2_B(K,K), S_tp(m,K);
+    arma::mat P1_mu_tp(K,K), P2_mu_tp(K,K), P1_B_tp(K,K), P2_B_tp(K,K), P_S_tp(m,K), Lambda(K,K);
+    P1_mu.fill(0.0), P2_mu.fill(0.0), P1_B.fill(0.0), P2_B.fill(0.0), S_tp.fill(0.0), Lambda.fill(0.0);
+    arma::mat lam_store(K,K);
+
 
     int l, k, n_edge;
+    for (int i = 0; i < m; i++) {
+        arma::rowvec edge = A[i];
+        n_edge = edge.n_elem;
+        for (int p = 0; p < n_edge; p++){
+            int j = (int) edge(p);
+            for (k = 0; k < K; k++) {
+                for (l = 0; l < K; l++) {
+                    P2_mu(k,l) = P2_mu(k,l) + tau(i,k) * tau(j,l) * (t_end - t_start);
+                }
+            }
+        }
+    }
+
+    unordered_map<string, arma::vec>:: iterator itr; 
     arma::vec timevec;
     string key;
     int ln,n;
-    double intensity;
-    unordered_map<string, arma::vec>:: iterator itr; 
-
-    arma::mat part1(K,K), part2(K,K), Lambda(K,K);
-
-    for (itr = datamap.begin(); itr != datamap.end(); itr++) {
+    double intensity_lam1, intensity_lam2, intensity, grad_lam = 0.0;
+    for (itr = datamap.begin(); itr != datamap.end(); itr++) 
+    { 
+        // type itr->first stores the key part  and 
+        // itr->second stroes the value part 
         key = itr->first;
         timevec = itr->second;
         arma::vec index = split(key);
         int i = (int) index(0), j = (int) index(1);
-        ln = timevec.n_elem;
 
-        part1.fill(0.0), part2.fill(0.0);
+        //if (i == j)
+        //    continue;
+        
+        P1_mu_tp.fill(0.0), P2_mu_tp.fill(0.0), P1_B_tp.fill(0.0), P2_B_tp.fill(0.0), P_S_tp.fill(0.0);
+        lam_store.fill(0.0);
+        P2_mu_tp = P2_mu_tp + t_end - t_start;
+        ln = timevec.n_elem;
         for (n = ln - 1; n >= 0; n--){
             double t_current = timevec(n);
             if (t_current > t_start) {
-                intensity = 0.0;
+                intensity = 0, intensity_lam1 = 0.0, intensity_lam2 = 0.0;
                 Lambda.fill(0.0); // store temporary intensity values
                 for (int n1 = 0; n1 < n; n1++) {
                     double t1 = timevec(n1);
                     intensity += trigger(t1, t_current, lam);
+                    intensity_lam1 += trigger_lam(t1, t_current, lam);
+                    intensity_lam2 += (t_current - t1) * trigger(t1, t_current, lam);
                 }
+                P2_B_tp = P2_B_tp + integral(t_current, t_end, lam);
                 for (k = 0; k < K; k++){
                     for (l = 0; l < K; l++){
                         Lambda(k,l) = Mu(k,l) + B(k,l) * intensity;
                     }
                 }
-                part1 = part1 + arma::log(Lambda);
-                part2 = part2 + B * integral(t_current, t_end, lam);
+                lam_store = lam_store + B * (intensity_lam1 - intensity_lam2) / Lambda;
+                lam_store = lam_store - B * ((t_end - t_current) * exp(-lam*(t_end - t_current)));
+                for (k = 0; k < K; k++) {
+                    for (l = 0; l < K; l++){
+                        P1_mu_tp(k,l) += 1.0 / Lambda(k,l);
+                        P1_B_tp(k,l) += intensity / Lambda(k,l);
+                        P_S_tp(k,l) += log(Lambda(k,l));
+                    }
+                }
             } else {
-                part2 = part2 + B * integral2(t_current, t_start, t_end, lam);
+                P2_B_tp = P2_B_tp + integral2(t_current, t_start, t_end, lam);
+                lam_store = lam_store + B * ((t_start - t_current) * exp(-lam*(t_start - t_current)) - (t_end - t_current) * exp(-lam*(t_end - t_current)));
             }
         }
 
         for (k = 0; k < K; k++) {
             for (l = 0; l < K; l++) {
-                elbo += tau(i,k) * tau(j,l) * (part1(k,l) - part2(k,l));
+                grad_lam += tau(i,k) * tau(j,l) * lam_store(k,l);
             }
         }
-    }
 
-    // mu * T
+        for (k = 0; k < K; k++) {
+            for (l = 0; l < K; l++) {
+                P1_mu(k,l) += tau(i,k) * tau(j,l) * P1_mu_tp(k,l);
+                P1_B(k,l) += tau(i,k) * tau(j,l) * P1_B_tp(k,l);
+                P2_B(k,l) += tau(i,k) * tau(j,l) * P2_B_tp(k,l);
+            }
+        }
+
+        // update S
+        for (k = 0; k < K; k++) {
+            for (l = 0; l < K; l++) {
+                S_tp(i,k) += tau(j,l) * (P_S_tp(k,l) - B(k,l) * P2_B_tp(k,l));
+            }
+        }
+    } 
+
+    // update S, second part
     for (int i = 0; i < m; i++) {
         arma::rowvec edge = A[i];
         n_edge = edge.n_elem;
-        for (int p = 0; p < n_edge; p++) {
-            int j = (int) edge(p);
-            for (k = 0; k < K; k++) {
+        for (k = 0; k < K; k++) {
+            for (int p = 0; p < n_edge; p++) {
+                int j = (int) edge(p);
                 for (l = 0; l < K; l++) {
-                    elbo -= tau(i,k) * tau(j,l) * (t_end - t_start);
+                    S_tp(i,k) = S_tp(i,k) - tau(j,l) * Mu(k,l) * (t_end - t_start);
                 }
             }
         }
-        
     }
 
-    // tau
-    for (int i = 0; i < m; i++) {
-        for (k = 0; k < K; k++) {
-            elbo += tau(i,k) * (log(tau(i,k) + eps) - log(tau(i,k) + eps));
+
+    // update parameters
+    S = S + S_tp;
+    arma::mat grad_B = P1_B - P2_B;
+    //grad_B.print();
+    arma::mat grad_mu = P1_mu - P2_mu;
+    //grad_mu.print();
+    arma::mat B_new = B + eta * grad_B;
+    //printf("B new is: \n");   
+    //B_new.print();
+    arma::mat Mu_new = Mu + eta * grad_mu;
+    //printf("Mu new is: \n");
+    //Mu_new.print();
+
+    // handle negative values and large gradient
+    for (k = 0; k < K; k++) {
+        for (l = 0; l < K; l++) {
+            if (B_new(k,l) <= 0.0) 
+                B_new(k,l) = B(k,l) / 2.0;
+            else if (B_new(k,l) > 2 * B(k,l))
+                B_new(k,l) = B(k,l) * 2.0;
+            if (Mu_new(k,l) <= 0.0)
+                Mu_new(k,l) = Mu(k,l) / 2.0;
+            else if (Mu_new(k,l) > 2 * Mu(k,l))
+                Mu_new(k,l) = Mu(k,l) * 2.0;
         }
     }
+    double lam_new = lam + eta * grad_lam;
+    if (lam_new > 2*lam) {
+        lam_new = 2 * lam;
+    } else if (lam_new <= 0.0) {
+        lam_new = lam/2.0;
+    }
 
-    return elbo;
+    arma::mat tau_new(m,K);
+    tau_new.fill(0.0);
+
+    arma::rowvec s;
+    for (int i = 0; i < m; i++) {
+        s = S.row(i) - S.row(i).max();
+        s = s + log(Pi + 0.000001);
+        s = exp(s)/sum(exp(s));
+        tau_new.row(i) = s;
+    }
+
+    for (k = 0; k < K; k++) {
+        Pi(k) = sum(tau.col(k)) / (m + 0.0);
+    }   
+
+    return Rcpp::List::create(Rcpp::Named("tau") = tau_new,
+                          Rcpp::Named("Mu") = Mu_new,
+                          Rcpp::Named("B") = B_new,
+                          Rcpp::Named("Pi") = Pi,
+                          Rcpp::Named("lam") = lam_new,
+                          Rcpp::Named("S") = S);
+}
+
+
+double get_grad_lam(
+    arma::mat tau,
+    arma::mat Mu,
+    arma::mat B,
+    arma::rowvec Pi,
+    arma::mat S,
+    unordered_map<string, arma::vec> datamap,
+    double t_start,
+    double t_end,
+    int m,
+    int K,
+    Rcpp::List A,
+    double lam
+    ){
+    arma::mat lam_store(K,K), Lambda(K,K);
+    unordered_map<string, arma::vec>:: iterator itr; 
+    arma::vec timevec;
+    string key;
+    int ln, n, k, l;
+    double intensity_lam1, intensity_lam2, intensity, grad_lam = 0.0;
+
+    for (itr = datamap.begin(); itr != datamap.end(); itr++) 
+    { 
+        // type itr->first stores the key part  and 
+        // itr->second stroes the value part 
+        key = itr->first;
+        timevec = itr->second;
+        arma::vec index = split(key);
+        int i = (int) index(0), j = (int) index(1);
+
+        lam_store.fill(0.0);
+
+        ln = timevec.n_elem;
+        for (n = ln - 1; n >= 0; n--){
+            double t_current = timevec(n);
+            if (t_current > t_start) {
+                intensity = 0, intensity_lam1 = 0.0, intensity_lam2 = 0.0;
+                Lambda.fill(0.0); // store temporary intensity values
+                for (int n1 = 0; n1 < n; n1++) {
+                    double t1 = timevec(n1);
+                    intensity += trigger(t1, t_current, lam);
+                    intensity_lam1 += trigger_lam(t1, t_current, lam);
+                    intensity_lam2 += (t_current - t1) * trigger(t1, t_current, lam);
+                }
+                
+                for (k = 0; k < K; k++){
+                    for (l = 0; l < K; l++){
+                        Lambda(k,l) = Mu(k,l) + B(k,l) * intensity;
+                    }
+                }
+                lam_store = lam_store + B * (intensity_lam1 - intensity_lam2) / Lambda;
+                lam_store = lam_store - B * ((t_end - t_current) * exp(-lam*(t_end - t_current)));
+            } else {
+                lam_store = lam_store + B * ((t_start - t_current) * exp(-lam*(t_start - t_current)) - (t_end - t_current) * exp(-lam*(t_end - t_current)));
+            }
+        }
+
+        for (k = 0; k < K; k++) {
+            for (l = 0; l < K; l++) {
+                grad_lam += tau(i,k) * tau(j,l) * lam_store(k,l);
+            }
+        }        
+
+    }
+    return grad_lam;
+}
+
+// [[Rcpp::export]]
+double test_lam(
+    arma::mat tau,
+    arma::mat Mu,
+    arma::mat B,
+    arma::rowvec Pi,
+    arma::mat S,
+    arma::mat alltimes,
+    double t_start,
+    double t_end,
+    int m,
+    int K,
+    Rcpp::List A,
+    double lam
+    ){
+    unordered_map<string, arma::vec> datamap = transfer(alltimes);
+    double grad = get_grad_lam(tau, Mu, B, Pi, S, datamap, t_start, t_end, m, K, A, lam);
+    return grad;
 }

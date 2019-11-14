@@ -1,5 +1,5 @@
 # test case 1
-T <- 50
+T <- 100
 K <- 3
 Mu <- matrix(c(0.6,0.2,0.3,0.1,1.0,0.4,0.5,0.4,0.8),K,K,byrow = TRUE)
 B <- matrix(c(0.5,0.1,0.3,0.4,0.4,0.4,0.2,0.3,0.6),K,K,byrow = TRUE)
@@ -30,13 +30,29 @@ for (k in 1:K){
 system.time(results <- online_estimator(alltimes, A, m, K, T, dT, lam = 1, B, Mu, tau))
 
 
-# --- test ----
-S <- matrix(0,m,K)
-tau <- matrix(0,m,K)
-for (k in 1:K){
-  tau[which(Z == (k-1)),k] <- 1
-}
-paralist <- test(alltimes,tau,Mu,B,Pi,S,0,50,m,K,A,1,1/dim(alltimes)[1])
+# -- debug elbo ---
+results1 <- results
+results2 <- results
+
+
+
+tau <- results1$tau
+Mu <- results1$B
+Pi <- results1$Pi
+lam <- results1$lam
+elbo1 <- get_elbo_hak(alltimes,0,T,tau,Mu,B,Pi,A,lam,m,K)
+
+results2 <- results
+tau <- results2$tau
+Mu <- results2$B
+Pi <- results2$Pi
+lam <- results2$lam
+elbo2 <- get_elbo_hak(alltimes,0,T,tau,Mu,B,Pi,A,lam = 1.0,m,K)
+
+# -- debug lam update---
+# grad_lam <- test_lam(tau, Mu, B, Pi, S, alltimes, 0, T, m, K, A, lam = 0.9)
+
+
 
 ### Poisson Simulation ###
 T = 100
@@ -50,6 +66,7 @@ Z <- c(rep(0,m*Pi[1]),rep(1,m*Pi[2]),rep(2,m*Pi[3]))
 
 system.time(alltimes <- sampleBlockHak(T, A, Z, Mu, B, lam = 1))
 
+# initial
 Pi = c(0.3,0.3,0.4)
 B = matrix(c(1.2,0.5,0.5,0.5,1.1,.65,0.75,0.85,1.15),nrow = K,ncol = K,byrow = T)
 tau = matrix(runif(m*K),nrow=m,ncol=K)

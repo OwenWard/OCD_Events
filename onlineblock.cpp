@@ -6,6 +6,22 @@
 
 #include "blockhawkes.h"
 #include "blockPoisson.h"
+#include "nonhomohak.h"
+
+// [[Rcpp::export]]
+arma::vec func(arma::vec X){
+	X(0) = 4;
+  arma::vec y;
+  return y;
+}
+
+// [[Rcpp::export]]
+void test(){
+	arma::vec X(3);
+	X.fill(0.0);
+	X = func(X);
+	X.print();
+}
 
 // // [[Rcpp::export]]
 // Rcpp::List test(
