@@ -8,7 +8,7 @@ library(RcppArmadillo)
 sourceCpp("onlineblock.cpp")
 
 
-#### Simulate data from our Model, fit with both methods ####
+#### Simulate data from our Model, fit with all methods ####
 T = 50
 dT = 0.1
 K <- 3
@@ -33,13 +33,20 @@ tau = matrix(runif(m*K),nrow=m,ncol=K)
 tau = tau/rowSums(tau)
 S = matrix(0,nrow = m,ncol = K)
 
+# more random start
+Pi = rep(1/K,K)
+B = matrix(runif(K*K),K,K)
+diag(B) = rnorm(3,mean = 1, sd = 0.1)
+tau = matrix(runif(m*K),nrow=m,ncol=K)
+tau = tau/rowSums(tau)
+S = matrix(0,nrow = m,ncol = K)
+
 
 results_online <- estimate_Poisson(full_data = alltimes,tau,B,Pi,S,A,m,K,dT,T)
 results_online$B
 Mu
 est_Z = apply(results_online$tau,1,which.max)#-1
-est_Z
-Z
+
 
 
 adjustedRandIndex(Z,est_Z)
@@ -51,11 +58,16 @@ n_events = dim(alltimes)[1]
 ids = rep(0,n_events)
 times = rep(0,n_events)
 
+A_matrix = matrix(0,nrow = m,ncol = m)
+A_mat_bin = matrix(0,nrow = m,ncol = m)
+
 for(i in 1:n_events){
   j = alltimes[i,1]+1
   k = alltimes[i,2]+1
   ids[i] = convertNodePair(j,k,m,TRUE)
   times[i] = alltimes[3]
+  A_matrix[j,k] = A_matrix[j,k] + 1
+  A_mat_bin[j,k] = 1
 }
 
 sim_data = list(time.seq = times, type.seq = ids, Time = T)
@@ -65,53 +77,33 @@ results = mainVEM(data = sim_data, n = m, Qmin = 3, Qmax = 3, method = 'kernel',
 
 results[[2]]$tau
 est_Z_ppsbm = apply(results[[1]]$tau, 2, which.max)
-est_Z_ppsbm
+#est_Z_ppsbm
 adjustedRandIndex(Z,est_Z_ppsbm)
-# so with
 
 
-##
-##
-##### simulate from ppsbm ####
-# simulate data from this model
-generated_Q3
 
-convertGroupPair(c(1:3),c(1:3),Q=3)
+### Spectral Clustering on Weighted Adjacency Matrix ####
+A_matrix
 
-generated_Q3_n20$z
-generated_Q3_n20$data
+library(kernlab)
 
-n_events = length(generated_Q3_n20$data$type.seq)
-
-for(i in 1:n_events){
-  convertNodePair(1,2,n=20)
-  convertGroupPair(3,3,3)
-}
+sc <- specc(A_matrix, centers=3)
+estimated_groups = sc@.Data
+adjustedRandIndex(estimated_groups,Z)
 
 
-# Generate data from an undirected graph with n=10 individuals and Q=2 clusters
+### SBM on Binary Counts ####
+library(blockmodels)
+sbm_bin = BM_bernoulli('SBM',A_mat_bin,explore_min = 3, explore_max = 3)
+sbm_bin$estimate()
+sbm_bin$memberships
 
-# equal cluster proportions
-prop.groups <- c(0.5,0.5)
-
-# 3 different intensity functions :
-intens <- list(NULL)
-intens[[1]] <- list(intens= function(x) 100*x*exp(-8*x),max=5)
-# (q,l) = (1,1)
-intens[[2]] <- list(intens= function(x) exp(3*x)*(sin(6*pi*x-pi/2)+1)/2,max=13)
-# (q,l) = (1,2)
-intens[[3]] <- list(intens= function(x) 8.1*(exp(-6*abs(x-1/2))-.049),max=8)
-# (q,l) = (2,2)
-
-# generate data :
-obs <- generateDynppsbm(intens,Time=10,n=30,prop.groups,directed=FALSE)
-
-obs$data$time.seq
-
-results = mainVEM(data = obs$data, n = 100, Qmin = 2, Qmax = 5, method = 'kernel')
+sbm_bin_est = apply(sbm_bin$memberships[[3]]$Z,1,which.max)
+adjustedRandIndex(Z,sbm_bin_est)
 
 
-generated_Q3_n20
-results = mainVEM(data = generated_Q3_n20$data,n=20,Qmin=2,Qmax = 3,
-                  method = 'kernel',n_perturb = 1,d_part = 1)
-results
+### SBM on Counts ####
+sbm_count = BM_poisson('SBM',A_matrix, explore_min = 3, explore_max = 3)
+sbm_count$estimate()
+sbm_count_est = apply(sbm_count$memberships[[3]]$Z,1,which.max)
+adjustedRandIndex(Z,sbm_count_est)
