@@ -781,6 +781,9 @@ Rcpp::List update_nonhomo_pois(
         arma::vec index = split(key);
         int i = (int) index(0), j = (int) index(1);
 
+        if (i == j)
+        	continue;
+
         P1_mu_tp.fill(0.0), P2_mu_tp.fill(0.0); 
         P_S_tp.fill(0.0);
 
