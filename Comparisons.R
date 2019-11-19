@@ -1,12 +1,21 @@
 # because these models don't scale, use on a subset of the data?
-library(mclust)
-library(dplyr)
-library(ppsbm)
+# library(mclust)
+# library(dplyr)
+# library(ppsbm)
+# library(kernlab)
+# library(blockmodels)
+# library(Rcpp)
+# library(RcppArmadillo)
+# sourceCpp("onlineblock.cpp")
+source("comparison_fcns.R")
 
-library(Rcpp)
-library(RcppArmadillo)
-sourceCpp("onlineblock.cpp")
+n_iters = 100
 
+Pois_On_ARI <- rep(0,n_iters)
+Pois_PPSBM_ARI <- rep(0,n_iters)
+Pois_Sc_ARI <- rep(0,n_iters)
+Pois_B_SBM_ARI <- rep(0,n_iters)
+Pois_P_SBM_ARI <- rep(0,n_iters)
 
 #### Simulate data from our Model, fit with all methods ####
 T = 50
@@ -46,13 +55,10 @@ results_online <- estimate_Poisson(full_data = alltimes,tau,B,Pi,S,A,m,K,dT,T)
 results_online$B
 Mu
 est_Z = apply(results_online$tau,1,which.max)#-1
-
-
-
 adjustedRandIndex(Z,est_Z)
 
 # then transform and fit with PPSBM
-alltimes %>% head()
+#alltimes %>% head()
 
 n_events = dim(alltimes)[1]
 ids = rep(0,n_events)
@@ -73,9 +79,10 @@ for(i in 1:n_events){
 sim_data = list(time.seq = times, type.seq = ids, Time = T)
 
 results = mainVEM(data = sim_data, n = m, Qmin = 3, Qmax = 3, method = 'kernel',
+                  directed = T,
                   d_part = 1, n_perturb = 1)
 
-results[[2]]$tau
+#results[[2]]$tau
 est_Z_ppsbm = apply(results[[1]]$tau, 2, which.max)
 #est_Z_ppsbm
 adjustedRandIndex(Z,est_Z_ppsbm)
@@ -83,27 +90,76 @@ adjustedRandIndex(Z,est_Z_ppsbm)
 
 
 ### Spectral Clustering on Weighted Adjacency Matrix ####
-A_matrix
 
-library(kernlab)
-
-sc <- specc(A_matrix, centers=3)
-estimated_groups = sc@.Data
-adjustedRandIndex(estimated_groups,Z)
-
+spec_ARI(A_matrix,K=3,Z)
 
 ### SBM on Binary Counts ####
-library(blockmodels)
-sbm_bin = BM_bernoulli('SBM',A_mat_bin,explore_min = 3, explore_max = 3)
-sbm_bin$estimate()
-sbm_bin$memberships
 
-sbm_bin_est = apply(sbm_bin$memberships[[3]]$Z,1,which.max)
-adjustedRandIndex(Z,sbm_bin_est)
+
+sbm_bin_ARI(A_mat_bin,K=3,Z)
 
 
 ### SBM on Counts ####
-sbm_count = BM_poisson('SBM',A_matrix, explore_min = 3, explore_max = 3)
-sbm_count$estimate()
-sbm_count_est = apply(sbm_count$memberships[[3]]$Z,1,which.max)
-adjustedRandIndex(Z,sbm_count_est)
+
+sbm_count_ARI(A_matrix,K=3,Z)
+
+
+
+#### Simulate Data from Hawkes Process and Fit the Models again
+Mu_H <- matrix(c(0.6,0.2,0.3,0.1,1.0,0.4,0.5,0.4,0.8),K,K,byrow = TRUE)
+B_H <- matrix(c(0.7,0.1,0.1,0.15,0.85,0.2,0.01,0.4,1),K,K,byrow = TRUE)
+
+
+system.time(alltimes_Hawkes <- sampleBlockHak(T, A, Z, Mu_H, B_H, lam = 1))
+n_events = dim(alltimes_Hawkes)[1]
+ids = rep(0,n_events)
+times = rep(0,n_events)
+
+A_matrix_H = matrix(0,nrow = m,ncol = m)
+A_mat_bin_H = matrix(0,nrow = m,ncol = m)
+
+for(i in 1:n_events){
+  j = alltimes_Hawkes[i,1]+1
+  k = alltimes_Hawkes[i,2]+1
+  ids[i] = convertNodePair(j,k,m,TRUE)
+  times[i] = alltimes[3]
+  A_matrix_H[j,k] = A_matrix[j,k] + 1
+  A_mat_bin_H[j,k] = 1
+}
+
+sim_data_H = list(time.seq = times, type.seq = ids, Time = T)
+
+results_H = mainVEM(data = sim_data_H, n = m, Qmin = 3, Qmax = 3, method = 'kernel',
+                  directed = T,
+                  d_part = 1, n_perturb = 1)
+
+est_Z_ppsbm_H = apply(results_H[[1]]$tau, 2, which.max)
+#est_Z_ppsbm
+adjustedRandIndex(Z,est_Z_ppsbm_H)
+
+
+# fit our hawkes model also
+Pi = c(0.3,0.3,0.4)
+B = matrix(c(1,0.5,0.5,0.5,1,.65,0.75,0.85,1.),nrow = K,ncol = K,byrow = T)
+tau = matrix(runif(m*K),nrow=m,ncol=K)
+tau = tau/rowSums(tau)
+S = matrix(0,nrow = m,ncol = K)
+Mu = matrix(runif(K*K),K,K)
+
+
+system.time(results_H <- online_estimator(alltimes, A, m, K, T, dT, lam = 1, B, Mu, tau))
+# true mu and B on lines 16 and 32
+est_Z_H <- apply(results_H$tau, 1, which.max)
+adjustedRandIndex(Z,est_Z_H)
+
+# spectral clustering on Hawkes ####
+
+spec_ARI(A_matrix_H,K=3,Z)
+
+# Binary SBM #### 
+
+sbm_bin_ARI(A_mat_bin_H,3,Z)
+
+# Poisson SBM ###
+
+sbm_count_ARI(A_matrix_H,3,Z)
