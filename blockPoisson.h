@@ -206,7 +206,9 @@ Rcpp::List estimate_Poisson(
   int start_pos = 0;
   int curr_pos = 0;
   int end_pos = 0;
+  int ind = 0;
   int nall = full_data.n_rows;
+  arma::cube inter_tau(m,K,10);
   arma::vec curr_elbo, ave_elbo;
   curr_elbo.zeros(N);
   ave_elbo.zeros(N);
@@ -248,11 +250,16 @@ Rcpp::List estimate_Poisson(
     Pi.print();
     //S.print();
     printf("=============\n");
+    if(n % 50 == 0){
+      inter_tau.slice(ind) = tau;
+      ind = ind + 1;
+    }
     
   }
   
   return Rcpp::List::create(Named("S")= S,
                             Named("tau")=tau,
+                            Named("early_tau")= inter_tau,
                             Named("B")=B,
                             Named("Pi")=Pi,
                             Named("AveELBO")=ave_elbo);
