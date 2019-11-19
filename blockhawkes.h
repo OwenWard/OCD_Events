@@ -316,7 +316,8 @@ Rcpp::List online_estimator(
 	double lam,
 	arma::mat B_start,
 	arma::mat Mu_start,
-	arma::mat tau_start
+	arma::mat tau_start,
+    bool is_elbo = false
 	){
 	// initialization
 	arma::rowvec Pi(K);
@@ -397,9 +398,11 @@ Rcpp::List online_estimator(
   		Mu.print();
         printf("lam: %2.3f", lam);
 
-        prevdata = alltimes.rows(0, end_pos - 1); // head_rows()
-        elbo = get_elbo_hak(prevdata, 0.0, Tn, tau, Mu, B, Pi, A, lam, m, K);
-        elbo_vec(n) = elbo / ln_curr;
+        if (is_elbo) {
+            prevdata = alltimes.rows(0, end_pos - 1); // head_rows()
+            elbo = get_elbo_hak(prevdata, 0.0, Tn, tau, Mu, B, Pi, A, lam, m, K);
+            elbo_vec(n) = elbo / ln_curr;
+        }
 
   		//S.print();
   		printf("=============\n");
@@ -467,8 +470,8 @@ Rcpp::List update_lam(
         arma::vec index = split(key);
         int i = (int) index(0), j = (int) index(1);
 
-        //if (i == j)
-        //    continue;
+        if (i == j)
+            continue;
         
         P1_mu_tp.fill(0.0), P2_mu_tp.fill(0.0), P1_B_tp.fill(0.0), P2_B_tp.fill(0.0), P_S_tp.fill(0.0);
         lam_store.fill(0.0);
@@ -570,8 +573,8 @@ Rcpp::List update_lam(
         }
     }
     double lam_new = lam + eta * grad_lam;
-    if (lam_new > 2*lam) {
-        lam_new = 2 * lam;
+    if (lam_new > 5*lam) {
+        lam_new = 5 * lam;
     } else if (lam_new <= 0.0) {
         lam_new = lam/2.0;
     }
