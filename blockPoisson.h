@@ -193,6 +193,47 @@ double computeELBO(
   return elbo;
 }
 
+// [[Rcpp::export]]
+double computeLL(arma::mat data, arma::mat tau,
+                 arma::mat B, arma::rowvec Pi, Rcpp::List A,
+                 int m, int K, double currT){
+  // compute the negative log likelihood given current estimates
+  double LL = 0;
+  arma:: vec curr_group;
+  curr_group.zeros(m);
+  for(int i = 0; i < m; ++i){
+    arma::rowvec curr_tau = tau.row(i);
+    curr_group(i) = curr_tau.index_max(); // need this later anyway
+    LL += log(Pi(curr_group(i)));
+  }
+  // compute the next term in the same way as done for the elbo.
+  int nrow = data.n_rows;
+  for(int n =0; n<nrow; n++){
+    arma::rowvec event = data.row(n);
+    int i = event(0);
+    int j = event(1);
+    int k = curr_group(i);
+    int l = curr_group(j);
+    LL += log(B(k,l));
+  }
+  for(int i=0; i<m; ++i){
+    arma::rowvec edge = A[i];
+    int n = edge.n_elem;
+    for(int j=0; j<n; ++j){
+      int j_loc = edge(j);
+      if(i != j_loc){
+        int k = curr_group(i);
+        int l = curr_group(j_loc);
+        LL -= B(k,l)*currT;
+      
+      }
+    }
+  }
+  return LL;
+}
+
+
+
 
 // [[Rcpp::export]]
 Rcpp::List estimate_Poisson(
@@ -209,8 +250,10 @@ Rcpp::List estimate_Poisson(
   int ind = 0;
   int nall = full_data.n_rows;
   arma::cube inter_tau(m,K,10);
-  arma::vec curr_elbo, ave_elbo;
+  arma::vec curr_elbo, ave_elbo, ave_ll, curr_ll;
   curr_elbo.zeros(N);
+  curr_ll.zeros(N);
+  ave_ll.zeros(N);
   ave_elbo.zeros(N);
   int cum_events = 0;
   for(int n = 0; n < N; ++n){
@@ -243,6 +286,8 @@ Rcpp::List estimate_Poisson(
     //cout<<"update B"<<endl;
     Pi = updatePi(tau,K);
     curr_elbo(n) = computeELBO(elbo_dat,tau,B,Pi,A,m,K,dT);
+    curr_ll(n) = computeLL(elbo_dat,tau,B,Pi,A,m,K,t_curr);
+    ave_ll(n) = curr_ll(n)/cum_events;
     ave_elbo(n) = curr_elbo(n)/cum_events;
     //cout<<B<<endl;
     printf("iter: %d; \n", n); 
@@ -262,7 +307,8 @@ Rcpp::List estimate_Poisson(
                             Named("early_tau")= inter_tau,
                             Named("B")=B,
                             Named("Pi")=Pi,
-                            Named("AveELBO")=ave_elbo);
+                            Named("AveELBO")=ave_elbo,
+                            Named("logL") = ave_ll);
 }
 
 
