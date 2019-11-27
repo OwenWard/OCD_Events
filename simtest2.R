@@ -61,7 +61,7 @@ loglik.batch <- get_loglik_nonhomoHak(alltimes,0,T,Z,results.batch$MuA,
 
 
 # test case 2
-T <- 50
+T <- 500
 K <- 2
 H <- 7
 MuA <- array(0,c(K,K,H))
@@ -73,7 +73,7 @@ MuA[,,5] <- matrix(c(0.5,0.5,0.5,0),2,2, byrow = T)
 MuA[,,6] <- matrix(c(0.4,0,0.4,0),2,2, byrow = T)
 MuA[,,7] <- matrix(c(0,0.9,0,0.9),2,2, byrow = T)
 B <- matrix(c(0.8,0.3,0.4,0.7),K,K,byrow = TRUE)
-m <- 100
+m <- 500
 Pi <- matrix(c(0.6,0.4),1,K)
 Z <- c(rep(0,m*Pi[1]),rep(1,m*Pi[2]))
 window <- 1/7
@@ -87,18 +87,20 @@ for(i in 1:m){
 
 system.time(alltimes <- sampleBlockHak_nonhomo(T, A, Z, MuA, B, window, lam = 1))
 
-dT <- 1.0
+dT <- 2.5
 tau <- matrix(0,m,K)
 for (k in 1:K){
   tau[which(Z == (k-1)),k] <- 1
 }
 
-system.time(results <- nonhomoHak_estimator(alltimes,A,m,K,H,window,T,dT,lam = 0.1, gravity = 0.001, B,MuA,tau))
+system.time(results.online <- nonhomoHak_estimator(alltimes,A,m,K,H,window,T,dT,lam = 0.1, 
+                                            gravity = 0.001, B,MuA,tau))
 
 itermax <- T / dT
 stop_eps <- 0.001
 system.time(results.batch <- batch_nonhomoHak_estimator(alltimes,A,m,K,H,
-                                                        window,T,dT,lam = 0.1, gravity = 0.0,
+                                                        window,T,dT,lam = 0.1, 
+                                                        gravity = 0.001,
                                                         B,MuA,tau,itermax, stop_eps))
 
 # -- calculate loglik ---
@@ -116,7 +118,7 @@ loglik.batch <- get_loglik_nonhomoHak(alltimes,0,T,Z,results.batch$MuA,
 
 
 # test case 3 --- nonhomo poisson case
-T <- 50
+T <- 500
 K <- 2
 H <- 7
 MuA <- array(0,c(K,K,H))
@@ -128,7 +130,7 @@ MuA[,,5] <- matrix(c(0.5,0.5,0.5,0),2,2, byrow = T)
 MuA[,,6] <- matrix(c(0.4,0,0.4,0),2,2, byrow = T)
 MuA[,,7] <- matrix(c(0,0.9,0,0.9),2,2, byrow = T)
 B <- matrix(0,K,K,byrow = TRUE)
-m <- 100
+m <- 500
 Pi <- matrix(c(0.6,0.4),1,K)
 Z <- c(rep(0,m*Pi[1]),rep(1,m*Pi[2]))
 window <- 1/7
@@ -142,12 +144,30 @@ for(i in 1:m){
 
 system.time(alltimes <- sampleBlockHak_nonhomo(T, A, Z, MuA, B, window, lam = 1))
 
-dT <- 1.0
+dT <- 2.5
 tau <- matrix(0,m,K)
 for (k in 1:K){
   tau[which(Z == (k-1)),k] <- 1
 }
 
-system.time(results <- nonhomoPois_estimator(alltimes,A,m,K,H,window,T,dT,gravity = 0.001,MuA,tau))
+system.time(results.online <- nonhomoPois_estimator(alltimes,A,m,K,H,window,T,dT,
+                                             gravity = 0.001,MuA,tau))
+
+itermax <- T / dT
+stop_eps <- 0.001
+system.time(results.batch <- batch_nonhomoPois_estimator(alltimes,A,m,K,H,window,T,dT,
+                                             gravity = 0.001,MuA,tau,itermax, stop_eps))
 
 
+# -- calculate loglik ---
+Z <- apply(results.online$tau,1,which.max) - 1
+loglik.online <- get_loglik_nonhomoHak(alltimes,0,T,Z,results.online$MuA, 
+                                       B, results.online$Pi,A, 0.0,
+                                       m,K,H,window)
+
+Z <- apply(results.batch$tau,1,which.max) - 1
+loglik.batch <- get_loglik_nonhomoHak(alltimes,0,T,Z,results.batch$MuA, 
+                                      B, results.batch$Pi,A, 0.0,
+                                      m,K,H,window)
+
+1 - (loglik.batch - loglik.online)/abs(loglik.batch)
