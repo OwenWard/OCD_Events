@@ -1,9 +1,9 @@
 # test case 1
-T <- 100
+T <- 500
 K <- 3
-Mu <- matrix(c(0.6,0.2,0.3,0.1,1.0,0.4,0.5,0.4,0.8),K,K,byrow = TRUE)
-B <- matrix(c(0.5,0.1,0.3,0.4,0.4,0.4,0.2,0.3,0.6),K,K,byrow = TRUE)
-m <- 100
+Mu <- matrix(c(0.6,0.2,0.3,0.1,1.0,0.4,0.5,0.2,0.75),K,K,byrow = TRUE)
+B <- matrix(c(0.5,0.1,0.3,0.4,0.4,0.4,0.2,0.6,0.2),K,K,byrow = TRUE)
+m <- 500
 Pi <- matrix(c(0.4,0.3,0.3),1,3)
 Z <- c(rep(0,m*Pi[1]),rep(1,m*Pi[2]),rep(2,m*Pi[3]))
 
@@ -21,33 +21,52 @@ sourceCpp("onlineblock.cpp")
 
 system.time(alltimes <- sampleBlockHak(T, A, Z, Mu, B, lam = 1))
 
+
+# just test how fast simulation is 
+#start_time <- Sys.time()
+#for(i in 1:100000){
+#  x <- sampleChild(0,100,1,0.5)
+#}
+#end_time <- Sys.time()
+#print(end_time - start_time)
+
 # main
-dT <- 0.25
+dT <- 2.5
 tau <- matrix(0,m,K)
 for (k in 1:K){
   tau[which(Z == (k-1)),k] <- 1
 }
-system.time(results <- online_estimator(alltimes, A, m, K, T, dT, lam = 1, B, Mu, tau))
+system.time(results.online <- online_estimator(alltimes, A, m, K, T, dT, 
+                                               lam = 1.0, B, Mu, tau))
+
+system.time(results.stoch <- online_estimator(alltimes, A, m, K, T, dT, 
+                                               lam = 1.0, B, Mu, tau, percent = 0.8))
+
+itermax <- T / dT
+stop_eps <- 0.001
+system.time(results.batch <- batch_estimator(alltimes, A, m, K, T, dT, 
+                                             lam = 1.0, B, Mu, tau, itermax, stop_eps))
+
+
+# -- calculate loglik ---
+Z <- apply(results.online$tau,1,which.max) - 1
+loglik.online <- get_loglik_Hak(alltimes,0,T,Z,results.online$Mu, 
+                                results.online$B, results.online$Pi,A, results.online$lam,m,K)
+
+Z <- apply(results.batch$tau,1,which.max) - 1
+loglik.batch <- get_loglik_Hak(alltimes,0,T,Z,results.batch$Mu, 
+                                results.batch$B, results.batch$Pi,A, results.batch$lam,m,K)
+
+Z <- apply(results.stoch$tau,1,which.max) - 1
+loglik.batch <- get_loglik_Hak(alltimes,0,T,Z,results.stoch$Mu, 
+                               results.stoch$B, results.stoch$Pi,A, results.stoch$lam,m,K)
+
+1 - (loglik.batch - loglik.online)/abs(loglik.batch)
+
 
 
 # -- debug elbo ---
-results1 <- results
-results2 <- results
 
-
-
-tau <- results1$tau
-Mu <- results1$B
-Pi <- results1$Pi
-lam <- results1$lam
-elbo1 <- get_elbo_hak(alltimes,0,T,tau,Mu,B,Pi,A,lam,m,K)
-
-results2 <- results
-tau <- results2$tau
-Mu <- results2$B
-Pi <- results2$Pi
-lam <- results2$lam
-elbo2 <- get_elbo_hak(alltimes,0,T,tau,Mu,B,Pi,A,lam = 1.0,m,K)
 
 # -- debug lam update---
 # grad_lam <- test_lam(tau, Mu, B, Pi, S, alltimes, 0, T, m, K, A, lam = 0.9)

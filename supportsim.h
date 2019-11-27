@@ -76,6 +76,8 @@ arma::vec sampleChild(
 	arma::vec child(size);
 	int l = 0;
 	double tcurr = tstart;
+	double Tmax = 10.0 / lam + tstart;
+	T = min(Tmax, T);
 	while (tcurr <= T){
 		dt = myrexp(lam*b);
 		tcurr += dt;
