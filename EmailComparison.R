@@ -3,7 +3,7 @@ library(RcppArmadillo)
 sourceCpp("C:/Users/owenw/Documents/Online_Point_Process/onlineblock.cpp")
 
 
-#setwd("C:/Users/owenw/Downloads/")
+setwd("C:/Users/owenw/Downloads/")
 
 library(tidyverse)
 emails = read_csv(gzfile("email-Eu-core-temporal.txt.gz"))
@@ -124,8 +124,8 @@ sqrt(mean(comparison$diff^2))
 
 
 ## fit the Hom Hawkes Model also
-K = 5
-dT = 2.5
+K = 2
+dT = 5
 Pi = rep(1/K,K)
 B = matrix(runif(K*K),K,K)
 Mu = matrix(runif(K*K),K,K)
@@ -135,7 +135,7 @@ tau = tau/rowSums(tau)
 S = matrix(0,nrow = m,ncol = K)
 
 
-results_hawkes_sim <- online_estimator(as.matrix(emails_train), A_test, m, K, T = 471, dT, lam = 1, B, Mu, tau)
+results_hawkes_sim <- online_estimator_eff(as.matrix(emails_train), A_test, m, K, T = 471, dT, lam = 1, B, Mu, tau)
 # seems to blow up for certain dT?
 
 est_Z = apply(results_hawkes_sim$tau,1,which.max)
@@ -164,14 +164,19 @@ sqrt(mean(comparison$diff^2))
 
 ## Non Homogeneous Poisson ####
 K = 2
-H = 4
-window = 2.5
+H = 1
+window = 1
 
 results_npois_sim <- nonhomoPois_estimator(as.matrix(emails_train),A_test,m,K,H,
-                                            window,T=471,dT=3, gravity = 0.0,MuA,tau)
+                                            window,T=471,dT=5, gravity = 0.0,MuA,tau)
 est_Z = apply(results_nhawkes_sim$tau,1,which.max)
 # then predictions for this
 
+pred_times = sampleBlockHak_nonhomo_pre(T = Time, startT = 472,A,est_Z-1,
+                                        MuA = results_nhawkes_sim$MuA,
+                                        B = results_nhawkes_sim$B,
+                                        window,
+                                        lam = 1)
 
 
 
@@ -179,11 +184,13 @@ est_Z = apply(results_nhawkes_sim$tau,1,which.max)
 
 ## Non Homogeneous Hawkes ####
 K = 2
-H <- 4
-window = 0.5
+H <- 1
+window = 1/H
 
-results_nhawkes_sim <- nonhomoHak_estimator(as.matrix(emails_train),A_test,m,K,H,
-                                       window,T=471,dT=3,lam = 0.1, gravity = 0.0, B,MuA,tau)
+MuA = array(0,dim=c(K,K,H))
+
+results_nhawkes_sim <- nonhomoHak_estimator_eff(as.matrix(emails_train),A_test,m,K,H,
+                                       window,T=471,dT=5,lam = 0.1, gravity = 0.0, B,MuA,tau)
 est_Z = apply(results_nhawkes_sim$tau,1,which.max)
 
 pred_times = sampleBlockHak_nonhomo_pre(T = Time, startT = 472,A,est_Z-1,

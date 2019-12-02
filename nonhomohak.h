@@ -995,7 +995,7 @@ Rcpp::List nonhomoHak_estimator_eff(
 	arma::mat truncdata;
 	Rcpp::List paralist;
 	
-	double R = 5.0;
+	double R = 25.0;
 
 	for (int n = 0; n < N; n++ ){
 		Tn = (n + 1.0) * dT;

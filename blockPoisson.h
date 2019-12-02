@@ -243,13 +243,14 @@ Rcpp::List estimate_Poisson(
     int m, int K, double dT, double T){
   // iterate this over the time windows...
   int N = int(T/dT);
+  int slices = int(N/50);
   double eta;
   int start_pos = 0;
   int curr_pos = 0;
   int end_pos = 0;
   int ind = 0;
   int nall = full_data.n_rows;
-  arma::cube inter_tau(m,K,10);
+  arma::cube inter_tau(m,K,slices+1);
   arma::vec curr_elbo, ave_elbo, ave_ll, curr_ll;
   curr_elbo.zeros(N);
   curr_ll.zeros(N);
