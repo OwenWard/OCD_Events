@@ -240,8 +240,7 @@ Rcpp::List estimate_Poisson(
     arma::mat full_data, arma::mat tau, 
     arma::mat B, arma::rowvec Pi,
     arma::mat S, Rcpp::List A, //arma::mat A,
-    int m, int K, double dT, double T,
-    bool is_ll = false){
+    int m, int K, double dT, double T){
   // iterate this over the time windows...
   int N = int(T/dT);
   double eta;
@@ -250,8 +249,7 @@ Rcpp::List estimate_Poisson(
   int end_pos = 0;
   int ind = 0;
   int nall = full_data.n_rows;
-  int slices = int(N/50);
-  arma::cube inter_tau(m,K,slices+1);
+  arma::cube inter_tau(m,K,10);
   arma::vec curr_elbo, ave_elbo, ave_ll, curr_ll;
   curr_elbo.zeros(N);
   curr_ll.zeros(N);
@@ -280,7 +278,6 @@ Rcpp::List estimate_Poisson(
     //cout<<size(sub_data)<<endl;
     start_pos = curr_pos;
     eta = 1/sqrt(1+n);
-    //cout << "To here "<<endl;
     S = updateS(sub_data,tau,B,A,S,K,m,dT);
     //cout<<"S works"<<endl;
     tau = updateTau(S,Pi,m,K); 
@@ -289,10 +286,8 @@ Rcpp::List estimate_Poisson(
     //cout<<"update B"<<endl;
     Pi = updatePi(tau,K);
     curr_elbo(n) = computeELBO(elbo_dat,tau,B,Pi,A,m,K,dT);
-    if (is_ll) {
-      curr_ll(n) = computeLL(elbo_dat,tau,B,Pi,A,m,K,t_curr);
-      ave_ll(n) = curr_ll(n)/cum_events;
-    }
+    curr_ll(n) = computeLL(elbo_dat,tau,B,Pi,A,m,K,t_curr);
+    ave_ll(n) = curr_ll(n)/cum_events;
     ave_elbo(n) = curr_elbo(n)/cum_events;
     //cout<<B<<endl;
     printf("iter: %d; \n", n); 

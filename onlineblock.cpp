@@ -7,7 +7,6 @@
 #include "blockhawkes.h"
 #include "blockPoisson.h"
 #include "nonhomohak.h"
-#include "link_predict.h"
 
 // [[Rcpp::export]]
 arma::vec func(arma::vec X){
