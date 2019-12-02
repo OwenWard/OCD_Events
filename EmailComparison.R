@@ -161,3 +161,50 @@ comparison = comparison %>% mutate(n.x = replace_na(n.x,0),
 
 sqrt(mean(comparison$diff^2))
 # approx 61.2791 for k = 3
+
+## Non Homogeneous Poisson ####
+K = 2
+H = 4
+window = 2.5
+
+results_npois_sim <- nonhomoPois_estimator(as.matrix(emails_train),A_test,m,K,H,
+                                            window,T=471,dT=3, gravity = 0.0,MuA,tau)
+est_Z = apply(results_nhawkes_sim$tau,1,which.max)
+# then predictions for this
+
+
+
+
+
+
+## Non Homogeneous Hawkes ####
+K = 2
+H <- 4
+window = 0.5
+
+results_nhawkes_sim <- nonhomoHak_estimator(as.matrix(emails_train),A_test,m,K,H,
+                                       window,T=471,dT=3,lam = 0.1, gravity = 0.0, B,MuA,tau)
+est_Z = apply(results_nhawkes_sim$tau,1,which.max)
+
+pred_times = sampleBlockHak_nonhomo_pre(T = Time, startT = 472,A,est_Z-1,
+                                        MuA = results_nhawkes_sim$MuA,
+                                        B = results_nhawkes_sim$B,
+                                        window,
+                                        lam = results_nhawkes_sim$lam)
+
+colnames(pred_times) = c("Send","Rec","Time")
+pred_times = as_tibble(pred_times)
+
+pred_set = pred_times %>% group_by(Send,Rec) %>% tally()
+test_set = emails_test %>% group_by(Send,Rec) %>% tally()
+
+
+comparison = test_set %>% full_join(pred_set,by = c("Send","Rec") )
+
+comparison = comparison %>% mutate(n.x = replace_na(n.x,0),
+                                   n.y = replace_na(n.y,0),
+                                   diff = n.x-n.y)
+
+
+sqrt(mean(comparison$diff^2))
+
