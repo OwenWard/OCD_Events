@@ -1,9 +1,13 @@
+library(Rcpp)
+library(RcppArmadillo)
+sourceCpp("onlineblock.cpp")
+
 # test case 1
-T <- 500
+T <- 100
 K <- 3
 Mu <- matrix(c(0.6,0.2,0.3,0.1,1.0,0.4,0.5,0.2,0.75),K,K,byrow = TRUE)
 B <- matrix(c(0.5,0.1,0.3,0.4,0.4,0.4,0.2,0.6,0.2),K,K,byrow = TRUE)
-m <- 500
+m <- 100
 Pi <- matrix(c(0.4,0.3,0.3),1,3)
 Z <- c(rep(0,m*Pi[1]),rep(1,m*Pi[2]),rep(2,m*Pi[3]))
 
@@ -14,10 +18,6 @@ for(i in 1:m){
   A[[i]] <- edge
 }
 
-
-library(Rcpp)
-library(RcppArmadillo)
-sourceCpp("onlineblock.cpp")
 
 system.time(alltimes <- sampleBlockHak(T, A, Z, Mu, B, lam = 1))
 
@@ -31,7 +31,7 @@ system.time(alltimes <- sampleBlockHak(T, A, Z, Mu, B, lam = 1))
 #print(end_time - start_time)
 
 # main
-dT <- 2.5
+dT <- 0.5
 tau <- matrix(0,m,K)
 for (k in 1:K){
   tau[which(Z == (k-1)),k] <- 1
@@ -39,8 +39,11 @@ for (k in 1:K){
 system.time(results.online <- online_estimator(alltimes, A, m, K, T, dT, 
                                                lam = 1.0, B, Mu, tau))
 
-system.time(results.stoch <- online_estimator(alltimes, A, m, K, T, dT, 
-                                               lam = 1.0, B, Mu, tau, percent = 0.8))
+system.time(results.eff <- online_estimator_eff(alltimes, A, m, K, T, dT,
+                                                lam = 1.0, B, Mu, tau)) 
+
+#system.time(results.stoch <- online_estimator(alltimes, A, m, K, T, dT, 
+#                                               lam = 1.0, B, Mu, tau, percent = 0.25))
 
 itermax <- T / dT
 stop_eps <- 0.001
@@ -53,15 +56,17 @@ Z <- apply(results.online$tau,1,which.max) - 1
 loglik.online <- get_loglik_Hak(alltimes,0,T,Z,results.online$Mu, 
                                 results.online$B, results.online$Pi,A, results.online$lam,m,K)
 
+Z <- apply(results.eff$tau,1,which.max) - 1
+loglik.eff <- get_loglik_Hak(alltimes,0,T,Z,results.eff$Mu, 
+                                results.eff$B, results.eff$Pi,A, results.eff$lam,m,K)
+
+
 Z <- apply(results.batch$tau,1,which.max) - 1
 loglik.batch <- get_loglik_Hak(alltimes,0,T,Z,results.batch$Mu, 
                                 results.batch$B, results.batch$Pi,A, results.batch$lam,m,K)
 
-Z <- apply(results.stoch$tau,1,which.max) - 1
-loglik.batch <- get_loglik_Hak(alltimes,0,T,Z,results.stoch$Mu, 
-                               results.stoch$B, results.stoch$Pi,A, results.stoch$lam,m,K)
 
-1 - (loglik.batch - loglik.online)/abs(loglik.batch)
+1 - (loglik.batch - loglik.eff)/abs(loglik.batch)
 
 
 

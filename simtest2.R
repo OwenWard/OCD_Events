@@ -35,6 +35,9 @@ for (k in 1:K){
 system.time(results.online <- nonhomoHak_estimator(alltimes,A,m,K,H,
                                             window,T,dT,lam = 0.1, gravity = 0.0, B,MuA,tau))
 
+system.time(results.eff <- nonhomoHak_estimator_eff(alltimes,A,m,K,H,
+                                                   window,T,dT,lam = 0.1, gravity = 0.0, B,MuA,tau))
+
 itermax <- T / dT
 stop_eps <- 0.001
 system.time(results.batch <- batch_nonhomoHak_estimator(alltimes,A,m,K,H,
@@ -42,9 +45,9 @@ system.time(results.batch <- batch_nonhomoHak_estimator(alltimes,A,m,K,H,
                                             B,MuA,tau,itermax, stop_eps))
 
 # -- calculate loglik ---
-Z <- apply(results.online$tau,1,which.max) - 1
-loglik.online <- get_loglik_nonhomoHak(alltimes,0,T,Z,results.online$MuA, 
-                                results.online$B, results.online$Pi,A, results.online$lam,
+Z <- apply(results.eff$tau,1,which.max) - 1
+loglik.eff <- get_loglik_nonhomoHak(alltimes,0,T,Z,results.eff$MuA, 
+                                results.eff$B, results.eff$Pi,A, results.eff$lam,
                                 m,K,H,window)
 
 Z <- apply(results.batch$tau,1,which.max) - 1
@@ -52,7 +55,7 @@ loglik.batch <- get_loglik_nonhomoHak(alltimes,0,T,Z,results.batch$MuA,
                                results.batch$B, results.batch$Pi,A, results.batch$lam,
                                m,K,H,window)
 
-1 - (loglik.batch - loglik.online)/abs(loglik.batch)
+1 - (loglik.batch - loglik.eff)/abs(loglik.batch)
 
 # -- debug elbo ---
 # elbo <- get_elbo_nonhomoHak(alltimes,0,T,tau,MuA,B,Pi,A,lam = 0.5,m,K,H,window)

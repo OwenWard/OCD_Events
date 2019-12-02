@@ -7,14 +7,16 @@
 #include <stdio.h>
 #include <random>
 #include <queue>
+#include <deque>
 
 using namespace std;
 using namespace Rcpp;
 // [[Rcpp::depends(RcppArmadillo)]]
 
-// define some constants
-const double eps = 0.000001;
 
+// define some constants
+
+const double eps = 0.000001;
 
 // ===============================
 // miscellaneous functions
@@ -97,6 +99,118 @@ unordered_map<string, arma::vec> transfer(arma::mat alltimes){
 	return datamap;
 }
 
+
+
+// [[Rcpp::export]]
+unordered_map<string, arma::vec> transfer2(arma::mat alltimes, Rcpp::List A, int m){
+	unordered_map<string, arma::vec> datamap;
+	int N = alltimes.n_rows;
+	arma::rowvec event;
+	int i,j,ln;
+	double time;
+	string key;
+	int n_edge;
+	
+	for (int i = 0; i < m; i++) {
+        arma::rowvec edge = A[i];
+        n_edge = edge.n_elem;
+        for (int p = 0; p < n_edge; p++){
+            int j = (int) edge(p);
+            key = to_string(i) + "," + to_string(j);
+            arma::vec timevec;
+            datamap[key] = timevec;
+        }
+    }
+
+    arma::vec timetemp;
+	for (int n = 0; n < N; n++) {
+		event = alltimes.row(n);
+		i = event[0], j = event[1], time = event[2];
+		key = to_string(i) + "," + to_string(j);
+		timetemp = datamap[key];
+		ln = timetemp.n_elem;
+		timetemp.resize(ln + 1);
+		timetemp(ln) = time;
+		datamap[key] = timetemp;
+	}
+	return datamap;
+}
+
+
+
+// create a empty map
+// [[Rcpp::export]]
+unordered_map<string, std::deque<double> > transfer_create(Rcpp::List A, int m){
+	unordered_map<string, std::deque<double>> datamap;
+	int i,j;
+	string key;
+	int n_edge;
+	
+	for (i = 0; i < m; i++) {
+        arma::rowvec edge = A[i];
+        n_edge = edge.n_elem;
+        for (int p = 0; p < n_edge; p++){
+            j = (int) edge(p);
+            key = to_string(i) + "," + to_string(j);
+            std::deque<double> timevec;
+            datamap[key] = timevec;
+        }
+    }
+	return datamap;
+}
+
+
+// trim queue, old data exceeding R will be deleted
+std::deque<double> trim_queue(std::deque<double> data, double t_current, double R){
+	data.push_back(t_current);
+	if (data.size() == 1){
+		return data;
+	}
+	double time = data.front();
+	while (t_current - time > R) {
+		data.pop_front();
+		time = data.front();
+	}
+	return data;
+}
+
+// efficient way to trasnfer data to reduce the head cost
+unordered_map<string, std::deque<double>> transfer_eff(unordered_map<string, std::deque<double>> datamap, arma::mat newtimes, double R){
+	int N = newtimes.n_rows;
+	arma::rowvec event;
+	int i,j;
+	double time;
+	string key;
+
+    std::deque<double> timetemp;
+	for (int n = 0; n < N; n++) {
+		event = newtimes.row(n);
+		i = event[0], j = event[1], time = event[2];
+		key = to_string(i) + "," + to_string(j);
+		timetemp = datamap[key];
+		timetemp = trim_queue(timetemp, time, R);
+		datamap[key] = timetemp;
+	}
+	return datamap;
+}
+
+
+// convert back to arma::vec
+arma::vec convert_deque(std::deque<double> mydeque){
+	int ln = mydeque.size();
+	int count = 0;
+	arma::vec myvec(ln);
+	std::deque<double>::iterator it = mydeque.begin();
+
+  	while (it != mydeque.end()){
+  		myvec(count) = *it;
+    	it++;
+    	count++; 
+  	}
+  	return myvec;
+}
+
+
 // this function cannot be exported, since Rcpp cannot convert unordered_map
 void mapprint(unordered_map<string, arma::vec> datamap){
 	unordered_map<string, arma::vec>:: iterator itr; 
@@ -116,7 +230,6 @@ void testmap(arma::mat alltimes){
 }
 
 
-
 // split string to two numbers separated by ","
 // [[Rcpp::export]]
 arma::vec split(string x){
@@ -129,13 +242,14 @@ arma::vec split(string x){
 }
 
 
-
+// =====================================
+// Update function for homo Poisson
+// =====================================
 
 
 // =====================================
 // Update function for Hawkes
 // =====================================
-
 
 
 #endif
