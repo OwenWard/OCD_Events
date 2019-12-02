@@ -3,7 +3,7 @@ library(RcppArmadillo)
 sourceCpp("C:/Users/owenw/Documents/Online_Point_Process/onlineblock.cpp")
 
 
-setwd("C:/Users/owenw/Downloads/")
+#setwd("C:/Users/owenw/Downloads/")
 
 library(tidyverse)
 emails = read_csv(gzfile("email-Eu-core-temporal.txt.gz"))
