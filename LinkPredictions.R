@@ -234,7 +234,7 @@ window <- 0.25
 
 A <- list()
 for(i in 1:m){
-  edge <- sample(m, 40) - 1
+  edge <- sample(m, 20) - 1
   edge <- sort(edge)
   A[[i]] <- edge
 }

@@ -250,7 +250,8 @@ Rcpp::List estimate_Poisson(
   int end_pos = 0;
   int ind = 0;
   int nall = full_data.n_rows;
-  arma::cube inter_tau(m,K,10);
+  int slices = int(N/50);
+  arma::cube inter_tau(m,K,slices+1);
   arma::vec curr_elbo, ave_elbo, ave_ll, curr_ll;
   curr_elbo.zeros(N);
   curr_ll.zeros(N);
@@ -279,6 +280,7 @@ Rcpp::List estimate_Poisson(
     //cout<<size(sub_data)<<endl;
     start_pos = curr_pos;
     eta = 1/sqrt(1+n);
+    //cout << "To here "<<endl;
     S = updateS(sub_data,tau,B,A,S,K,m,dT);
     //cout<<"S works"<<endl;
     tau = updateTau(S,Pi,m,K); 
