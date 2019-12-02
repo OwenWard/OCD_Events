@@ -970,6 +970,14 @@ Rcpp::List nonhomoHak_estimator_eff(
 	arma::cube MuA(K,K,H);
 	arma::mat tau(m,K);
 	B.fill(0.5), MuA.fill(0.5), S.fill(0.0);
+	for (int k = 0; k < K; k++) {
+        for (int l=0; l < K; l++) {
+            B(k,l) = myrunif();
+            for(int h = 0; h < H; h++) {
+            	MuA(k,l,h) = myrunif();
+            }            
+        }
+    }
 	//B = B_start, Mu = Mu_start;
 	for (int i = 0; i < m; i++) {
 		arma::rowvec tt(K);
@@ -995,7 +1003,7 @@ Rcpp::List nonhomoHak_estimator_eff(
 	arma::mat truncdata;
 	Rcpp::List paralist;
 	
-	double R = 25.0;
+	double R = 5.0;
 
 	for (int n = 0; n < N; n++ ){
 		Tn = (n + 1.0) * dT;

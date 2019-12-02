@@ -42,6 +42,13 @@ system.time(results.online <- online_estimator(alltimes, A, m, K, T, dT,
 system.time(results.eff <- online_estimator_eff(alltimes, A, m, K, T, dT,
                                                 lam = 1.0, B, Mu, tau)) 
 
+H <- 1
+window <- 1
+MuA <- array(0,c(K,K,H))
+system.time(results.nh.eff <- nonhomoHak_estimator_eff(alltimes,A,m,K,H,
+                                                    window,T,dT,lam = 0.1, gravity = 0.0, B,MuA,tau))
+
+
 #system.time(results.stoch <- online_estimator(alltimes, A, m, K, T, dT, 
 #                                               lam = 1.0, B, Mu, tau, percent = 0.25))
 
