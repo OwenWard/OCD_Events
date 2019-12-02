@@ -240,7 +240,8 @@ Rcpp::List estimate_Poisson(
     arma::mat full_data, arma::mat tau, 
     arma::mat B, arma::rowvec Pi,
     arma::mat S, Rcpp::List A, //arma::mat A,
-    int m, int K, double dT, double T){
+    int m, int K, double dT, double T,
+    bool is_ll = false){
   // iterate this over the time windows...
   int N = int(T/dT);
   double eta;
@@ -286,8 +287,10 @@ Rcpp::List estimate_Poisson(
     //cout<<"update B"<<endl;
     Pi = updatePi(tau,K);
     curr_elbo(n) = computeELBO(elbo_dat,tau,B,Pi,A,m,K,dT);
-    curr_ll(n) = computeLL(elbo_dat,tau,B,Pi,A,m,K,t_curr);
-    ave_ll(n) = curr_ll(n)/cum_events;
+    if (is_ll) {
+      curr_ll(n) = computeLL(elbo_dat,tau,B,Pi,A,m,K,t_curr);
+      ave_ll(n) = curr_ll(n)/cum_events;
+    }
     ave_elbo(n) = curr_elbo(n)/cum_events;
     //cout<<B<<endl;
     printf("iter: %d; \n", n); 
