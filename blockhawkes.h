@@ -561,7 +561,7 @@ Rcpp::List update_lam_stoch(
             double t_current = timevec(n);
             if (t_current > t_start) {
                 intensity = 0, intensity_lam1 = 0.0, intensity_lam2 = 0.0;
-                Lambda.fill(0.0); // store temporary intensity values
+                Lambda.fill(eps); // store temporary intensity values
                 for (int n1 = 0; n1 < n; n1++) {
                     double t1 = timevec(n1);
                     intensity += trigger(t1, t_current, lam);
@@ -571,7 +571,7 @@ Rcpp::List update_lam_stoch(
                 P2_B_tp = P2_B_tp + integral(t_current, t_end, lam);
                 for (k = 0; k < K; k++){
                     for (l = 0; l < K; l++){
-                        Lambda(k,l) = Mu(k,l) + B(k,l) * intensity;
+                        Lambda(k,l) += Mu(k,l) + B(k,l) * intensity;
                     }
                 }
                 lam_store = lam_store + B * (intensity_lam1 - intensity_lam2) / Lambda;
