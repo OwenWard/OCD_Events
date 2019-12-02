@@ -942,6 +942,8 @@ Rcpp::List update_nonhomo_eff(
                           Rcpp::Named("lam") = lam_new);
 }
 
+
+
 // [[Rcpp::export]]
 Rcpp::List nonhomoHak_estimator_eff(
 	arma::mat alltimes,
@@ -1019,6 +1021,9 @@ Rcpp::List nonhomoHak_estimator_eff(
 			}
 		}
 		end_pos = curr_pos;
+
+		if (end_pos <= start_pos)
+			continue;
 
 		truncdata = alltimes.rows(start_pos, end_pos - 1);
         // datamap = transfer(truncdata);
@@ -1751,7 +1756,13 @@ Rcpp::List nonhomoPois_estimator(
 	arma::cube MuA(K,K,H);
 	arma::mat tau(m,K);
 	MuA.fill(0.5), S.fill(0.0);
-	//B = B_start, Mu = Mu_start;
+	for (int k = 0; k < K; k++) {
+        for (int l=0; l < K; l++) {
+            for(int h = 0; h < H; h++) {
+            	MuA(k,l,h) = myrunif();
+            }            
+        }
+    }
 	for (int i = 0; i < m; i++) {
 		arma::rowvec tt(K);
 		for (int k = 0; k < K; k++) {

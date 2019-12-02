@@ -1346,6 +1346,9 @@ Rcpp::List online_estimator_eff(
         }
         end_pos = curr_pos;
 
+        if (end_pos <= start_pos)
+            continue;
+
         truncdata = alltimes.rows(start_pos, end_pos - 1);
         // datamap = transfer(truncdata);
         datamap = transfer_eff(datamap, truncdata, R);
