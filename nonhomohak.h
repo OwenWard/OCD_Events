@@ -1559,7 +1559,7 @@ Rcpp::List update_nonhomo_pois(
 	arma::cube MuA,
 	arma::rowvec Pi,
 	arma::mat S,
-	unordered_map<string, arma::vec> datamap,
+	unordered_map<string, std::deque<double>> datamap,
 	double t_start,
 	double t_end,
 	int m,
@@ -1577,7 +1577,7 @@ Rcpp::List update_nonhomo_pois(
 	P1_mu.fill(0.0), P2_mu.fill(0.0); 
 	S_tp.fill(0.0), Lambda.fill(0.0);
 
-	int l, k, n_edge, h;
+	int l, k, h;
 	arma::vec tvec(H);
 	tvec.fill(0.0);
 	int h1 = floor(t_start/window);
@@ -1599,7 +1599,7 @@ Rcpp::List update_nonhomo_pois(
 		}
 	}
 
-	
+	/*
 	for (int i = 0; i < m; i++) {
 		arma::rowvec edge = A[i];
 		n_edge = edge.n_elem;
@@ -1613,9 +1613,10 @@ Rcpp::List update_nonhomo_pois(
 			}
 		}
 	}
+	*/
 
-
-	unordered_map<string, arma::vec>:: iterator itr; 
+	unordered_map<string, std::deque<double>>:: iterator itr; 
+	std::deque<double> timeque;
 	arma::vec timevec;
 	string key;
 	int ln,n;
@@ -1630,12 +1631,29 @@ Rcpp::List update_nonhomo_pois(
         // type itr->first stores the key part  and 
         // itr->second stroes the value part 
         key = itr->first;
-        timevec = itr->second;
+        timeque = itr->second;
+        timevec = convert_deque(timeque);
+        
         arma::vec index = split(key);
         int i = (int) index(0), j = (int) index(1);
 
         if (i == j)
         	continue;
+
+        for (k = 0; k < K; k++) {
+			for (l = 0; l < K; l++) {
+				for (h = 0; h < H; h++)
+					P2_mu(k,l,h) = P2_mu(k,l,h) + tau(i,k) * tau(j,l) * tvec(h);
+			}
+		}
+
+		for (k = 0; k < K; k++) {
+    		for (l = 0; l < K; l++) {
+    			for (h = 0; h < H; h++) {
+    				S_tp(i,k) = S_tp(i,k) - tau(j,l) * MuA(k,l,h) * tvec(h); // change here
+    			}
+    		}
+    	}
 
         P1_mu_tp.fill(0.0), P2_mu_tp.fill(0.0); 
         P_S_tp.fill(0.0);
@@ -1688,6 +1706,7 @@ Rcpp::List update_nonhomo_pois(
         }
     } 
 
+    /*
     // update S, second part
     for (int i = 0; i < m; i++) {
     	arma::rowvec edge = A[i];
@@ -1703,7 +1722,7 @@ Rcpp::List update_nonhomo_pois(
     		}
     	}
     }
-
+	*/
 
     // update parameters
     S = S + S_tp;
@@ -1767,6 +1786,9 @@ Rcpp::List nonhomoPois_estimator(
 	arma::mat tau_start,
 	bool is_elbo = false
 	){
+	unordered_map<string, std::deque<double>> datamap;
+    datamap = transfer_create(A, m);
+
 	// initialization
 	arma::rowvec Pi(K);
 	Pi.fill(1.0 / K);
@@ -1792,10 +1814,8 @@ Rcpp::List nonhomoPois_estimator(
 	//tau = tau_start;
 
 	int nall = alltimes.n_rows;
-	int trunc_pos = 0, start_pos = 0, curr_pos = 0, end_pos = 0, ln_prev = 0, ln_curr, n_t;
+	int start_pos = 0, curr_pos = 0, end_pos = 0, ln_prev = 0, ln_curr, n_t;
 	int N = floor(T / dT);
-	int nsave = 1;
-	queue<double> trunc_pos_queue;
 
 
 	arma::vec elbo_vec(N);
@@ -1806,7 +1826,9 @@ Rcpp::List nonhomoPois_estimator(
 	arma::rowvec event; 
 	arma::mat truncdata;
 	Rcpp::List paralist;
-	unordered_map<string, arma::vec> datamap;
+
+	double R = dT;
+
 	for (int n = 0; n < N; n++ ){
 		Tn = (n + 1.0) * dT;
 		event = alltimes.row(start_pos);
@@ -1821,12 +1843,14 @@ Rcpp::List nonhomoPois_estimator(
 			}
 		}
 		end_pos = curr_pos;
-		if ( (int) trunc_pos_queue.size() == nsave) {
-			trunc_pos = trunc_pos_queue.front();
-			trunc_pos_queue.pop();
-		}
-		truncdata = alltimes.rows(trunc_pos, end_pos - 1);
-		datamap = transfer(truncdata);
+
+		if (end_pos <= start_pos)
+			continue;
+
+		truncdata = alltimes.rows(start_pos, end_pos - 1);
+        // datamap = transfer(truncdata);
+        datamap = transfer_eff(datamap, truncdata, R);
+
 		t_start = Tn - dT;
 		ln_curr = end_pos;
 		n_t = ln_curr - ln_prev;
@@ -1837,7 +1861,6 @@ Rcpp::List nonhomoPois_estimator(
 		arma::rowvec Pi_new = paralist["Pi"];
 		tau = tau_new; 
 		MuA = MuA_new, S = S_new, Pi = Pi_new;
-		trunc_pos_queue.push(start_pos);
   		start_pos = curr_pos;
   		ln_prev = ln_curr;
   		printf("iter: %d; number: %d \n", n, n_t); 
@@ -1906,8 +1929,11 @@ Rcpp::List batch_nonhomoPois_estimator(
     int ncol = alltimes.n_cols;
 
 	Rcpp::List paralist;
-	unordered_map<string, arma::vec> datamap;
-	datamap = transfer(alltimes);
+	
+	unordered_map<string, std::deque<double>> datamap;
+	datamap = transfer_create(A,m);
+	double R = T;
+	datamap = transfer_eff(datamap, alltimes, R);
 
 
 	double t_start = 0.0, Tn;

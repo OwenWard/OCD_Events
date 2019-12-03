@@ -44,6 +44,9 @@ emails = emails %>%
 
 emails = emails %>% mutate(Time = Time/(3600*24))
 
+# ---
+emails <- readRDS("emailscleaned.RDS")
+
 emails_train = emails %>% filter(Time < 471)
 summary(emails_train$Time)
 summary(emails$Time)
@@ -184,7 +187,7 @@ pred_times = sampleBlockHak_nonhomo_pre(T = Time, startT = 472,A,est_Z-1,
 
 ## Non Homogeneous Hawkes ####
 K = 2
-H <- 1
+H <- 2
 window = 1/H
 
 MuA = array(0,dim=c(K,K,H))

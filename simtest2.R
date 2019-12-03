@@ -3,14 +3,14 @@ library(RcppArmadillo)
 sourceCpp("onlineblock.cpp")
 
 # test case 1
-T <- 500
+T <- 100
 K <- 2
 H <- 2
 MuA <- array(0,c(K,K,H))
 MuA[,,1] <- matrix(c(0.8,0.2,0.6,0.4),2,2)
 MuA[,,2] <- matrix(c(0.4,0.7,0.2,0.7),2,2)
 B <- matrix(c(0.8,0.2,0.4,0.6),K,K,byrow = TRUE)
-m <- 500
+m <- 100
 Pi <- matrix(c(0.6,0.4),1,K)
 Z <- c(rep(0,m*Pi[1]),rep(1,m*Pi[2]))
 window <- 0.25
@@ -26,7 +26,7 @@ for(i in 1:m){
 
 system.time(alltimes <- sampleBlockHak_nonhomo(T, A, Z, MuA, B, window, lam = 1))
 
-dT <- 2.5
+dT <- 0.5
 tau <- matrix(0,m,K)
 for (k in 1:K){
   tau[which(Z == (k-1)),k] <- 1
@@ -121,7 +121,7 @@ loglik.batch <- get_loglik_nonhomoHak(alltimes,0,T,Z,results.batch$MuA,
 
 
 # test case 3 --- nonhomo poisson case
-T <- 500
+T <- 100
 K <- 2
 H <- 7
 MuA <- array(0,c(K,K,H))
@@ -133,7 +133,7 @@ MuA[,,5] <- matrix(c(0.5,0.5,0.5,0),2,2, byrow = T)
 MuA[,,6] <- matrix(c(0.4,0,0.4,0),2,2, byrow = T)
 MuA[,,7] <- matrix(c(0,0.9,0,0.9),2,2, byrow = T)
 B <- matrix(0,K,K,byrow = TRUE)
-m <- 500
+m <- 100
 Pi <- matrix(c(0.6,0.4),1,K)
 Z <- c(rep(0,m*Pi[1]),rep(1,m*Pi[2]))
 window <- 1/7
@@ -147,7 +147,7 @@ for(i in 1:m){
 
 system.time(alltimes <- sampleBlockHak_nonhomo(T, A, Z, MuA, B, window, lam = 1))
 
-dT <- 2.5
+dT <- 0.5
 tau <- matrix(0,m,K)
 for (k in 1:K){
   tau[which(Z == (k-1)),k] <- 1
