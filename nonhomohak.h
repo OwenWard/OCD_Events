@@ -726,7 +726,7 @@ Rcpp::List update_nonhomo_eff(
 	arma::mat P1_B_tp(K,K), P2_B_tp(K,K), P_S_tp(m,K), Lambda(K,K);
 	P1_mu.fill(0.0), P2_mu.fill(0.0), P1_B.fill(0.0), P2_B.fill(0.0), S_tp.fill(0.0), Lambda.fill(0.0);
 
-	int l, k, n_edge, h;
+	int l, k, h;
 	arma::vec tvec(H);
 	tvec.fill(0.0);
 	int h1 = floor(t_start/window);
@@ -748,7 +748,8 @@ Rcpp::List update_nonhomo_eff(
 		}
 	}
 
-	
+
+	/*	
 	for (int i = 0; i < m; i++) {
 		arma::rowvec edge = A[i];
 		n_edge = edge.n_elem;
@@ -762,7 +763,7 @@ Rcpp::List update_nonhomo_eff(
 			}
 		}
 	}
-
+	*/
 
 	arma::mat lam_store(K,K);
 	double grad_lam = 0.0;
@@ -792,6 +793,22 @@ Rcpp::List update_nonhomo_eff(
 
         if (i == j)
         	continue;
+
+        for (k = 0; k < K; k++) {
+			for (l = 0; l < K; l++) {
+				for (h = 0; h < H; h++)
+					P2_mu(k,l,h) = P2_mu(k,l,h) + tau(i,k) * tau(j,l) * tvec(h);
+			}
+		}
+
+		for (k = 0; k < K; k++) {
+    		for (l = 0; l < K; l++) {
+    			for (h = 0; h < H; h++) {
+    				S_tp(i,k) = S_tp(i,k) - tau(j,l) * MuA(k,l,h) * tvec(h);
+    			}
+    		}
+    	}
+
 
         P1_mu_tp.fill(0.0), P2_mu_tp.fill(0.0), P1_B_tp.fill(0.0), P2_B_tp.fill(0.0), P_S_tp.fill(0.0);
 
@@ -864,6 +881,7 @@ Rcpp::List update_nonhomo_eff(
         }
     } 
 
+    /*
     // update S, second part
     for (int i = 0; i < m; i++) {
     	arma::rowvec edge = A[i];
@@ -879,7 +897,7 @@ Rcpp::List update_nonhomo_eff(
     		}
     	}
     }
-
+	*/
 
     // update parameters
     S = S + S_tp;

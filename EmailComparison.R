@@ -5,8 +5,8 @@ sourceCpp("C:/Users/owenw/Documents/Online_Point_Process/onlineblock.cpp")
 
 setwd("C:/Users/owenw/Downloads/")
 
-library(tidyverse)
-emails = read_csv(gzfile("email-Eu-core-temporal.txt.gz"))
+library(dplyr)
+emails = read.csv(gzfile("email-Eu-core-temporal.txt.gz"))
 
 emails %>% head()
 
