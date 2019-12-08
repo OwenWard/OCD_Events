@@ -8,6 +8,7 @@
 #include "blockPoisson.h"
 #include "nonhomohak.h"
 #include "link_predict.h"
+#include "ccrm.h"
 
 // [[Rcpp::export]]
 arma::vec func(arma::vec X){

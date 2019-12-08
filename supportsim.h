@@ -316,3 +316,58 @@ arma::mat sampleBlockHak_nonhomo(
 	}
 	return alltimes_sort;
 }
+
+
+// [[Rcpp::export]]
+arma::mat sampleCCRMHak(
+	double T,
+	Rcpp::List A,
+	arma::mat W1,
+	arma::mat W2,
+	double b,
+	double lam
+	){
+	int count = 0, size = 2;
+	int K = W1.n_cols;
+	arma::mat alltimes(size, 3);
+	int m = A.size();
+	printf("m: %d", m);
+	int n_edge, n_temp;
+	double mu;
+	int i,j,k,p,l;
+	arma::vec temp;
+	for (i = 0; i < m; i++){
+		//printf("count: %d", count);
+		arma::rowvec edge = A[i];
+		n_edge = edge.n_elem;
+		for (p = 0; p < n_edge; p++) {
+			j = edge(p);
+			mu = 0.0;
+			for (l = 0; l < K; l++)
+				mu += W1(i,l) * W2(j,l);
+
+			temp = sampleHak(T, mu, b, lam);
+			n_temp = temp.n_elem;
+			//printf("n_temp: %d", n_temp);
+			if(count + n_temp > size){
+				size = max(2*size, count + n_temp);
+				alltimes.resize(size,3);
+			}
+			for (k = 0; k < n_temp; k++){
+				alltimes(count+k,0) = i;
+				alltimes(count+k,1) = j;
+				alltimes(count+k,2) = temp(k);
+			}
+			count += n_temp;
+		}
+	}
+	alltimes = alltimes.head_rows(count); // throw away useless rows
+	arma::mat alltimes_sort = alltimes; // sort by the third column
+	arma::uvec indices = arma::sort_index(alltimes.col(2));
+	for (i = 0; i < count; i++) {
+		alltimes_sort(i,0) = alltimes(indices(i),0);
+		alltimes_sort(i,1) = alltimes(indices(i),1);
+		alltimes_sort(i,2) = alltimes(indices(i),2);
+	}
+	return alltimes_sort;
+}

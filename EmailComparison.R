@@ -120,6 +120,8 @@ comparison = comparison %>% mutate(n.x = replace_na(n.x,0),
                                    n.y = replace_na(n.y,0),
                                    diff = n.x-n.y)
 
+comparison$n.x[is.na(comparison$n.x)] = 0
+comparison$n.y[is.na(comparison$n.y)] = 0
 
 sqrt(mean(comparison$diff^2))
 # approx 500
@@ -161,6 +163,10 @@ comparison = comparison %>% mutate(n.x = replace_na(n.x,0),
                                    n.y = replace_na(n.y,0),
                                    diff = n.x-n.y)
 
+comparison$n.x[is.na(comparison$n.x)] = 0
+comparison$n.y[is.na(comparison$n.y)] = 0
+comparison$diff <- comparison$n.x - comparison$n.y
+
 
 sqrt(mean(comparison$diff^2))
 # approx 61.2791 for k = 3
@@ -171,7 +177,7 @@ H = 1
 window = 1
 
 results_npois_sim <- nonhomoPois_estimator(as.matrix(emails_train),A_test,m,K,H,
-                                            window,T=471,dT=5, gravity = 0.0,MuA,tau)
+                                            window,T=471,dT=2.5, gravity = 0.0,MuA,tau)
 est_Z = apply(results_nhawkes_sim$tau,1,which.max)
 # then predictions for this
 
@@ -193,7 +199,7 @@ window = 1/H
 MuA = array(0,dim=c(K,K,H))
 
 results_nhawkes_sim <- nonhomoHak_estimator_eff(as.matrix(emails_train),A_test,m,K,H,
-                                       window,T=471,dT=5,lam = 0.1, gravity = 0.0, B,MuA,tau)
+                                       window,T=471,dT=2.5,lam = 0.1, gravity = 0.0, B,MuA,tau)
 est_Z = apply(results_nhawkes_sim$tau,1,which.max)
 
 pred_times = sampleBlockHak_nonhomo_pre(T = Time, startT = 472,A,est_Z-1,
@@ -215,6 +221,9 @@ comparison = comparison %>% mutate(n.x = replace_na(n.x,0),
                                    n.y = replace_na(n.y,0),
                                    diff = n.x-n.y)
 
+comparison$n.x[is.na(comparison$n.x)] = 0
+comparison$n.y[is.na(comparison$n.y)] = 0
+comparison$diff <- comparison$n.x - comparison$n.y
 
 sqrt(mean(comparison$diff^2))
 
