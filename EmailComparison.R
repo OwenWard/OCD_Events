@@ -55,12 +55,16 @@ emails_test = emails %>% filter(Time > 471)
 
 A = list()
 
+for(i in 1:m){
+  A[[i+1]] = i
+}
+
 for(i in 1:nrow(emails)){
   j = emails$Send[i]
   k = emails$Rec[i]
   #print(j)
-  A[[j+1]] = j
-  A[[k+1]] = k
+  #A[[j+1]] = j
+  #A[[k+1]] = k
   A[[j+1]] = c(A[[j+1]],emails$Rec[i])
 }
 A_test = lapply(A,unique)
@@ -141,6 +145,14 @@ S = matrix(0,nrow = m,ncol = K)
 
 
 results_hawkes_sim <- online_estimator_eff(as.matrix(emails_train), A_test, m, K, T = 471, dT, lam = 1, B, Mu, tau)
+
+
+dT <- 2.25
+K <- 2
+b <- 0.5
+W1 <- matrix(0,m,K)
+W2 <- matrix(0,m,K)
+system.time(results.ccrm <- ccrm_estimator(alltimes,A,m,K,T,dT,lam = 1.0,W1,W2,b))
 # seems to blow up for certain dT?
 
 est_Z = apply(results_hawkes_sim$tau,1,which.max)

@@ -1076,12 +1076,12 @@ Rcpp::List update_lam_eff(
     arma::mat B,
     arma::rowvec Pi,
     arma::mat S,
-    unordered_map<string, std::deque<double>> datamap,
+    unordered_map<string, std::deque<double>> &datamap,
     double t_start,
     double t_end,
     int m,
     int K,
-    Rcpp::List A,
+    //Rcpp::List A,
     double lam,
     double eta
     ){
@@ -1144,7 +1144,7 @@ Rcpp::List update_lam_eff(
 
         P1_mu_tp.fill(0.0), P2_mu_tp.fill(0.0), P1_B_tp.fill(0.0), P2_B_tp.fill(0.0), P_S_tp.fill(0.0);
         lam_store.fill(0.0);
-        P2_mu_tp = P2_mu_tp + t_end - t_start;
+        //P2_mu_tp = P2_mu_tp + t_end - t_start;
         ln = timevec.n_elem;
         for (n = ln - 1; n >= 0; n--){
             double t_current = timevec(n);
@@ -1357,8 +1357,8 @@ Rcpp::List online_estimator_eff(
         ln_curr = end_pos;
         n_t = ln_curr - ln_prev;
         eta = 1.0/sqrt(1 + n/10.0)/n_t * (K * K);
-        // paralist = update_lam(tau, Mu, B, Pi, S, datamap, t_start, Tn, m, K, A, lam, eta);
-        paralist = update_lam_eff(tau, Mu, B, Pi, S, datamap, t_start, Tn, m, K, A, lam, eta);
+        // paralist = update_lam_eff(tau, Mu, B, Pi, S, datamap, t_start, Tn, m, K, A, lam, eta);
+        paralist = update_lam_eff(tau, Mu, B, Pi, S, datamap, t_start, Tn, m, K, lam, eta);
         arma::mat tau_new = paralist["tau"], Mu_new = paralist["Mu"], B_new = paralist["B"], S_new = paralist["S"];
         arma::rowvec Pi_new = paralist["Pi"];
         double lam_new = paralist["lam"];
