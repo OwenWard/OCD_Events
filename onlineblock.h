@@ -175,7 +175,8 @@ std::deque<double> trim_queue(std::deque<double> data, double t_current, double 
 }
 
 // efficient way to trasnfer data to reduce the head cost
-unordered_map<string, std::deque<double>> transfer_eff(unordered_map<string, std::deque<double>> datamap, arma::mat newtimes, double R){
+
+unordered_map<string, std::deque<double>> transfer_eff2(unordered_map<string, std::deque<double>> datamap, arma::mat newtimes, double R){
 	int N = newtimes.n_rows;
 	arma::rowvec event;
 	int i,j;
@@ -192,6 +193,26 @@ unordered_map<string, std::deque<double>> transfer_eff(unordered_map<string, std
 		datamap[key] = timetemp;
 	}
 	return datamap;
+}
+
+
+
+void transfer_eff(unordered_map<string, std::deque<double>> &datamap, arma::mat newtimes, double R){
+	int N = newtimes.n_rows;
+	arma::rowvec event;
+	int i,j;
+	double time;
+	string key;
+
+    std::deque<double> timetemp;
+	for (int n = 0; n < N; n++) {
+		event = newtimes.row(n);
+		i = event[0], j = event[1], time = event[2];
+		key = to_string(i) + "," + to_string(j);
+		timetemp = datamap[key];
+		timetemp = trim_queue(timetemp, time, R);
+		datamap[key] = timetemp;
+	}
 }
 
 

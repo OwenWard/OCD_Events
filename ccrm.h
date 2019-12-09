@@ -276,8 +276,9 @@ Rcpp::List ccrm_estimator(
             continue;
 
         truncdata = alltimes.rows(start_pos, end_pos - 1);
-        // datamap = transfer(truncdata);
-        datamap = transfer_eff(datamap, truncdata, R);
+
+        // datamap = transfer_eff(datamap, truncdata, R);
+        transfer_eff(datamap, truncdata, R);
 
         t_start = Tn - dT;
         ln_curr = end_pos;
@@ -320,6 +321,7 @@ Rcpp::List ccrm_estimator(
 
 // --- test ----
 
+/*
 Rcpp::List update_test(
     arma::mat W,
     double b,
@@ -344,20 +346,6 @@ Rcpp::List update_test(
     //int l, k;
     //int n_edge;
 
-    /*
-    for (int i = 0; i < m; i++) {
-        arma::rowvec edge = A[i];
-        n_edge = edge.n_elem;
-        for (int p = 0; p < n_edge; p++){
-            int j = (int) edge(p);
-            for (k = 0; k < K; k++) {
-                for (l = 0; l < K; l++) {
-                    P2_mu(k,l) = P2_mu(k,l) + tau(i,k) * tau(j,l) * (t_end - t_start);
-                }
-            }
-        }
-    }
-    */
 
     unordered_map<string, std::deque<double>>:: iterator itr; 
     arma::vec timevec;
@@ -415,13 +403,7 @@ Rcpp::List update_test(
 
         grad_lam += lam_store;
 
-        /*
-        for (k = 0; k < K; k++) {
-            for (l = 0; l < K; l++) {
-                grad_lam += tau(i,k) * tau(j,l) * lam_store(k,l);
-            }
-        }
-        */
+
 
 
         P1_w(i,j) += P1_w_tp(i,j);
@@ -429,21 +411,6 @@ Rcpp::List update_test(
         P2_b += P2_b_tp;
     } 
 
-    /*
-    // update S, second part
-    for (int i = 0; i < m; i++) {
-        arma::rowvec edge = A[i];
-        n_edge = edge.n_elem;
-        for (k = 0; k < K; k++) {
-            for (int p = 0; p < n_edge; p++) {
-                int j = (int) edge(p);
-                for (l = 0; l < K; l++) {
-                    S_tp(i,k) = S_tp(i,k) - tau(j,l) * Mu(k,l) * (t_end - t_start);
-                }
-            }
-        }
-    }
-    */
 
     // update parameters
     double grad_b = P1_b - P2_b;
@@ -487,9 +454,9 @@ Rcpp::List update_test(
                           Rcpp::Named("b") = b_new,
                           Rcpp::Named("lam") = lam_new);
 }
+*/
 
-
-
+/*
 // [[Rcpp::export]]
 Rcpp::List test_estimator(
     arma::mat alltimes,
@@ -594,7 +561,10 @@ Rcpp::List test_estimator(
                           Rcpp::Named("lam") = lam,
                           Rcpp::Named("elbo") = elbo_vec);
 }
+*/
 
+
+/*
 Rcpp::List compute_grad_ccrm(
     arma::mat W1,
     arma::mat W2,
@@ -621,20 +591,6 @@ Rcpp::List compute_grad_ccrm(
     //int l, k;
     //int n_edge;
 
-    /*
-    for (int i = 0; i < m; i++) {
-        arma::rowvec edge = A[i];
-        n_edge = edge.n_elem;
-        for (int p = 0; p < n_edge; p++){
-            int j = (int) edge(p);
-            for (k = 0; k < K; k++) {
-                for (l = 0; l < K; l++) {
-                    P2_mu(k,l) = P2_mu(k,l) + tau(i,k) * tau(j,l) * (t_end - t_start);
-                }
-            }
-        }
-    }
-    */
 
     unordered_map<string, std::deque<double>>:: iterator itr; 
     arma::vec timevec;
@@ -698,13 +654,7 @@ Rcpp::List compute_grad_ccrm(
 
         grad_lam += lam_store;
 
-        /*
-        for (k = 0; k < K; k++) {
-            for (l = 0; l < K; l++) {
-                grad_lam += tau(i,k) * tau(j,l) * lam_store(k,l);
-            }
-        }
-        */
+
 
         for (k = 0; k < K; k++) {
         	P1_w1(i,k) += P1_w1_tp(i,k);
@@ -814,3 +764,4 @@ void get_grad_ccrm(
     }
 
 }
+*/

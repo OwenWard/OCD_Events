@@ -1044,8 +1044,9 @@ Rcpp::List nonhomoHak_estimator_eff(
 			continue;
 
 		truncdata = alltimes.rows(start_pos, end_pos - 1);
-        // datamap = transfer(truncdata);
-        datamap = transfer_eff(datamap, truncdata, R);
+
+        // datamap = transfer_eff(datamap, truncdata, R);
+		transfer_eff(datamap, truncdata, R);
 
 		t_start = Tn - dT;
 		ln_curr = end_pos;
@@ -1848,8 +1849,9 @@ Rcpp::List nonhomoPois_estimator(
 			continue;
 
 		truncdata = alltimes.rows(start_pos, end_pos - 1);
-        // datamap = transfer(truncdata);
-        datamap = transfer_eff(datamap, truncdata, R);
+
+        // datamap = transfer_eff(datamap, truncdata, R);
+		transfer_eff(datamap, truncdata, R);
 
 		t_start = Tn - dT;
 		ln_curr = end_pos;
@@ -1929,12 +1931,12 @@ Rcpp::List batch_nonhomoPois_estimator(
     int ncol = alltimes.n_cols;
 
 	Rcpp::List paralist;
-	
+
 	unordered_map<string, std::deque<double>> datamap;
 	datamap = transfer_create(A,m);
 	double R = T;
-	datamap = transfer_eff(datamap, alltimes, R);
-
+	// datamap = transfer_eff(datamap, alltimes, R);
+	transfer_eff(datamap, alltimes, R);
 
 	double t_start = 0.0, Tn;
     Tn = alltimes(nall - 1, ncol - 1);

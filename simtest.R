@@ -36,8 +36,8 @@ tau <- matrix(0,m,K)
 for (k in 1:K){
   tau[which(Z == (k-1)),k] <- 1
 }
-system.time(results.online <- online_estimator(alltimes, A, m, K, T, dT, 
-                                               lam = 1.0, B, Mu, tau))
+# system.time(results.online <- online_estimator(alltimes, A, m, K, T, dT, 
+#                                                lam = 1.0, B, Mu, tau))
 
 system.time(results.eff <- online_estimator_eff(alltimes, A, m, K, T, dT,
                                                 lam = 1.0, B, Mu, tau)) 

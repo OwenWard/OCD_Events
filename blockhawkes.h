@@ -1350,8 +1350,9 @@ Rcpp::List online_estimator_eff(
             continue;
 
         truncdata = alltimes.rows(start_pos, end_pos - 1);
-        // datamap = transfer(truncdata);
-        datamap = transfer_eff(datamap, truncdata, R);
+
+        //datamap = transfer_eff2(datamap, truncdata, R);
+        transfer_eff(datamap, truncdata, R);
 
         t_start = Tn - dT;
         ln_curr = end_pos;

@@ -144,7 +144,9 @@ tau = tau/rowSums(tau)
 S = matrix(0,nrow = m,ncol = K)
 
 
-results_hawkes_sim <- online_estimator_eff(as.matrix(emails_train), A_test, m, K, T = 471, dT, lam = 1, B, Mu, tau)
+system.time(results_hawkes_sim <- online_estimator_eff(as.matrix(emails_train),
+                                                       A_test, m, K, T = 471, dT, 
+                                                       lam = 1, B, Mu, tau))
 
 
 dT <- 2.25
