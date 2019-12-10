@@ -2,7 +2,7 @@ library(Rcpp)
 library(RcppArmadillo)
 sourceCpp("C:/Users/owenw/Documents/Online_Point_Process/onlineblock.cpp")
 
-
+### clean raw data ####
 setwd("C:/Users/owenw/Downloads/")
 
 library(dplyr)
@@ -44,7 +44,7 @@ emails = emails %>%
 
 emails = emails %>% mutate(Time = Time/(3600*24))
 
-# ---
+# --- ####
 emails <- readRDS("emailscleaned.RDS")
 
 emails_train = emails %>% filter(Time < 471)
