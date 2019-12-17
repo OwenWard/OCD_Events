@@ -17,10 +17,11 @@ results = list(param = matrix(,nrow = 50,ncol=4),
 
 
 
-for(setting in c(1:4)){
+for(setting_m in c(1:4)){
+  for(setting_t in c(1:4))
   for(sim in 1:50){
-    Time = Times[setting]
-    m = m_setting[setting]
+    Time = Times[setting_t]
+    m = m_setting[setting_m]
     for(iter in c(1:50)){
       dT = 0.1
       K <- 3
