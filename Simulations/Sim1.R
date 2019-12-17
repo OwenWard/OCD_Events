@@ -1,4 +1,8 @@
-source("comparison_fcns.R")
+.libPaths("/rigel/stats/users/ogw2103/rpackages")
+setwd("/rigel/stats/users/ogw2103/code/Online_Point_Process")
+library(Rcpp)
+library(RcppArmadillo)
+sourcecpp("onlineblock.cpp")
 
 
 num_Sims = 50
