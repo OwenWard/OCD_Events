@@ -292,8 +292,8 @@ Rcpp::List estimate_Poisson(
     ave_elbo(n) = curr_elbo(n)/cum_events;
     //cout<<B<<endl;
     printf("iter: %d; \n", n); 
-    B.print();
-    Pi.print();
+    //B.print();
+    //Pi.print();
     //S.print();
     printf("=============\n");
     if(n % 50 == 0){
