@@ -148,7 +148,7 @@ arma::mat sampleBlockHak(
 	int count = 0, size = 2;
 	arma::mat alltimes(size, 3);
 	int m = A.size();
-	printf("m: %d", m);
+	//printf("m: %d", m);
 	int z1, z2, n_edge, n_temp;
 	double mu, b;
 	int i,j,k,p;
@@ -274,8 +274,8 @@ arma::mat sampleBlockHak_nonhomo(
 	int count = 0, size = 2;
 	arma::mat alltimes(size, 3);
 	int m = A.size(), H = MuA.n_slices;
-	printf("H: %d", H);
-	printf("m: %d", m);
+	//printf("H: %d", H);
+	//printf("m: %d", m);
 	int z1, z2, n_edge, n_temp;
 	double b;
 	int i,j,k,p,h;

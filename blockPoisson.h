@@ -291,11 +291,11 @@ Rcpp::List estimate_Poisson(
     ave_ll(n) = curr_ll(n)/cum_events;
     ave_elbo(n) = curr_elbo(n)/cum_events;
     //cout<<B<<endl;
-    printf("iter: %d; \n", n); 
-    B.print();
-    Pi.print();
+    //printf("iter: %d; \n", n); 
+    //B.print();
+    //Pi.print();
     //S.print();
-    printf("=============\n");
+    //printf("=============\n");
     if(n % 50 == 0){
       inter_tau.slice(ind) = tau;
       ind = ind + 1;
