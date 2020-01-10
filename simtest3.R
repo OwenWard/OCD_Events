@@ -26,6 +26,9 @@ dT <- 1.0
 system.time(results.ccrm <- ccrm_estimator(alltimes,A,m,K,T,dT,lam = 1.0,W1,W2,b))
 
 
+
+
+
 dT <- 1
 W <- matrix(0,m,m)
 system.time(results.test <- test_estimator(alltimes,A,m,K,T,dT,lam = 1.0,W,b))
