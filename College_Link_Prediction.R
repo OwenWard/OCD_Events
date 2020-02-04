@@ -102,8 +102,8 @@ S = matrix(0,nrow = m,ncol = K)
 results_pois <- estimate_Poisson(full_data = as.matrix(college),tau,
                             B,Pi,S,A_test,m,K,dT,T=Time)
 
-results_hawkes_sim <- online_estimator_eff(as.matrix(college), 
-                                           A_test, m, K, T = Time, dT, lam = 1, B, Mu, tau)
+system.time(results_hawkes_sim <- online_estimator_eff(as.matrix(college), 
+                                           A_test, m, K, T = Time, dT, lam = 1, B, Mu, tau))
 
 results_hawkes_sim$Pi
 
@@ -203,6 +203,14 @@ S = matrix(0,nrow = m,ncol = K)
 
 results_hawkes_sim <- online_estimator_eff(as.matrix(college_train), 
                                            A_test, m, K, T = train_time, dT, lam = 1, B, Mu, tau)
+
+dT <- 2.25
+K <- 2
+b <- 0.5
+W1 <- matrix(0,m,K)
+W2 <- matrix(0,m,K)
+system.time(results.ccrm <- ccrm_estimator(as.matrix(college_train),A_test,m,K,T = train_time,
+                                           dT,lam = 1.0,W1,W2,b))
 
 est_Z = apply(results_hawkes_sim$tau,1,which.max)
 

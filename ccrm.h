@@ -26,7 +26,7 @@ Rcpp::List update_ccrm(
     double t_end,
     int m,
     int K,
-    Rcpp::List A,
+    // Rcpp::List A,
     double lam,
     double eta
     ){
@@ -285,8 +285,8 @@ Rcpp::List ccrm_estimator(
         n_t = ln_curr - ln_prev;
         // eta = 1.0/sqrt(1 + n/10.0)/n_t * (K * K);
         eta = 1.0/sqrt(1 + n/10.0)/n_t;
-        paralist = update_ccrm(W1, W2, b, datamap, t_start, Tn, m, K, A, lam, eta);
-        // paralist = update_lam_eff(tau, Mu, B, Pi, S, datamap, t_start, Tn, m, K, A, lam, eta);
+        // paralist = update_ccrm(W1, W2, b, datamap, t_start, Tn, m, K, A, lam, eta);
+        paralist = update_ccrm(W1, W2, b, datamap, t_start, Tn, m, K, lam, eta);
         arma::mat W1_new = paralist["W1"], W2_new = paralist["W2"];
         double lam_new = paralist["lam"], b_new = paralist["b"]; 
         W1 = W1_new;
@@ -316,6 +316,277 @@ Rcpp::List ccrm_estimator(
                           Rcpp::Named("lam") = lam,
                           Rcpp::Named("elbo") = elbo_vec);
 }
+
+
+
+
+// batch case 
+
+Rcpp::List update_ccrm_batch(
+    arma::mat W1,
+    arma::mat W2,
+    double b,
+    //unordered_map<string, std::deque<double>> datamap,
+    unordered_map<string, arma::vec> datamap,
+    double t_start,
+    double t_end,
+    int m,
+    int K,
+    // Rcpp::List A,
+    double lam,
+    double eta,
+    double R
+    ){
+    arma::mat P1_w1(m,K), P2_w1(m,K), P1_w2(m,K), P2_w2(m,K);
+    double  P1_b, P2_b;
+    arma::mat P1_w1_tp(m,K), P2_w1_tp(m,K), P1_w2_tp(m,K), P2_w2_tp(m,K);
+    double P1_b_tp, P2_b_tp, Lambda = 0.0;
+    P1_w1.fill(0.0), P2_w1.fill(0.0), P1_w2.fill(0.0), P2_w2.fill(0.0);
+    P1_b = P2_b = 0.0;
+    double lam_store;
+    double mu;
+
+    int k;
+    //int l, k;
+    //int n_edge;
+
+    /*
+    for (int i = 0; i < m; i++) {
+        arma::rowvec edge = A[i];
+        n_edge = edge.n_elem;
+        for (int p = 0; p < n_edge; p++){
+            int j = (int) edge(p);
+            for (k = 0; k < K; k++) {
+                for (l = 0; l < K; l++) {
+                    P2_mu(k,l) = P2_mu(k,l) + tau(i,k) * tau(j,l) * (t_end - t_start);
+                }
+            }
+        }
+    }
+    */
+
+    unordered_map<string, arma::vec>:: iterator itr; 
+    arma::vec timevec;
+    // std::deque<double> timeque;
+    string key;
+    int ln,n;
+    double intensity_lam1, intensity_lam2, intensity, grad_lam = 0.0;
+    for (itr = datamap.begin(); itr != datamap.end(); itr++) 
+    { 
+        // type itr->first stores the key part  and 
+        // itr->second stroes the value part 
+        key = itr->first;
+        // timeque = itr->second;
+        // timevec = convert_deque(timeque);
+        timevec = itr->second;
+        arma::vec index = split(key);
+        int i = (int) index(0), j = (int) index(1);
+
+        if (i == j)
+            continue;
+        
+
+        mu = 0.0;
+       	for (k = 0; k < K; k++) {
+            P2_w1(i,k) = P2_w1(i,k) + W2(j,k) * (t_end - t_start);
+            P2_w2(j,k) = P2_w2(j,k) + W1(i,k) * (t_end - t_start);
+            mu += W1(i,k) * W2(j,k);
+        }
+
+        P1_w1_tp.fill(0.0), P2_w1_tp.fill(0.0), P1_w2_tp.fill(0.0), P2_w2_tp.fill(0.0);
+        P1_b_tp = 0.0, P2_b_tp = 0.0;
+        lam_store = 0.0;
+        //P2_mu_tp = P2_mu_tp + t_end - t_start;
+        ln = timevec.n_elem;
+        for (n = ln - 1; n >= 0; n--){
+            double t_current = timevec(n);
+            if (t_current > t_start) {
+                intensity = eps, intensity_lam1 = eps, intensity_lam2 = eps;
+                Lambda = eps; // store temporary intensity values
+                for (int n1 = n-1; n1 >= 0; n1--) {
+                	double t1 = timevec(n1);
+                	if (t_current - t1 > R)
+                		break; // trunc
+                    intensity += trigger(t1, t_current, lam);
+                    intensity_lam1 += trigger_lam(t1, t_current, lam);
+                    intensity_lam2 += (t_current - t1) * trigger(t1, t_current, lam);
+                }
+                P2_b_tp = P2_b_tp + integral(t_current, t_end, lam);
+                Lambda += mu + b * intensity;
+
+                lam_store = lam_store + b * (intensity_lam1 - intensity_lam2) / Lambda;
+                lam_store = lam_store - b * ((t_end - t_current) * exp(-lam*(t_end - t_current)));
+
+                P1_b_tp += intensity / Lambda;
+                for (k = 0; k < K; k++) {
+                	P1_w1_tp(i,k) += W2(j,k) / Lambda;
+                	P1_w2_tp(j,k) += W1(i,k) / Lambda;
+                }
+            } else {
+                P2_b_tp = P2_b_tp + integral2(t_current, t_start, t_end, lam);
+                lam_store = lam_store + b * ((t_start - t_current) * exp(-lam*(t_start - t_current)) - (t_end - t_current) * exp(-lam*(t_end - t_current)));
+            }
+        }
+
+        grad_lam += lam_store;
+
+        /*
+        for (k = 0; k < K; k++) {
+            for (l = 0; l < K; l++) {
+                grad_lam += tau(i,k) * tau(j,l) * lam_store(k,l);
+            }
+        }
+        */
+
+        for (k = 0; k < K; k++) {
+        	P1_w1(i,k) += P1_w1_tp(i,k);
+        	P1_w2(j,k) += P1_w2_tp(j,k);
+        }
+        P1_b += P1_b_tp;
+        P2_b += P2_b_tp;
+
+    } 
+
+    /*
+    // update S, second part
+    for (int i = 0; i < m; i++) {
+        arma::rowvec edge = A[i];
+        n_edge = edge.n_elem;
+        for (k = 0; k < K; k++) {
+            for (int p = 0; p < n_edge; p++) {
+                int j = (int) edge(p);
+                for (l = 0; l < K; l++) {
+                    S_tp(i,k) = S_tp(i,k) - tau(j,l) * Mu(k,l) * (t_end - t_start);
+                }
+            }
+        }
+    }
+    */
+
+    // update parameters
+    double grad_b = P1_b - P2_b;
+    //grad_B.print();
+    arma::mat grad_w1 = P1_w1 - P2_w1;
+    arma::mat grad_w2 = P1_w2 - P2_w2;
+    //grad_mu.print();
+    double b_new = b + eta * grad_b;
+    //printf("B new is: \n");   
+    //B_new.print();
+    arma::mat W1_new = W1 + eta * m * grad_w1;
+    arma::mat W2_new = W2 + eta * m * grad_w2;
+    //printf("Mu new is: \n");
+    //Mu_new.print();
+
+    // handle negative values and large gradient
+    if (b_new <= 0.0) 
+    	b_new = b / 2.0;
+    else if (b_new >= 2*b)
+    	b_new = 2.0 * b;
+
+    for (int i = 0; i < m; i++) {
+    	for(k = 0; k < K; k++) {
+    		if (W1_new(i,k) <= 0.0) 
+                W1_new(i,k) = W1(i,k) / 2.0;
+            else if (W1_new(i,k) > 2 * W1(i,k))
+                W1_new(i,k) = W1(i,k) * 2.0;
+
+            if (W2_new(i,k) <= 0.0) 
+                W2_new(i,k) = W2(i,k) / 2.0;
+            else if (W2_new(i,k) > 2 * W2(i,k))
+                W2_new(i,k) = W2(i,k) * 2.0;
+    	}
+    }
+
+    
+    // normaliztion
+    unordered_map<string, arma::mat> res = w_normaliztion(W1_new, W2_new);
+    W1_new = res["W1"];
+    W2_new = res["W2"];
+	
+
+    double lam_new = lam + eta * grad_lam;
+    if (lam_new > 5*lam) {
+        lam_new = 5 * lam;
+    } else if (lam_new <= 0.0) {
+        lam_new = lam/2.0;
+    }
+
+
+    return Rcpp::List::create(Rcpp::Named("W1") = W1_new,
+                          Rcpp::Named("W2") = W2_new,
+                          Rcpp::Named("b") = b_new,
+                          Rcpp::Named("lam") = lam_new);
+}
+
+
+// [[Rcpp::export]]
+Rcpp::List batch_ccrm_estimator(
+    arma::mat alltimes,
+    Rcpp::List A,
+    int m,
+    int K,
+    double T,
+    double dT,
+    double lam,
+    arma::mat W1_start,
+    arma::mat W2_start,
+    double b_start,
+    int itermax,
+	double stop_eps
+    ){
+
+    // initialization
+    arma::mat W1(m,K), W2(m,K);
+    double b = myrunif();
+    for (int i = 0; i < m; i++) {
+        for (int k = 0; k < K; k++) {
+            W1(i,k) = 2*myrunif();
+            W2(i,k) = 2*myrunif();
+        }
+    }
+    // W1.fill(1.0);
+    //b = b_start, W1 = W1_start, W2 = W2_start;
+
+    int nall = alltimes.n_rows;
+    int ncol = alltimes.n_cols;
+
+    Rcpp::List paralist;
+	unordered_map<string, arma::vec> datamap;
+	datamap = transfer(alltimes);
+
+
+	double t_start = 0.0, Tn;
+    Tn = alltimes(nall - 1, ncol - 1);
+
+    double gap = 2147483647;
+    double eta = 1.0/nall;
+
+    double R = 5.0;
+	for (int iter = 0; iter < itermax; iter++) {
+        eta = 1.0/nall/ sqrt(iter + 1.0);
+        paralist = update_ccrm_batch(W1, W2, b, datamap, t_start, Tn, m, K, lam, eta, R);
+        arma::mat W1_new = paralist["W1"], W2_new = paralist["W2"];
+        double lam_new = paralist["lam"], b_new = paralist["b"]; 
+        gap = max(abs(b - b_new), abs(lam - lam_new));
+        W1 = W1_new;
+        W2 = W2_new;
+        lam = lam_new, b = b_new;
+        printf("b: %2.3f", b);
+        printf("lam: %2.3f", lam);
+        printf("gap: %2.3f", gap);
+        printf("=============\n");
+        if (gap < stop_eps){
+            break;
+        }
+    }
+    
+    return Rcpp::List::create(
+                          Rcpp::Named("W1") = W1,
+                          Rcpp::Named("W2") = W2,
+                          Rcpp::Named("b") = b,
+                          Rcpp::Named("lam") = lam);
+}
+
 
 
 
