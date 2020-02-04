@@ -1,8 +1,459 @@
 ### Link Prediction
+library(Rcpp)
+library(RcppArmadillo)
+library(dplyr)
+sourceCpp("C:/Users/owenw/Documents/Online_Point_Process/onlineblock.cpp")
 
-source("comparison_fcns.R")
+## 85% training, 15% test set, same as miscouridou et al
 
 
+### Inhomo-Poisson, H=7 ####
+## general settings
+# K = 2, window = 0.25, H = 2, 0.25 prop of edges,
+# these should match simtest2
+T <- 500
+dT <- 1.25 # depends on T
+m <- 500
+K <- 2
+H <- 2
+MuA <- array(0,c(K,K,H))
+MuA[,,1] <- matrix(c(0.8,0.2,0.6,0.4),2,2)
+MuA[,,2] <- matrix(c(0.4,0.7,0.2,0.7),2,2)
+#B <- matrix(c(0.8,0.2,0.4,0.6),K,K,byrow = TRUE)
+B_pois <- matrix(0,K,K)
+
+
+Pi <- matrix(c(0.6,0.4),1,K)
+Z <- c(rep(0,m*Pi[1]),rep(1,m*Pi[2]))
+window <- 0.25
+
+A <- list()
+for(i in 1:m){
+  edge <- sample(m, 25) - 1
+  edge <- sort(edge)
+  A[[i]] <- edge
+}
+
+
+
+system.time(alltimes <- sampleBlockHak_nonhomo(T, A, Z, MuA, B_pois, window, lam = 1))
+
+# fit to training set
+colnames(alltimes) = c("Send","Rec","Time")
+alltimes = as_tibble(alltimes)
+
+times_train = alltimes %>% top_frac(-.85)
+# this gives a training time cutoff of 1934 for the big dataset
+# total time is 2350
+times_test = alltimes %>% top_frac(.15)
+
+test_set = times_test %>% group_by(Send,Rec) %>% tally()
+
+train_time = max(times_train$Time)
+test_time = T
+
+MuA_start = array(0,c(K,K,H))
+tau_start = matrix(0,m,K)
+non_hom_pois_est <- nonhomoPois_estimator(as.matrix(times_train),A,m,K,H,window,
+                                          T = train_time,dT,gravity = 0.001,MuA_start,tau_start)
+
+### Predictions
+baseline = apply(non_hom_pois_est$MuA,c(1,2),mean)
+
+est_Z = apply(non_hom_pois_est$tau,1,which.max)
+
+groups = tibble(Send = c(1:m)-1,Z = est_Z)
+
+pred_test_set =  test_set %>% left_join(groups, by = "Send")
+
+groups = tibble(Rec = c(1:m)-1,Z = est_Z)
+pred_test_set = pred_test_set %>% left_join(groups,by = "Rec")
+
+
+
+mu = rep(0,dim(pred_test_set)[1])
+for(i in 1:length(mu)){
+  mu[i] = baseline[pred_test_set$Z.x[i],pred_test_set$Z.y[i]]
+}
+
+pred_test_set$Mean = mu
+
+pred_test_set %>% 
+  mutate(mean_events = Mean*(test_time-train_time)) %>%
+  mutate(diff_mean = n -mean_events) %>%
+  mutate(diff_zero = n - 0) %>%
+  ungroup() %>%
+  summarise(RMSE = sqrt(mean(diff_mean^2)),
+            RMSE_0 = sqrt(mean(diff_zero^2)))
+
+## Predictions from batch version #
+itermax <- T / dT
+stop_eps <- 0.001
+non_homo_pois_batch <- batch_nonhomoPois_estimator(as.matrix(times_train),A,m,
+                                                   K,H,window,
+                                                   T = train_time,dT,gravity = 0.001,
+                                                   MuA_start,tau_start,
+                                                   itermax,stop_eps)
+
+## corresponding link prediction also
+baseline = apply(non_homo_pois_batch$MuA,c(1,2),mean)
+
+est_Z = apply(non_homo_pois_batch$tau,1,which.max)
+
+groups = tibble(Send = c(1:m)-1,Z = est_Z)
+
+pred_test_set =  test_set %>% left_join(groups, by = "Send")
+
+groups = tibble(Rec = c(1:m)-1,Z = est_Z)
+pred_test_set = pred_test_set %>% left_join(groups,by = "Rec")
+
+
+
+mu = rep(0,dim(pred_test_set)[1])
+for(i in 1:length(mu)){
+  mu[i] = baseline[pred_test_set$Z.x[i],pred_test_set$Z.y[i]]
+}
+
+pred_test_set$Mean = mu
+
+pred_test_set %>% 
+  mutate(mean_events = Mean*(test_time-train_time)) %>%
+  mutate(diff_mean = n -mean_events) %>%
+  mutate(diff_zero = n - 0) %>%
+  ungroup() %>%
+  summarise(RMSE = sqrt(mean(diff_mean^2)),
+            RMSE_0 = sqrt(mean(diff_zero^2)))
+
+
+#### Homogeneous Hawkes Model ####
+## Simulate Data ###
+T <- 1000
+dT <- 2.5
+m <- 500
+K <- 3
+Mu <- matrix(c(0.6,0.2,0.3,0.1,1.0,0.4,0.5,0.2,0.75),K,K,byrow = TRUE)
+B <- matrix(c(0.5,0.1,0.3,0.4,0.4,0.4,0.2,0.6,0.2),K,K,byrow = TRUE)
+Pi <- matrix(c(0.4,0.3,0.3),1,3)
+Z <- c(rep(0,m*Pi[1]),rep(1,m*Pi[2]),rep(2,m*Pi[3]))
+
+A <- list()
+for(i in 1:m){
+  edge <- sample(m, 25) - 1
+  edge <- sort(edge)
+  A[[i]] <- edge
+}
+
+
+system.time(alltimes <- sampleBlockHak(T, A, Z, Mu, B, lam = 1))
+
+## break into training and test
+
+# fit to training set
+colnames(alltimes) = c("Send","Rec","Time")
+alltimes = as_tibble(alltimes)
+
+times_train = alltimes %>% top_frac(-.85)
+# this gives a training time cutoff of 1934 for the big dataset
+# total time is 2350
+times_test = alltimes %>% top_frac(.15)
+
+test_set = times_test %>% group_by(Send,Rec) %>% tally()
+
+train_time = max(times_train$Time)
+test_time = T
+
+# fit on training data
+K = 3
+Pi = rep(1/K,K)
+B = matrix(runif(K*K),K,K)
+Mu = matrix(runif(K*K),K,K)
+#diag(B) = rnorm(3,mean = 1, sd = 0.1)
+tau = matrix(runif(m*K),nrow=m,ncol=K)
+tau = tau/rowSums(tau)
+S = matrix(0,nrow = m,ncol = K)
+
+
+results_hawkes_sim <- online_estimator_eff(as.matrix(times_train), 
+                                           A, m, K, T = train_time, dT, lam = 1, B, Mu, tau)
+
+est_Z = apply(results_hawkes_sim$tau,1,which.max)
+
+
+
+# mean number of events
+# this is very slow for the large network. will try make it faster
+est = Predict_Counts_Hawkes(startT = train_time,finalT = test_time,A,est_Z-1,
+                            results_hawkes_sim$Mu,results_hawkes_sim$B,m,
+                            results_hawkes_sim$lam)
+
+est = est[-1,]
+colnames(est)= c("Send","Rec","Time")
+est = as_tibble(est)
+
+test_set %>% left_join(est,by = c("Send","Rec")) %>%
+  rename(Pred_Mean = Time,
+         num_test = n) %>%
+  mutate(Pred_Mean = replace_na(Pred_Mean,0)) %>%
+  mutate(diff_mean = Pred_Mean-num_test,
+         diff_zer = 0 - num_test) %>%
+  ungroup() %>%
+  summarise(RMSE = sqrt(mean(diff_mean^2)),
+            RMSE_0 = sqrt(mean(diff_zer^2)))
+
+### batch estimates also ###
+itermax <- T / dT
+stop_eps <- 0.001
+system.time(results.batch <- batch_estimator(as.matrix(times_train), A, m, K, T, dT, 
+                                             lam = 1.0, B, Mu, tau, itermax, stop_eps))
+est_Z <- apply(results.batch$tau, 1, which.max)
+est = Predict_Counts_Hawkes(startT = train_time,finalT = test_time,A,est_Z-1,
+                            results.batch$Mu,results.batch$B,m,
+                            results.batch$lam)
+
+est = est[-1,]
+colnames(est)= c("Send","Rec","Time")
+est = as_tibble(est)
+
+test_set %>% left_join(est,by = c("Send","Rec")) %>%
+  rename(Pred_Mean = Time,
+         num_test = n) %>%
+  mutate(Pred_Mean = replace_na(Pred_Mean,0)) %>%
+  mutate(diff_mean = Pred_Mean-num_test,
+         diff_zer = 0 - num_test) %>%
+  ungroup() %>%
+  summarise(RMSE = sqrt(mean(diff_mean^2)),
+            RMSE_0 = sqrt(mean(diff_zer^2)))
+
+
+
+## Inhomogeneous Hawkes, H = 2 ####
+T <- 500
+dT <- 1.25
+m <- 500
+K <- 2
+H <- 2
+MuA <- array(0,c(K,K,H))
+MuA[,,1] <- matrix(c(0.8,0.2,0.6,0.4),2,2)
+MuA[,,2] <- matrix(c(0.4,0.7,0.2,0.7),2,2)
+B <- matrix(c(0.8,0.2,0.4,0.6),K,K,byrow = TRUE)
+Pi <- matrix(c(0.6,0.4),1,K)
+Z <- c(rep(0,m*Pi[1]),rep(1,m*Pi[2]))
+window <- 0.25
+
+A <- list()
+for(i in 1:m){
+  edge <- sample(m, 25) - 1
+  edge <- sort(edge)
+  A[[i]] <- edge
+}
+
+
+
+system.time(alltimes <- sampleBlockHak_nonhomo(T, A, Z, MuA, B, window, lam = 1))
+
+# split into training and test times
+
+# fit to training set
+colnames(alltimes) = c("Send","Rec","Time")
+alltimes = as_tibble(alltimes)
+
+times_train = alltimes %>% top_frac(-.85)
+# this gives a training time cutoff of 1934 for the big dataset
+# total time is 2350
+times_test = alltimes %>% top_frac(.15)
+
+test_set = times_test %>% group_by(Send,Rec) %>% tally()
+
+train_time = max(times_train$Time)
+test_time = T
+
+
+tau <- matrix(0,m,K)
+for (k in 1:K){
+  tau[which(Z == (k-1)),k] <- 1
+}
+
+
+system.time(results.eff <- nonhomoHak_estimator_eff(as.matrix(times_train),A,m,K,H,
+                                                    window,train_time,dT,lam = 0.1, gravity = 0.0, B,MuA,tau))
+
+# then do link prediction for this
+
+est_Z = apply(results.eff$tau,1,which.max)
+
+baseline = baseline = apply(results.eff$MuA,c(1,2),mean)
+
+
+# mean number of events
+# this is very slow for the large network. will try make it faster
+est = Predict_Counts_Hawkes(startT = train_time,finalT = test_time,A,est_Z-1,
+                            baseline,results.eff$B,m,
+                            results.eff$lam)
+
+est = est[-1,]
+colnames(est)= c("Send","Rec","Time")
+est = as_tibble(est)
+
+test_set %>% left_join(est,by = c("Send","Rec")) %>%
+  rename(Pred_Mean = Time,
+         num_test = n) %>%
+  mutate(Pred_Mean = replace_na(Pred_Mean,0)) %>%
+  mutate(diff_mean = Pred_Mean-num_test,
+         diff_zer = 0 - num_test) %>%
+  ungroup() %>%
+  summarise(RMSE = sqrt(mean(diff_mean^2)),
+            RMSE_0 = sqrt(mean(diff_zer^2)))
+
+## then results for batch model
+itermax <- T / dT
+stop_eps <- 0.001
+system.time(results.batch <- batch_nonhomoHak_estimator(as.matrix(times_train),A,m,K,H,
+                                                        window,T,dT,lam = 0.1, gravity = 0.0,
+                                                        B,MuA,tau,itermax, stop_eps))
+
+est_Z = apply(results.batch$tau,1,which.max)
+
+baseline = baseline = apply(results.batch$MuA,c(1,2),mean)
+
+
+# mean number of events
+# this is very slow for the large network. will try make it faster
+est = Predict_Counts_Hawkes(startT = train_time,finalT = test_time,A,est_Z-1,
+                            baseline,results.batch$B,m,
+                            results.batch$lam)
+
+est = est[-1,]
+colnames(est)= c("Send","Rec","Time")
+est = as_tibble(est)
+
+test_set %>% left_join(est,by = c("Send","Rec")) %>%
+  rename(Pred_Mean = Time,
+         num_test = n) %>%
+  mutate(Pred_Mean = replace_na(Pred_Mean,0)) %>%
+  mutate(diff_mean = Pred_Mean-num_test,
+         diff_zer = 0 - num_test) %>%
+  ungroup() %>%
+  summarise(RMSE = sqrt(mean(diff_mean^2)),
+            RMSE_0 = sqrt(mean(diff_zer^2)))
+
+
+
+### Inhomogeneous Hawkes, H = 7 ####
+T <- 500
+dT <- 1.25
+m <- 500
+K <- 2
+H <- 7
+MuA <- array(0,c(K,K,H))
+MuA[,,1] <- matrix(c(0.8,0.2,0.6,0.4),2,2)
+MuA[,,2] <- matrix(c(0.4,0.7,0.2,0.7),2,2)
+B <- matrix(c(0.8,0.2,0.4,0.6),K,K,byrow = TRUE)
+Pi <- matrix(c(0.6,0.4),1,K)
+Z <- c(rep(0,m*Pi[1]),rep(1,m*Pi[2]))
+window <- 0.25
+
+A <- list()
+for(i in 1:m){
+  edge <- sample(m, 25) - 1
+  edge <- sort(edge)
+  A[[i]] <- edge
+}
+
+
+
+system.time(alltimes <- sampleBlockHak_nonhomo(T, A, Z, MuA, B, window, lam = 1))
+
+# split into training and test times
+
+# fit to training set
+colnames(alltimes) = c("Send","Rec","Time")
+alltimes = as_tibble(alltimes)
+
+times_train = alltimes %>% top_frac(-.85)
+# this gives a training time cutoff of 1934 for the big dataset
+# total time is 2350
+times_test = alltimes %>% top_frac(.15)
+
+test_set = times_test %>% group_by(Send,Rec) %>% tally()
+
+train_time = max(times_train$Time)
+test_time = T
+
+
+tau <- matrix(0,m,K)
+for (k in 1:K){
+  tau[which(Z == (k-1)),k] <- 1
+}
+
+# is this the correct sparse one to use here?
+results.sparse <- nonhomoHak_estimator_eff(as.matrix(times_train),A,m,K,
+                                           H,window,train_time,
+                                           dT,lam = 0.1, gravity = 0.0,
+                                           B,MuA,tau)
+
+## then predictions for this
+est_Z = apply(results.sparse$tau,1,which.max)
+
+baseline = baseline = apply(results.sparse$MuA,c(1,2),mean)
+
+
+# mean number of events
+# this is very slow for the large network. will try make it faster
+est = Predict_Counts_Hawkes(startT = train_time,finalT = test_time,A,est_Z-1,
+                            baseline,results.sparse$B,m,
+                            results.sparse$lam)
+
+est = est[-1,]
+colnames(est)= c("Send","Rec","Time")
+est = as_tibble(est)
+
+test_set %>% left_join(est,by = c("Send","Rec")) %>%
+  rename(Pred_Mean = Time,
+         num_test = n) %>%
+  mutate(Pred_Mean = replace_na(Pred_Mean,0)) %>%
+  mutate(diff_mean = Pred_Mean-num_test,
+         diff_zer = 0 - num_test) %>%
+  ungroup() %>%
+  summarise(RMSE = sqrt(mean(diff_mean^2)),
+            RMSE_0 = sqrt(mean(diff_zer^2)))
+
+# then batch estimator also
+itermax <- T / dT
+stop_eps <- 0.001
+system.time(results.batch <- batch_nonhomoHak_estimator(as.matrix(times_train),A,m,K,H,
+                                                        window,T,dT,lam = 0.1, gravity = 0.0,
+                                                        B,MuA,tau,itermax, stop_eps))
+
+est_Z = apply(results.batch$tau,1,which.max)
+
+baseline = baseline = apply(results.batch$MuA,c(1,2),mean)
+
+
+# mean number of events
+# this is very slow for the large network. will try make it faster
+est = Predict_Counts_Hawkes(startT = train_time,finalT = test_time,A,est_Z-1,
+                            baseline,results.batch$B,m,
+                            results.batch$lam)
+
+est = est[-1,]
+colnames(est)= c("Send","Rec","Time")
+est = as_tibble(est)
+
+test_set %>% left_join(est,by = c("Send","Rec")) %>%
+  rename(Pred_Mean = Time,
+         num_test = n) %>%
+  mutate(Pred_Mean = replace_na(Pred_Mean,0)) %>%
+  mutate(diff_mean = Pred_Mean-num_test,
+         diff_zer = 0 - num_test) %>%
+  ungroup() %>%
+  summarise(RMSE = sqrt(mean(diff_mean^2)),
+            RMSE_0 = sqrt(mean(diff_zer^2)))
+
+
+####
+#####
+#### Old Code ####
+#source("comparison_fcns.R")
 #
 #### Simulate data from our Model, fit with all methods ####
 T = 50

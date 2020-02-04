@@ -1,0 +1,418 @@
+---
+title: "Online Point Process Simulations"
+output:
+  html_notebook: default
+  pdf_document: default
+---
+
+```{r, echo=FALSE, message=FALSE}
+source("comparison_fcns.R")
+#sourceCpp("onlineblock.cpp")
+set.seed(200)
+```
+
+
+# Homogeneous Poisson 
+
+## Parameter Recovery from data simulated from the model
+
+We first simulate some data from our proposed model with a homogeneous Poisson process describing interactions.
+
+```{r "Simulate Data"}
+Time = 500
+dT = 0.1
+K <- 3
+Mu <- matrix(c(0.6,0.2,0.3,0.1,1.0,0.4,0.5,0.4,0.8),K,K,byrow = TRUE)
+B_Pois <- matrix(0,K,K,byrow = TRUE)
+m <- 100
+Pi <- matrix(c(0.4,0.3,0.3),1,3)
+Z <- c(rep(0,m*Pi[1]),rep(1,m*Pi[2]),rep(2,m*Pi[3]))
+
+A <- list()
+for(i in 1:m){
+  # could sample these here with SBM structure...
+  node_list <- c(1:m)
+  edge <- sample(node_list[-i], 40) - 1
+  edge <- sort(edge)
+  A[[i]] <- edge
+}
+
+system.time(alltimes <- sampleBlockHak(Time, A, Z, Mu, B_Pois, lam = 1))
+
+
+```
+
+
+We then aim to recover these parameters using our proposed model.
+
+```{r "Param Recovery",echo=TRUE, results='hide'}
+Pi = rep(1/K,K)
+B = matrix(runif(K*K),K,K)
+diag(B) = rnorm(K,mean = 1, sd = 0.1)
+tau = matrix(runif(m*K),nrow=m,ncol=K)
+tau = tau/rowSums(tau)
+S = matrix(0,nrow = m,ncol = K)
+
+dT <- 10
+inter_T <- 5
+
+results_online <- estimate_Poisson(full_data = alltimes,
+                                   A,m,K,Time,dT,B,
+                                   tau,Pi,S,inter_T,is_elbo = TRUE)
+
+# results_pois_train <- batch_estimator_hom_Poisson(alltimes,A,m,K,T=Time,B,tau,
+#                               itermax = 100,stop_eps = 0.01)
+
+```
+
+Up to label switching, our model successfully recovers the true parameters and latent groups. This is of course somewhat dependent on the random initialization.
+```{r}
+results_online$B
+Mu
+
+```
+
+We can also examine how our model approaches this solution, by examining the average ELBO per event. We see that it correctly learns the group labels present in the data also.
+```{r,message=FALSE}
+library(ggplot2)
+iter = seq(dT,Time,dT)
+av_elbo = results_online$AveELBO
+ll = results_online$logL
+elbo = as_tibble(cbind(iter,elbo = as.vector(av_elbo),ll= as.vector(ll)))
+ggplot(data = elbo, aes(iter,av_elbo)) + geom_line() + 
+  xlab("Number Observation Windows") + ylab("Average ELBO")
+
+ggplot(data = elbo, aes(iter,ll)) + geom_line()+ylab("Average Log likelihood") + xlab("Number observation windows")
+
+```
+
+We see that this model has effectively converged after analysing only 20% percent of the data. This indicates that perhaps not all data is needed to correctly recover the model parameters when data is observed in a streaming setting like this.
+
+```{r}
+est_Z = apply(results_online$tau,1,which.max)
+mclust::adjustedRandIndex(Z,est_Z)
+aricode::NMI(Z,est_Z)
+
+```
+We can also examine how quickly our method recovers the true clusters. After observing only a smalle fraction of the data it can correctly identify the true groups.
+
+```{r}
+# this plot was working better before but not now...
+# need to adjust this based on T and dT 
+
+time_points = dim(results_online$early_tau)[3]-1
+early_nmi = rep(0,time_points)
+for(i in 1:time_points){
+  est_Z = apply(results_online$early_tau[,,i],1,which.max)
+  early_nmi[i]= aricode::NMI(Z,est_Z)
+}
+
+online_nmi = cbind(iters = seq(from = dT*inter_T,by = dT*inter_T,length.out = time_points),early_nmi)
+
+as_tibble(online_nmi) %>% ggplot(aes(iters,early_nmi)) + geom_line() +
+  ylab("Online NMI")
+
+```
+### Parameter Recovery of Process parameters
+
+To evaluate the recovery of these parameters, we conside a metric to do this.
+
+
+```{r}
+library(latex2exp)
+
+inter_B = results_online$inter_B
+norm_B = apply(inter_B,c(3),sum)
+
+## need to adjust this also for sampling size
+b_recov = cbind(iters = seq(dT,500,dT),diff = abs(sum(Mu)-norm_B)/K^2)
+as_tibble(b_recov) %>% 
+  ggplot(aes(iters,diff)) + geom_line() + xlab("Time Windows") +
+  ylab("Difference in Rate Parameters")
+
+
+```
+
+## Repeat above as a function of number of nodes
+
+```{r}
+m_vec <- c(50,100,150,200,250,300,350,400,450,500)
+norm_vec <- c(rep(0,length(m_vec)))
+
+
+for(m_iter in c(1:length(m_vec))){
+  Time = 50
+  dT = 0.1
+  K <- 3
+  Mu <- matrix(c(0.6,0.2,0.3,0.1,1.0,0.4,0.5,0.4,0.8),K,K,byrow = TRUE)
+  B_Pois <- matrix(0,K,K,byrow = TRUE)
+  m <- m_vec[m_iter]
+  Pi <- matrix(c(0.4,0.3,0.3),1,3)
+  Z <- c(rep(0,m*Pi[1]),rep(1,m*Pi[2]),rep(2,m*Pi[3]))
+  
+  A <- list()
+  for(i in 1:m){
+    # could sample these here with SBM structure...
+    edge <- sample(m, 40) - 1
+    edge <- sort(edge)
+    A[[i]] <- edge
+  }
+  
+  system.time(alltimes <- sampleBlockHak(Time, A, Z, Mu, B_Pois, lam = 1))
+  
+  
+  Pi = rep(1/K,K)
+  B = matrix(runif(K*K),K,K)
+  diag(B) = rnorm(3,mean = 1, sd = 0.1)
+  tau = matrix(runif(m*K),nrow=m,ncol=K)
+  tau = tau/rowSums(tau)
+  S = matrix(0,nrow = m,ncol = K)
+  
+  
+  results_online <- estimate_Poisson(full_data = alltimes,tau,B,Pi,S,A,m,K,dT=0.1,Time)
+  
+  norm_vec[m_iter] <- abs(sum(Mu)-sum(results_online$B)  )
+}
+
+
+m_rate = cbind(m_vals = m_vec,diff = norm_vec)
+
+as_tibble(m_rate) %>% ggplot(aes(m_vals,diff)) + geom_line()
+# probably need to run multiple sims at each m
+
+```
+
+
+
+## Comparison to existing methods
+
+We can also fit the model in `ppsbm` to this data.
+
+```{r}
+
+n_events = dim(alltimes)[1]
+ids = rep(0,n_events)
+times = rep(0,n_events)
+m = 100
+
+A_matrix = matrix(0,nrow = m,ncol = m)
+A_mat_bin = matrix(0,nrow = m,ncol = m)
+
+for(i in 1:n_events){
+  j = alltimes[i,1]+1
+  k = alltimes[i,2]+1
+  ids[i] = convertNodePair(j,k,m,TRUE)
+  times[i] = alltimes[3]
+  A_matrix[j,k] = A_matrix[j,k] + 1
+  A_mat_bin[j,k] = 1
+}
+
+sim_data = list(time.seq = times, type.seq = ids, Time = Time)
+Dmax = 2^3
+Nijk = statistics(sim_data,Dmax,n=m,directed = T)
+results_ppsbm = ppsbm::mainVEM(list(Nijk=Nijk,Time = 50), n = m, Qmin = 3, Qmax = 3, 
+                               method = 'hist',directed = T,d_part = 1, n_perturb = 1)
+
+#results[[2]]$tau
+est_Z_ppsbm = apply(results_ppsbm[[1]]$tau, 2, which.max)
+#est_Z_ppsbm
+adjustedRandIndex(Z,est_Z_ppsbm)
+
+```
+
+This model appears to largely identify the true clusters present in the data.
+
+### Data Simulated from Other Models
+
+We can also compare our results to simulated data included in the `ppsbm` package. This allows data to be simulated for a given parametric form of the intensity function. We
+consider the following simulation.
+```{r}
+prop.groups <- c(0.5,0.5)
+
+# 3 different intensity functions :
+intens <- list(NULL)
+intens[[1]] <- list(intens= function(x) 100*x*exp(-8*x),max=5)
+# (q,l) = (1,1)
+intens[[2]] <- list(intens= function(x) exp(3*x)*(sin(6*pi*x-pi/2)+1)/2,max=13)
+# (q,l) = (1,2)
+intens[[3]] <- list(intens= function(x) 8.1*(exp(-6*abs(x-1/2))-.049),max=8)
+# (q,l) = (2,2)
+intens[[4]] <- list(intens= function(x) 1.1*(exp(-2*abs(x-1/2))-.1),max=3)
+
+obs <- generateDynppsbm(intens,Time=1,n=50,prop.groups,directed=T)
+
+
+
+```
+
+
+We can readily fit both the Poisson and Hawkes online updates to this data.
+
+```{r, echo=FALSE, results='hide'}
+n = 50
+index = listNodePairs(n,directed = T)
+#Id = convertNodePair(index[,1],index[,2],n,directed = T)
+# so these correspond exactly in some sense
+
+n_events = length(obs$data$time.seq)
+
+#generated_Q3_n20$data$type.seq
+
+alltimes_ppsbm = matrix(0,nrow = n_events,ncol = 3)
+for(i in 1:n_events){
+  ind = obs$data$type.seq[i]
+  alltimes_ppsbm[i,1] = index[ind,1]-1
+  alltimes_ppsbm[i,2] = index[ind,2]-1
+  alltimes_ppsbm[i,3] = obs$data$time.seq[i]
+}
+
+#alltimes_ppsbm # can then use this
+# need to construct the corresponding A also
+A_ppsbm = matrix(0,nrow = n,ncol = n)
+
+#A_ppsbm = list()
+for(i in 1:n_events){
+  j = alltimes_ppsbm[i,1] # sender id
+  k = alltimes_ppsbm[i,2] # rec id
+  A_ppsbm[j,k] = A_ppsbm[j,k] + 1
+
+}
+
+A_pp = list()
+for(i in 1:n){
+  temp = which(A_ppsbm[i,] > 0)-1
+  A_pp[[i]] = c(i-1,temp)
+}
+
+
+#####
+K = 2
+m = 50
+Time = 1
+dT = 0.01
+Pi = rep(1/K,K)
+B = matrix(runif(K*K),K,K)
+diag(B) = rnorm(2,mean = 1, sd = 0.1)
+tau = matrix(runif(m*K),nrow=m,ncol=K)
+tau = tau/rowSums(tau)
+S = matrix(0,nrow = m,ncol = K)
+
+Mu = matrix(runif(K*K),K,K)
+
+
+results_online <- estimate_Poisson(full_data = alltimes_ppsbm,tau,B,Pi,S,A_pp,m,K,dT,Time)
+results_hawkes <- online_estimator(alltimes_ppsbm, A_pp, m, K, Time, dT, lam = 1, B, Mu, tau)
+
+```
+
+
+We can see that the Hawkes model is able to recover the clusters with this intensity function while the Poisson is not. 
+
+
+```{r}
+true_Z = apply(obs$z,2,which.max)
+
+est_Z_online_Poisson = apply(results_online$tau,1,which.max)
+adjustedRandIndex(est_Z_online_Poisson,true_Z)
+
+
+est_Z_online_H = apply(results_hawkes$tau,1,which.max)
+adjustedRandIndex(est_Z_online_H,true_Z)
+
+
+results = mainVEM(data = obs$data, n = 50, Qmin = 2, Qmax = 2, method = 'kernel',
+                  directed = T,
+                  d_part = 1, n_perturb = 1)
+est_Z = apply(results[[1]]$tau, 2, which.max)
+
+
+adjustedRandIndex(true_Z,est_Z)
+
+
+```
+
+# Hawkes Process 
+
+We also consider a model where the intensity pair is assumed to be a Hawkes process with exponential kernel.
+
+## Parameter Recovery
+
+We first simulate data from a Hawkes process with an exponential kernel and demonstrate parameter recovery in our model in this setting.
+
+
+```{r}
+Time = 50
+dT = 0.1
+K <- 3
+Mu_H <- matrix(c(0.6,0.2,0.3,0.1,1.0,0.4,0.5,0.4,0.8),K,K,byrow = TRUE)
+B_H <- matrix(c(0.8,0.2,0.1,0.15,0.75,0.25,0.1,0.25,0.9),K,K,byrow = TRUE)
+m <- 50
+Pi <- matrix(c(0.4,0.3,0.3),1,3)
+Z <- c(rep(0,m*Pi[1]),rep(1,m*Pi[2]),rep(2,m*Pi[3]))
+
+A <- list()
+for(i in 1:m){
+  # could sample these here with SBM structure...
+  edge <- sample(m, 15) - 1
+  edge <- sort(edge)
+  A[[i]] <- edge
+}
+
+system.time(alltimes_hawkes <- sampleBlockHak(Time, A, Z, Mu_H, B_H, lam = 1))
+
+
+
+```
+
+Recovery in this setting is possible, but unsurprisingly more difficult.
+
+```{r, results='hide'}
+
+
+Pi = rep(1/K,K)
+Mu = matrix(runif(K*K),K,K)
+B = matrix(runif(K*K),K,K)
+diag(B) = rnorm(3,mean = 1, sd = 0.1)
+tau = matrix(runif(m*K),nrow=m,ncol=K)
+tau = tau/rowSums(tau)
+S = matrix(0,nrow = m,ncol = K)
+
+
+results_hawkes_sim <- online_estimator(alltimes_hawkes, A, m, K, Time, dT=0.2, lam = 1, B, Mu, tau,is_elbo = T)
+
+```
+
+```{r}
+results_hawkes_sim$Mu
+Mu_H
+
+results_hawkes_sim$B
+B_H
+
+adjustedRandIndex(Z,apply(results_hawkes_sim$tau,1,which.max))
+
+```
+
+We can also inspect the ELBO for this model
+
+```{r}
+plot(results_hawkes_sim$elbo,type='l')
+
+```
+
+This model seems to not as clearly identify the correct parameters or the latent groups, likely due to the initialisation.
+
+
+# Fit Hawkes model to Poisson Generated Data
+
+```{r}
+
+
+
+```
+
+
+# Link Prediction
+
+We wish to evaluate our model in terms of link prediction on some held out time
+period. To do this, we can fit our model
