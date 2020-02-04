@@ -117,7 +117,7 @@ arma::mat updateB(arma::mat data, arma::mat tau, arma::mat B, int K,
   }
   gradB = X1/B - X2;
   //cout << gradB << endl;
-  B_new = B + eta*gradB/nrow;
+  B_new = B + eta/nrow*gradB;
   // create matrix of 0.001 then take max element wise
   // prevent large updates
   // for (int k = 0; k < K; k++) {
@@ -197,7 +197,7 @@ double computeELBO(
 double computeLL(arma::mat data, arma::mat tau,
                  arma::mat B, arma::rowvec Pi, Rcpp::List A,
                  int m, int K, double currT){
-  // compute the negative log likelihood given current estimates
+  // compute the log likelihood given current estimates
   double LL = 0;
   arma:: vec curr_group;
   curr_group.zeros(m);
@@ -233,17 +233,24 @@ double computeLL(arma::mat data, arma::mat tau,
 }
 
 
-
-
 // [[Rcpp::export]]
 Rcpp::List estimate_Poisson(
-    arma::mat full_data, arma::mat tau, 
-    arma::mat B, arma::rowvec Pi,
-    arma::mat S, Rcpp::List A, //arma::mat A,
-    int m, int K, double dT, double T){
+    arma::mat full_data, 
+    Rcpp::List A, //arma::mat A,
+    int m,
+    int K,
+    double T,
+    double dT,
+    arma::mat B,
+    arma::mat tau, 
+    arma::rowvec Pi,
+    arma::mat S,
+    int inter_T,
+    bool is_elbo = false
+  ){
   // iterate this over the time windows...
   int N = int(T/dT);
-  int slices = int(N/50);
+  int slices = int(N/inter_T);
   double eta;
   int start_pos = 0;
   int curr_pos = 0;
@@ -251,6 +258,7 @@ Rcpp::List estimate_Poisson(
   int ind = 0;
   int nall = full_data.n_rows;
   arma::cube inter_tau(m,K,slices+1);
+  arma::cube inter_B(K,K,N);
   arma::vec curr_elbo, ave_elbo, ave_ll, curr_ll;
   curr_elbo.zeros(N);
   curr_ll.zeros(N);
@@ -278,27 +286,33 @@ Rcpp::List estimate_Poisson(
     elbo_dat = full_data.rows(0,end_pos); 
     //cout<<size(sub_data)<<endl;
     start_pos = curr_pos;
-    eta = 1/sqrt(1+n);
+    eta = 1/sqrt(1+n)/sub_data.n_rows*(K*K);
     S = updateS(sub_data,tau,B,A,S,K,m,dT);
     //cout<<"S works"<<endl;
     tau = updateTau(S,Pi,m,K); 
     //cout<<"update tau"<<endl;
     B = updateB(sub_data,tau,B,K,A,m,dT,eta);
+    inter_B.slice(n) = B;
     //cout<<"update B"<<endl;
     Pi = updatePi(tau,K);
-    curr_elbo(n) = computeELBO(elbo_dat,tau,B,Pi,A,m,K,dT);
-    curr_ll(n) = computeLL(elbo_dat,tau,B,Pi,A,m,K,t_curr);
-    ave_ll(n) = curr_ll(n)/cum_events;
-    ave_elbo(n) = curr_elbo(n)/cum_events;
+    if (is_elbo) {
+      curr_elbo(n) = computeELBO(elbo_dat,tau,B,Pi,A,m,K,dT);
+      ave_elbo(n) = curr_elbo(n)/cum_events;
+      curr_ll(n) = computeLL(elbo_dat,tau,B,Pi,A,m,K,t_curr);
+      ave_ll(n) = curr_ll(n)/cum_events;
+    }
+    
     //cout<<B<<endl;
     //printf("iter: %d; \n", n); 
     //B.print();
     //Pi.print();
     //S.print();
     //printf("=============\n");
-    if(n % 50 == 0){
+    if(n % inter_T == 0 ){
       inter_tau.slice(ind) = tau;
       ind = ind + 1;
+      printf("iter: %d; \n", n);
+      printf("=============\n");
     }
     
   }
@@ -306,6 +320,7 @@ Rcpp::List estimate_Poisson(
   return Rcpp::List::create(Named("S")= S,
                             Named("tau")=tau,
                             Named("early_tau")= inter_tau,
+                            Named("inter_B") = inter_B,
                             Named("B")=B,
                             Named("Pi")=Pi,
                             Named("AveELBO")=ave_elbo,
@@ -314,9 +329,92 @@ Rcpp::List estimate_Poisson(
 
 
 
-// You can include R code blocks in C++ files processed with sourceCpp
-// (useful for testing and development). The R code will be automatically 
-// run after the compilation.
-//
+
+// batch optimization
+// [[Rcpp::export]]
+Rcpp::List batch_estimator_hom_Poisson(
+    arma::mat alltimes,
+    Rcpp::List A,
+    int m,
+    int K,
+    double T,
+    arma::mat B_start,
+    arma::mat tau_start,
+    int itermax,
+    double stop_eps
+){
+  // initialization
+  arma::rowvec Pi(K);
+  Pi.fill(1.0 / K);
+  arma::mat B(K,K), S(m,K);
+  arma::mat tau(m,K);
+  for (int k = 0; k < K; k++) {
+    for (int l=0; l < K; l++) {
+      B(k,l) = myrunif();
+    }
+  }
+  //B.fill(0.5), Mu.fill(0.5); 
+  
+  //B = B_start, Mu = Mu_start;
+  for (int i = 0; i < m; i++) {
+    arma::rowvec tt(K);
+    for (int k = 0; k < K; k++) {
+      tt(k) = myrunif();
+    }
+    tt = tt / sum(tt);
+    tau.row(i) = tt;
+  }
+  
+  int nall = alltimes.n_rows;
+  double gap = 2147483647;
+  double eta = 1.0/nall * (K * K);
+  
+  arma::vec curr_elbo;
+  curr_elbo.zeros(itermax);
+  double elbo_gap = 2147483647;
+  
+  
+  for (int iter = 0; iter < itermax; iter++) {
+    eta = 1.0/ (K * K) /(iter + 1.0);
+    //eta = 0.001;
+    //printf("eta: %f",eta);
+    
+    // then do all the updates in here....
+    // what happens to dT?
+    S.fill(0.0);
+    arma::mat S_new = updateS(alltimes,tau,B,A,S,K,m,T);
+    //cout<<"S works"<<endl;
+    arma::mat tau_new = updateTau(S_new,Pi,m,K); 
+    //cout<<"update tau"<<endl;
+    arma::mat B_new = updateB(alltimes,tau_new,B,K,A,m,T,eta);
+    //cout<<"update B"<<endl;
+    arma::rowvec Pi_new = updatePi(tau_new,K);
+    curr_elbo(iter) = computeELBO(alltimes,tau_new,B_new,Pi_new,A,m,K,T);
+    //curr_ll(n) = computeLL(alltimes,tau,B,Pi,A,m,K,t_curr);
+    // need to check this
+    // then compare gap...
+    gap = abs(B - B_new).max();
+    if(iter > 0){
+      elbo_gap = abs(curr_elbo(iter) - curr_elbo(iter-1));
+    }
+    
+    // then convert them
+    tau = tau_new, B = B_new, Pi = Pi_new, S = S_new;
+    printf("gap: %2.3f", gap);
+    printf("=============\n");
+    B.print();
+    if (gap < stop_eps){
+      break;
+    }
+  }
+  
+  return Rcpp::List::create(Named("S")= S,
+                            Named("tau")=tau,
+                            //Named("early_tau")= inter_tau,
+                            //Named("inter_B") = inter_B,
+                            Named("B")=B,
+                            Named("Pi")=Pi,
+                            Named("ELBO")=curr_elbo);
+}
 
 
