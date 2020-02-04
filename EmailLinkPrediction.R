@@ -66,10 +66,10 @@ S = matrix(0,nrow = m,ncol = K)
 
 
 # Homogeneous Poisson ####
-train_time = 400
-test_time = 500
+train_time = 471
+test_time = 804
 results_train <- estimate_Poisson(full_data = as.matrix(emails_train),tau,
-                                  B,Pi,S,A_test,m,K,dT=1.5,T=train_time)
+                                  B,Pi,S,A_test,m,K,dT=0.5,T=train_time)
 
 # then predict links
 est_Z = apply(results_train$tau,1,which.max)
