@@ -24,6 +24,8 @@ system.time(alltimes <- sampleCCRMHak(T,A,W1,W2,b,lam = 1))
 
 dT <- 1.0
 system.time(results.ccrm <- ccrm_estimator(alltimes,A,m,K,T,dT,lam = 1.0,W1,W2,b))
+system.time(results.ccrmbatch <- batch_ccrm_estimator(alltimes,A,m,K,T,dT,lam = 1.0,
+                                                      W1,W2,b,50,0.001))
 
 
 
