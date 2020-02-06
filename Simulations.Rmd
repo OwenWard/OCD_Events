@@ -126,11 +126,6 @@ To evaluate the recovery of these parameters, we conside a metric to do this.
 
 
 ```{r}
-<<<<<<< HEAD
-# library(latex2exp)
-=======
-#library(latex2exp)
->>>>>>> 67189c9877f896d9427b1eff06f8b7702937f8f2
 
 inter_B = results_online$inter_B
 norm_B = apply(inter_B,c(3),sum)

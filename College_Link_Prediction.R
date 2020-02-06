@@ -13,8 +13,8 @@ set.seed(100)
 ### Read in raw data and preprocess to our format ####
 # this section uses dplyr
 library(tidyverse)
-#college = read.csv(gzfile("C:/Users/owenw/Downloads/CollegeMsg.txt.gz"))
-college = read.csv(gzfile("C:/Users/owenw/Downloads/sx-mathoverflow.txt.gz"))
+college = read.csv(gzfile("C:/Users/owenw/Downloads/CollegeMsg.txt.gz"))
+#college = read.csv(gzfile("C:/Users/owenw/Downloads/sx-mathoverflow.txt.gz"))
 # although we call the dataset college here in can be any dataset
 #college = read.csv(gzfile("C:/Users/owenw/Downloads/email-Eu-core-temporal.txt.gz"))
 
@@ -105,11 +105,13 @@ summary(college$Time)
 
 # then do link prediction on the test set
 #train_time = 470.3
-#train_time = 76.38
-train_time = 1934
+train_time = 76.38
+#train_time = 1934
 #test_time = 804
-#test_time = 193
-test_time = 2351
+test_time = 193
+#test_time = 2351
+
+test_set = college_test %>% group_by(Send,Rec) %>% tally()
 
 #### Hom Poisson ####
 #dT = 2 # for emails# such that approx 400 windows for whole time period
@@ -145,7 +147,7 @@ est_Z = apply(results_pois_train$tau,1,which.max)
 # pred_times = as_tibble(pred_times)
 # pred_set = pred_times %>% group_by(Send,Rec) %>% tally() %>%
 #   filter(Send != Rec)
-test_set = college_test %>% group_by(Send,Rec) %>% tally()
+
 
 ### simulating events
 # test_set %>% left_join(pred_set,by = c("Send","Rec")) %>%
@@ -207,8 +209,8 @@ PR_data %>%
 
 
 ### Hom Hawkes ####
-K = 3 # 4 for email, 2 for college, 3 for math
-dT = 6  # 2 for email, 0.5 for college, 6 for math
+K = 2 # 4 for email, 2 for college, 3 for math
+dT = 0.5  # 2 for email, 0.5 for college, 6 for math
 Pi = rep(1/K,K)
 B = matrix(runif(K*K),K,K)
 Mu = matrix(runif(K*K),K,K)
@@ -322,9 +324,9 @@ PR_data %>%
 
 # taking the mean of the time component?
 window = 1/7
-K <- 3 # 4 for email, 2 for college, 3 for math
+K <- 2 # 4 for email, 2 for college, 3 for math
 H <- 7
-dT = 6 # 2 for email, 0.5 for college
+dT = 0.5 # 2 for email, 0.5 for college, 6 for math
 MuA_start = array(0,c(K,K,H))
 tau_start = matrix(0,m,K)
 system.time(non_hom_pois_est <- nonhomoPois_estimator(as.matrix(college_train),A_test,m,K,H,window,
@@ -371,7 +373,7 @@ pred_test_set %>%
 
 
 B_start = matrix(0,K,K)
-system.time(non_homo_Hawkes_est <- nonhomoHak_estimator_eff(as.matrix(college_train),A_test,m,K,H,window, lam = 1,
+system.time(non_homo_Hawkes_est <- nonhomoHak_estimator_eff_revised(as.matrix(college_train),A_test,m,K,H,window, lam = 1,
                                                T = train_time,dT,gravity = 0.001,MuA_start = MuA_start,
                                                tau_start = tau_start,B_start = B_start) )
 

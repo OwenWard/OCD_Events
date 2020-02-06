@@ -99,7 +99,7 @@ arma::mat updateB(arma::mat data, arma::mat tau, arma::mat B, int K,
       }
     }
   }
-  auto start = high_resolution_clock::now();
+  //auto start = high_resolution_clock::now();
   for(int i =0; i<m; ++i){
     //arma::rowvec edge = A.row(i);
     arma::rowvec edge = A[i];
@@ -116,9 +116,9 @@ arma::mat updateB(arma::mat data, arma::mat tau, arma::mat B, int K,
       }
     }
   }
-  auto stop = high_resolution_clock::now();
-  auto duration = duration_cast<milliseconds>(stop-start);
-  cout<<duration.count()<<endl;
+  // auto stop = high_resolution_clock::now();
+  // auto duration = duration_cast<milliseconds>(stop-start);
+  // cout<<duration.count()<<endl;
   gradB = X1/B - X2;
   //cout << gradB << endl;
   B_new = B + eta*gradB; //previously had division of n_row here
