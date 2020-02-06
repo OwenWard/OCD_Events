@@ -9,6 +9,9 @@
 #include <queue>
 #include <deque>
 
+#include <chrono>
+using namespace std::chrono;
+
 using namespace std;
 using namespace Rcpp;
 // [[Rcpp::depends(RcppArmadillo)]]

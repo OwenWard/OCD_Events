@@ -1483,7 +1483,11 @@ Rcpp::List online_estimator_eff_revised(
         n_t = ln_curr - ln_prev;
         eta = 1.0/sqrt(1 + n/10.0)/n_t * (K * K);
         // paralist = update_lam_eff(tau, Mu, B, Pi, S, datamap, t_start, Tn, m, K, A, lam, eta);
+        auto start = high_resolution_clock::now();
         paralist = update_lam_eff(tau, Mu, B, Pi, S, datamap, t_start, Tn, m, K, lam, eta);
+        auto stop = high_resolution_clock::now();
+        auto duration = duration_cast<milliseconds>(stop-start);
+        cout<<duration.count()<<endl;
         arma::mat tau_new = paralist["tau"], Mu_new = paralist["Mu"], B_new = paralist["B"], S_new = paralist["S"];
         arma::rowvec Pi_new = paralist["Pi"];
         double lam_new = paralist["lam"];
