@@ -116,7 +116,7 @@ arma::mat updateB(arma::mat data, arma::mat tau, arma::mat B, int K,
     }
   }
   gradB = X1/B - X2;
-  cout << gradB << endl;
+  //cout << gradB << endl;
   B_new = B + eta*gradB; //previously had division of n_row here
   // create matrix of 0.001 then take max element wise
   // prevent large updates
@@ -286,7 +286,7 @@ Rcpp::List estimate_Poisson(
     elbo_dat = full_data.rows(0,end_pos); 
     //cout<<size(sub_data)<<endl;
     start_pos = curr_pos;
-    eta = 1/pow(1+n, .75)/sub_data.n_rows*(K*K);
+    eta = 1/pow(1+n, .5)/sub_data.n_rows*(K*K);
     S = updateS(sub_data,tau,B,A,S,K,m,dT);
     //cout<<"S works"<<endl;
     tau = updateTau(S,Pi,m,K); 
