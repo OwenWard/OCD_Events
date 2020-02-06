@@ -1271,6 +1271,221 @@ Rcpp::List update_lam_eff(
 }
 
 
+
+Rcpp::List update_lam_eff_revised(
+    arma::mat tau,
+    arma::mat Mu,
+    arma::mat B,
+    arma::rowvec Pi,
+    arma::mat S,
+    unordered_map<string, std::deque<double>> &datamap,
+    double t_start,
+    double t_end,
+    int m,
+    int K,
+    Rcpp::List A,
+    double lam,
+    double eta
+    ){
+    arma::mat P1_mu(K,K), P2_mu(K,K), P1_B(K,K), P2_B(K,K), S_tp(m,K);
+    arma::mat P1_mu_tp(K,K), P2_mu_tp(K,K), P1_B_tp(K,K), P2_B_tp(K,K), P_S_tp(m,K), Lambda(K,K);
+    P1_mu.fill(0.0), P2_mu.fill(0.0), P1_B.fill(0.0), P2_B.fill(0.0), S_tp.fill(0.0), Lambda.fill(0.0);
+    arma::mat lam_store(K,K);
+
+
+    int l, k;
+    
+    int n_edge;
+
+    for (int i = 0; i < m; i++) {
+        arma::rowvec edge = A[i];
+        n_edge = edge.n_elem;
+        for (int p = 0; p < n_edge; p++){
+            int j = (int) edge(p);
+
+            for (k = 0; k < K; k++) {
+                for (l = 0; l < K; l++) {
+                    P2_mu(k,l) = P2_mu(k,l) + tau(i,k) * tau(j,l) * (t_end - t_start);
+                }
+            }
+
+            // update S, second part
+            for (k = 0; k < K; k++) {
+                for (l = 0; l < K; l++) {
+                    S_tp(i,k) = S_tp(i,k) - tau(j,l) * Mu(k,l) * (t_end - t_start);
+                }
+            
+            }
+        }
+    }
+
+
+    unordered_map<string, std::deque<double>>:: iterator itr; 
+    arma::vec timevec;
+    std::deque<double> timeque;
+    string key;
+    int ln,n;
+    double intensity_lam1, intensity_lam2, intensity, grad_lam = 0.0;
+    for (itr = datamap.begin(); itr != datamap.end(); itr++) 
+    { 
+        // type itr->first stores the key part  and 
+        // itr->second stroes the value part 
+        key = itr->first;
+        timeque = itr->second;
+        timevec = convert_deque(timeque);
+        arma::vec index = split(key);
+        int i = (int) index(0), j = (int) index(1);
+
+        if (i == j)
+            continue;
+        
+        /*
+        for (k = 0; k < K; k++) {
+            for (l = 0; l < K; l++) {
+                P2_mu(k,l) = P2_mu(k,l) + tau(i,k) * tau(j,l) * (t_end - t_start);
+            }
+        }
+
+        // update S, second part
+        for (k = 0; k < K; k++) {
+            for (l = 0; l < K; l++) {
+                S_tp(i,k) = S_tp(i,k) - tau(j,l) * Mu(k,l) * (t_end - t_start);
+            }
+            
+        }
+        */
+
+        P1_mu_tp.fill(0.0), P2_mu_tp.fill(0.0), P1_B_tp.fill(0.0), P2_B_tp.fill(0.0), P_S_tp.fill(0.0);
+        lam_store.fill(0.0);
+        //P2_mu_tp = P2_mu_tp + t_end - t_start;
+        ln = timevec.n_elem;
+        for (n = ln - 1; n >= 0; n--){
+            double t_current = timevec(n);
+            if (t_current > t_start) {
+                intensity = eps, intensity_lam1 = eps, intensity_lam2 = eps;
+                Lambda.fill(eps); // store temporary intensity values
+                for (int n1 = 0; n1 < n; n1++) {
+                    double t1 = timevec(n1);
+                    intensity += trigger(t1, t_current, lam);
+                    intensity_lam1 += trigger_lam(t1, t_current, lam);
+                    intensity_lam2 += (t_current - t1) * trigger(t1, t_current, lam);
+                }
+                P2_B_tp = P2_B_tp + integral(t_current, t_end, lam);
+                for (k = 0; k < K; k++){
+                    for (l = 0; l < K; l++){
+                        Lambda(k,l) += Mu(k,l) + B(k,l) * intensity;
+                    }
+                }
+                lam_store = lam_store + B * (intensity_lam1 - intensity_lam2) / Lambda;
+                lam_store = lam_store - B * ((t_end - t_current) * exp(-lam*(t_end - t_current)));
+                for (k = 0; k < K; k++) {
+                    for (l = 0; l < K; l++){
+                        P1_mu_tp(k,l) += 1.0 / Lambda(k,l);
+                        P1_B_tp(k,l) += intensity / Lambda(k,l);
+                        P_S_tp(k,l) += log(Lambda(k,l));
+                    }
+                }
+            } else {
+                P2_B_tp = P2_B_tp + integral2(t_current, t_start, t_end, lam);
+                lam_store = lam_store + B * ((t_start - t_current) * exp(-lam*(t_start - t_current)) - (t_end - t_current) * exp(-lam*(t_end - t_current)));
+            }
+        }
+
+        for (k = 0; k < K; k++) {
+            for (l = 0; l < K; l++) {
+                grad_lam += tau(i,k) * tau(j,l) * lam_store(k,l);
+            }
+        }
+
+        for (k = 0; k < K; k++) {
+            for (l = 0; l < K; l++) {
+                P1_mu(k,l) += tau(i,k) * tau(j,l) * P1_mu_tp(k,l);
+                P1_B(k,l) += tau(i,k) * tau(j,l) * P1_B_tp(k,l);
+                P2_B(k,l) += tau(i,k) * tau(j,l) * P2_B_tp(k,l);
+            }
+        }
+
+        // update S
+        for (k = 0; k < K; k++) {
+            for (l = 0; l < K; l++) {
+                S_tp(i,k) += tau(j,l) * (P_S_tp(k,l) - B(k,l) * P2_B_tp(k,l));
+            }
+        }
+    } 
+
+    /*
+    // update S, second part
+    for (int i = 0; i < m; i++) {
+        arma::rowvec edge = A[i];
+        n_edge = edge.n_elem;
+        for (k = 0; k < K; k++) {
+            for (int p = 0; p < n_edge; p++) {
+                int j = (int) edge(p);
+                for (l = 0; l < K; l++) {
+                    S_tp(i,k) = S_tp(i,k) - tau(j,l) * Mu(k,l) * (t_end - t_start);
+                }
+            }
+        }
+    }
+    */
+
+    // update parameters
+    S = S + S_tp;
+    arma::mat grad_B = P1_B - P2_B;
+    //grad_B.print();
+    arma::mat grad_mu = P1_mu - P2_mu;
+    //grad_mu.print();
+    arma::mat B_new = B + eta * grad_B;
+    //printf("B new is: \n");   
+    //B_new.print();
+    arma::mat Mu_new = Mu + eta * grad_mu;
+    //printf("Mu new is: \n");
+    //Mu_new.print();
+
+    // handle negative values and large gradient
+    for (k = 0; k < K; k++) {
+        for (l = 0; l < K; l++) {
+            if (B_new(k,l) <= 0.0) 
+                B_new(k,l) = B(k,l) / 2.0;
+            else if (B_new(k,l) > 2 * B(k,l))
+                B_new(k,l) = B(k,l) * 2.0;
+            if (Mu_new(k,l) <= 0.0)
+                Mu_new(k,l) = Mu(k,l) / 2.0;
+            else if (Mu_new(k,l) > 2 * Mu(k,l))
+                Mu_new(k,l) = Mu(k,l) * 2.0;
+        }
+    }
+    double lam_new = lam + eta * grad_lam;
+    if (lam_new > 5*lam) {
+        lam_new = 5 * lam;
+    } else if (lam_new <= 0.0) {
+        lam_new = lam/2.0;
+    }
+
+    arma::mat tau_new(m,K);
+    tau_new.fill(0.0);
+
+    arma::rowvec s;
+    for (int i = 0; i < m; i++) {
+        s = S.row(i) - S.row(i).max();
+        s = s + log(Pi + eps);
+        s = exp(s)/sum(exp(s));
+        tau_new.row(i) = s;
+    }
+
+    for (k = 0; k < K; k++) {
+        Pi(k) = sum(tau.col(k)) / (m + eps);
+    }   
+
+    return Rcpp::List::create(Rcpp::Named("tau") = tau_new,
+                          Rcpp::Named("Mu") = Mu_new,
+                          Rcpp::Named("B") = B_new,
+                          Rcpp::Named("Pi") = Pi,
+                          Rcpp::Named("lam") = lam_new,
+                          Rcpp::Named("S") = S);
+}
+
+
 // [[Rcpp::export]]
 Rcpp::List online_estimator_eff(
     arma::mat alltimes,
@@ -1480,7 +1695,7 @@ Rcpp::List online_estimator_eff_revised(
         n_t = ln_curr - ln_prev;
         eta = 1.0/sqrt(1 + n/10.0)/n_t * (K * K);
         // paralist = update_lam_eff(tau, Mu, B, Pi, S, datamap, t_start, Tn, m, K, A, lam, eta);
-        paralist = update_lam_eff(tau, Mu, B, Pi, S, datamap, t_start, Tn, m, K, lam, eta);
+        paralist = update_lam_eff_revised(tau, Mu, B, Pi, S, datamap, t_start, Tn, m, K, A, lam, eta);
         arma::mat tau_new = paralist["tau"], Mu_new = paralist["Mu"], B_new = paralist["B"], S_new = paralist["S"];
         arma::rowvec Pi_new = paralist["Pi"];
         double lam_new = paralist["lam"];
