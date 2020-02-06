@@ -6,8 +6,10 @@ output:
 ---
 
 ```{r, echo=FALSE, message=FALSE}
-source("comparison_fcns.R")
-#sourceCpp("onlineblock.cpp")
+#source("comparison_fcns.R")
+library(Rcpp)
+library(RcppArmadillo)
+sourceCpp("onlineblock.cpp")
 set.seed(200)
 ```
 
@@ -27,6 +29,7 @@ B_Pois <- matrix(0,K,K,byrow = TRUE)
 m <- 100
 Pi <- matrix(c(0.4,0.3,0.3),1,3)
 Z <- c(rep(0,m*Pi[1]),rep(1,m*Pi[2]),rep(2,m*Pi[3]))
+
 
 A <- list()
 for(i in 1:m){
@@ -119,13 +122,15 @@ To evaluate the recovery of these parameters, we conside a metric to do this.
 
 
 ```{r}
-library(latex2exp)
+# library(latex2exp)
 
 inter_B = results_online$inter_B
 norm_B = apply(inter_B,c(3),sum)
 
 ## need to adjust this also for sampling size
 b_recov = cbind(iters = seq(dT,500,dT),diff = abs(sum(Mu)-norm_B)/K^2)
+plot(b_recov[,1],b_recov[,2],type="l")
+
 as_tibble(b_recov) %>% 
   ggplot(aes(iters,diff)) + geom_line() + xlab("Time Windows") +
   ylab("Difference in Rate Parameters")
