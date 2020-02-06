@@ -1197,7 +1197,6 @@ Rcpp::List update_lam_eff(
             }
         }
     } 
-
     /*
     // update S, second part
     for (int i = 0; i < m; i++) {
@@ -1547,6 +1546,7 @@ Rcpp::List online_estimator_eff(
     for (int n = 0; n < N; n++ ){
         // R = min(5.0 / lam, 10.0);
         Tn = (n + 1.0) * dT;
+        
         event = alltimes.row(start_pos);
         t_current = event(2);
         while (t_current <= Tn ) {
@@ -1562,12 +1562,15 @@ Rcpp::List online_estimator_eff(
 
         if (end_pos <= start_pos)
             continue;
-
+        
         truncdata = alltimes.rows(start_pos, end_pos - 1);
-
+       
+        
+       
         //datamap = transfer_eff2(datamap, truncdata, R);
+        
         transfer_eff(datamap, truncdata, R);
-
+        
         t_start = Tn - dT;
         ln_curr = end_pos;
         n_t = ln_curr - ln_prev;
@@ -1696,6 +1699,7 @@ Rcpp::List online_estimator_eff_revised(
         eta = 1.0/sqrt(1 + n/10.0)/n_t * (K * K);
         // paralist = update_lam_eff(tau, Mu, B, Pi, S, datamap, t_start, Tn, m, K, A, lam, eta);
         paralist = update_lam_eff_revised(tau, Mu, B, Pi, S, datamap, t_start, Tn, m, K, A, lam, eta);
+
         arma::mat tau_new = paralist["tau"], Mu_new = paralist["Mu"], B_new = paralist["B"], S_new = paralist["S"];
         arma::rowvec Pi_new = paralist["Pi"];
         double lam_new = paralist["lam"];
@@ -1797,7 +1801,7 @@ Rcpp::List batch_estimator(
 
     double trunc_length = 5.0;
     for (int iter = 0; iter < itermax; iter++) {
-        eta = 1.0/nall * (K * K) / sqrt(iter + 1.0);
+        eta = 1.0/nall * (K * K) /(iter + 1.0);
         S.fill(0.0);
         paralist = update_lam_trunc(tau, Mu, B, Pi, S, datamap, t_start, Tn, m, K, A, lam, eta, trunc_length);
         arma::mat tau_new = paralist["tau"], Mu_new = paralist["Mu"], B_new = paralist["B"], S_new = paralist["S"];

@@ -22,9 +22,10 @@ We first simulate some data from our proposed model with a homogeneous Poisson p
 
 ```{r "Simulate Data"}
 Time = 500
-dT = 0.1
 K <- 3
+#K <- 2
 Mu <- matrix(c(0.6,0.2,0.3,0.1,1.0,0.4,0.5,0.4,0.8),K,K,byrow = TRUE)
+#Mu <- matrix(c())
 B_Pois <- matrix(0,K,K,byrow = TRUE)
 m <- 100
 Pi <- matrix(c(0.4,0.3,0.3),1,3)
@@ -56,7 +57,7 @@ tau = matrix(runif(m*K),nrow=m,ncol=K)
 tau = tau/rowSums(tau)
 S = matrix(0,nrow = m,ncol = K)
 
-dT <- 10
+dT <- 5
 inter_T <- 5
 
 results_online <- estimate_Poisson(full_data = alltimes,
@@ -83,9 +84,11 @@ av_elbo = results_online$AveELBO
 ll = results_online$logL
 elbo = as_tibble(cbind(iter,elbo = as.vector(av_elbo),ll= as.vector(ll)))
 ggplot(data = elbo, aes(iter,av_elbo)) + geom_line() + 
-  xlab("Number Observation Windows") + ylab("Average ELBO")
+  xlab("Time") + ylab("Average ELBO") +      
+  theme(axis.title=element_text(size=14))
 
-ggplot(data = elbo, aes(iter,ll)) + geom_line()+ylab("Average Log likelihood") + xlab("Number observation windows")
+ggplot(data = elbo, aes(iter,ll)) + geom_line()+ylab("Average Log likelihood") + xlab("Time") +
+  theme(axis.title=element_text(size=14))
 
 ```
 
@@ -113,7 +116,8 @@ for(i in 1:time_points){
 online_nmi = cbind(iters = seq(from = dT*inter_T,by = dT*inter_T,length.out = time_points),early_nmi)
 
 as_tibble(online_nmi) %>% ggplot(aes(iters,early_nmi)) + geom_line() +
-  ylab("Online NMI")
+  ylab("Online NMI") +
+  theme(axis.text=element_text(size=14))
 
 ```
 ### Parameter Recovery of Process parameters
@@ -122,7 +126,11 @@ To evaluate the recovery of these parameters, we conside a metric to do this.
 
 
 ```{r}
+<<<<<<< HEAD
 # library(latex2exp)
+=======
+#library(latex2exp)
+>>>>>>> 67189c9877f896d9427b1eff06f8b7702937f8f2
 
 inter_B = results_online$inter_B
 norm_B = apply(inter_B,c(3),sum)
@@ -133,10 +141,40 @@ plot(b_recov[,1],b_recov[,2],type="l")
 
 as_tibble(b_recov) %>% 
   ggplot(aes(iters,diff)) + geom_line() + xlab("Time Windows") +
-  ylab("Difference in Rate Parameters")
+  ylab("Difference in Rate Parameters") +
+  theme(axis.text=element_text(size=14))
+
+
 
 
 ```
+
+### Above plot for different values of step size
+
+```{r}
+
+library(tidyverse)
+
+eta025 <- readRDS("Simulations/eta025.RDS")
+eta050 <- readRDS("Simulations/eta050.RDS")
+eta075 <- readRDS("Simulations/eta075.RDS")
+
+
+eta_df = rbind(eta025,eta050)
+eta_df = rbind(eta_df,eta075)
+step = c(rep("eta025",200),rep("eta050",200),rep("eta075",200))
+eta_df$step <- step
+eta_df$step = as.factor(eta_df$step)
+
+
+ggplot(data = eta_df,aes(x=iters,y=diff,))+
+  geom_line(aes(colour=step)) + 
+  scale_color_manual(name = "Step Size",values=c("blue","red","black")) +
+  xlab("Time") + ylab("Difference in rate matrix") +
+  theme(axis.title=element_text(size=14))
+
+```
+
 
 ## Repeat above as a function of number of nodes
 

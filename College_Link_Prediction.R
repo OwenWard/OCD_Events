@@ -7,7 +7,7 @@ library(Rcpp)
 library(RcppArmadillo)
 sourceCpp("C:/Users/owenw/Documents/Online_Point_Process/onlineblock.cpp")
 
-set.seed(1)
+set.seed(100)
 
 
 ### Read in raw data and preprocess to our format ####
@@ -91,46 +91,7 @@ for(i in 1:nrow(college)){
 A_test = lapply(A,unique)
 
 
-# check it fits on all data 
-<<<<<<< HEAD
-Time = 2351
-K = 2
-dT = 10
-Pi = rep(1/K,K)
-B = matrix(runif(K*K),K,K)
-Mu = matrix(runif(K*K),K,K)
-#diag(B) = rnorm(3,mean = 1, sd = 0.1)
-tau = matrix(runif(m*K),nrow=m,ncol=K)
-tau = tau/rowSums(tau)
-S = matrix(0,nrow = m,ncol = K)
 
-results_pois <- estimate_Poisson(full_data = as.matrix(college),tau,
-                            B,Pi,S,A_test,m,K,dT,T=Time)
-
-system.time(results_hawkes_sim <- online_estimator_eff(as.matrix(college), 
-                                           A_test, m, K, T = Time, dT, lam = 1, B, Mu, tau))
-
-results_hawkes_sim$Pi
-=======
-# Time = 804
-# K = 2
-# dT = 2
-# Pi = rep(1/K,K)
-# B = matrix(runif(K*K),K,K)
-# Mu = matrix(runif(K*K),K,K)
-# #diag(B) = rnorm(3,mean = 1, sd = 0.1)
-# tau = matrix(runif(m*K),nrow=m,ncol=K)
-# tau = tau/rowSums(tau)
-# S = matrix(0,nrow = m,ncol = K)
-# 
-# results_pois <- estimate_Poisson(full_data = as.matrix(college),tau,
-#                             B,Pi,S,A_test,m,K,dT,T=Time)
-# 
-# results_hawkes_sim <- online_estimator_eff(as.matrix(college), 
-#                                            A_test, m, K, T = Time, dT, lam = 1, B, Mu, tau)
-# 
-# results_hawkes_sim$Pi
->>>>>>> 908796851aa4a2765e97b55bcc4e642cb41b1ea4
 
 # split into training and test
 
@@ -151,8 +112,9 @@ train_time = 1934
 test_time = 2351
 
 #### Hom Poisson ####
-dT = 20 # such that approx 400 windows for whole time period
-#dT = .5
+#dT = 2 # for emails# such that approx 400 windows for whole time period
+#dT = .5 #for college
+dT = 6 # for math
 K = 3 # 2 for college, 4 for email, 3 for math
 Pi = rep(1/K,K)
 B = matrix(runif(K*K),K,K)
@@ -162,13 +124,15 @@ tau = tau/rowSums(tau)
 S = matrix(0,nrow = m,ncol = K)
 
 # online estimate
-system.time(results_pois_train <- estimate_Poisson(full_data = as.matrix(college_train),tau,
-                                 B,Pi,S,A_test,m,K,dT,T=train_time) )
+system.time(results_pois_train <- estimate_Poisson(full_data = as.matrix(college_train),
+                                                   A_test,m,K,
+                                                   T = train_time,dT,B,tau,Pi,
+                                                   S, inter_T = 5) )
 
 # batch estimate for hom-Poisson needed here
 system.time(results_pois_batch <- batch_estimator_hom_Poisson(alltimes = as.matrix(college_train),
                                                         A_test,m,K,T=train_time,B,tau,
-                                                        itermax = 100,stop_eps = 0.01))
+                                                        itermax = 400,stop_eps = 0.01))
 
 # simulate events
 est_Z = apply(results_pois_train$tau,1,which.max)
@@ -224,9 +188,27 @@ pred_test_set %>%
 # so well
 
 
+### Pearson Residuals for these Models
+test_new <- college_test %>% group_by(Send,Rec) %>% summarise(test_times = list(sort(Time)))
+train_new <- college_train %>% group_by(Send,Rec) %>% summarise(train_times = list(sort(Time)))
+
+PR_data <- test_new %>% left_join(train_new) 
+PR_data$Baseline <- mu
+# then just compute the PR
+PR_data %>% 
+  rowwise()%>%
+  mutate(
+  PR = Pearson_Res_HomPP(test_times,t_start = train_time,
+                         t_finish = test_time,intensity = Baseline)) %>%
+  ungroup() %>%
+  summarise(Ave_PR = mean(PR))
+
+
+
+
 ### Hom Hawkes ####
-K = 3
-dT = 20
+K = 3 # 4 for email, 2 for college, 3 for math
+dT = 6  # 2 for email, 0.5 for college, 6 for math
 Pi = rep(1/K,K)
 B = matrix(runif(K*K),K,K)
 Mu = matrix(runif(K*K),K,K)
@@ -236,22 +218,16 @@ tau = tau/rowSums(tau)
 S = matrix(0,nrow = m,ncol = K)
 
 # online estimator
-system.time(results_hawkes_sim <- online_estimator_eff(as.matrix(college_train), 
+system.time(results_hawkes_sim <- online_estimator_eff_revised(as.matrix(college_train), 
                                            A_test, m, K, T = train_time, dT, 
                                            lam = 1, B, Mu, tau))
-
+#### here!
 # batch estimator..
-system.time(results_hawkes_sim <- batch_estimator(as.matrix(college_train), 
+system.time(results_hawkes_batch <- batch_estimator(as.matrix(college_train), 
                                            A_test, m, K, T = train_time, dT, lam = 1, B, Mu, tau,
-                                      itermax =  100,stop_eps = 0.01))
+                                      itermax =  400,stop_eps = 0.01))
 
-dT <- 2.25
-K <- 2
-b <- 0.5
-W1 <- matrix(0,m,K)
-W2 <- matrix(0,m,K)
-system.time(results.ccrm <- ccrm_estimator(as.matrix(college_train),A_test,m,K,T = train_time,
-                                           dT,lam = 1.0,W1,W2,b))
+
 
 est_Z = apply(results_hawkes_sim$tau,1,which.max)
 
@@ -300,13 +276,55 @@ test_set %>% left_join(est,by = c("Send","Rec")) %>%
             RMSE_0 = sqrt(mean(diff_zer^2)))
  
 
+### Pearson Residuals for these Models
+## need to compute lambda0,alpha,beta for each pair...
+# same as computation of mu above..
+groups = tibble(Send = c(1:m)-1,Z = est_Z)
+
+pred_test_set =  test_set %>% left_join(groups, by = "Send")
+
+groups = tibble(Rec = c(1:m)-1,Z = est_Z)
+pred_test_set = pred_test_set %>% left_join(groups,by = "Rec")
+
+
+mu = rep(0,dim(pred_test_set)[1])
+alpha = rep(0,dim(pred_test_set)[1])
+for(i in 1:length(mu)){
+  mu[i] = results_hawkes_sim$Mu[pred_test_set$Z.x[i],pred_test_set$Z.y[i]]
+  alpha[i] = results_hawkes_sim$lam*results_hawkes_sim$B[pred_test_set$Z.x[i],pred_test_set$Z.y[i]]
+}
+
+#pred_test_set$Mean = mu
+
+
+test_new <- college_test %>% group_by(Send,Rec) %>% summarise(test_times = list(sort(Time)))
+train_new <- college_train %>% group_by(Send,Rec) %>% summarise(train_times = list(sort(Time)))
+
+PR_data <- test_new %>% left_join(train_new) 
+PR_data$Baseline <- mu
+PR_data$alpha <- alpha
+# then just compute the PR
+PR_data %>% 
+  rowwise()%>%
+  mutate(
+    PR = uniHawkesPearsonResidual(lambda0 = Baseline,alpha = alpha,
+                                  beta = results_hawkes_sim$lam,train_times,
+                                  test_times,start=train_time,
+                                  termination = test_time)) %>%
+  ungroup() %>%
+  summarise(Ave_PR = mean(PR),
+            med_PR = median(PR))
+
+
+
+
 ## InHomogeneous Poisson ####
 
 # taking the mean of the time component?
 window = 1/7
-K <- 3
+K <- 3 # 4 for email, 2 for college, 3 for math
 H <- 7
-dT = 5
+dT = 6 # 2 for email, 0.5 for college
 MuA_start = array(0,c(K,K,H))
 tau_start = matrix(0,m,K)
 system.time(non_hom_pois_est <- nonhomoPois_estimator(as.matrix(college_train),A_test,m,K,H,window,
@@ -315,7 +333,7 @@ system.time(non_hom_pois_est <- nonhomoPois_estimator(as.matrix(college_train),A
 
 system.time(batch <- batch_nonhomoPois_estimator(as.matrix(college_train),A_test,m,K,H,window,T = train_time,dT,
                             gravity = 0.001,MuA_start,tau_start,
-                            itermax = 100,stop_eps = 0.01 ))
+                            itermax = 400,stop_eps = 0.01 ))
 
 # taking the average of these basis functions for link prediction
 dim(non_hom_pois_est$MuA)
@@ -362,7 +380,7 @@ system.time(non_homo_Hawkes_batch <- batch_nonhomoHak_estimator(as.matrix(colleg
                                                     gravity = 0.001,MuA_start=MuA_start,
                                                     tau_start= tau_start,lam = 1,
                                                     B_start = B_start,
-                                                    itermax = 100,stop_eps = 0.01))
+                                                    itermax = 400,stop_eps = 0.01))
 
 
 
