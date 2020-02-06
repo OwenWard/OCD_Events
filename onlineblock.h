@@ -196,7 +196,7 @@ unordered_map<string, std::deque<double>> transfer_eff2(unordered_map<string, st
 }
 
 
-
+// use reference 
 void transfer_eff(unordered_map<string, std::deque<double>> &datamap, arma::mat newtimes, double R){
 	int N = newtimes.n_rows;
 	arma::rowvec event;
@@ -214,6 +214,58 @@ void transfer_eff(unordered_map<string, std::deque<double>> &datamap, arma::mat 
 		datamap[key] = timetemp;
 	}
 }
+
+
+
+unordered_map<string, std::deque<double> > transfer_create_empty(){
+	unordered_map<string, std::deque<double>> datamap;
+	return datamap;
+}
+
+// do not keep all datamap
+void transfer_dynamic(unordered_map<string, std::deque<double>> &datamap, arma::mat newtimes, double R, double t_current){
+	int N = newtimes.n_rows;
+	arma::rowvec event;
+	int i,j;
+	double time;
+	string key;
+
+    std::deque<double> timetemp;
+    std::unordered_map<std::string, std::deque<double>>::iterator got;
+	for (int n = 0; n < N; n++) {
+		event = newtimes.row(n);
+		i = event[0], j = event[1], time = event[2];
+		key = to_string(i) + "," + to_string(j);
+
+		got = datamap.find(key);
+		if (got == datamap.end()){
+			// if key in data map
+			timetemp.clear();
+			timetemp.push_back(time);
+			datamap[key] = timetemp;
+		} else {
+			// else if key is not in data map
+			timetemp = datamap[key];
+			timetemp = trim_queue(timetemp, time, R);
+			datamap[key] = timetemp;			
+		}				
+	}
+	// loop over datamap to check whether need to throw old pairs
+	unordered_map<string, std::deque<double>>:: iterator itr; 
+	std::deque<double> timeque;
+	for (itr = datamap.begin(); itr != datamap.end(); itr++) 
+    { 
+        // type itr->first stores the key part  and 
+        // itr->second stroes the value part 
+        key = itr->first;
+        timeque = itr->second;
+        if (timeque.back() < t_current - R) {
+        	// remove 
+        	datamap.erase(key);
+        }
+    }
+}
+
 
 
 // convert back to arma::vec

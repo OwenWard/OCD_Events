@@ -796,8 +796,6 @@ Rcpp::List online_estimator(
 
 
 
-
-
 Rcpp::List update_lam(
     arma::mat tau,
     arma::mat Mu,
@@ -1272,6 +1270,7 @@ Rcpp::List update_lam_eff(
                           Rcpp::Named("S") = S);
 }
 
+
 // [[Rcpp::export]]
 Rcpp::List online_estimator_eff(
     arma::mat alltimes,
@@ -1353,6 +1352,128 @@ Rcpp::List online_estimator_eff(
 
         //datamap = transfer_eff2(datamap, truncdata, R);
         transfer_eff(datamap, truncdata, R);
+
+        t_start = Tn - dT;
+        ln_curr = end_pos;
+        n_t = ln_curr - ln_prev;
+        eta = 1.0/sqrt(1 + n/10.0)/n_t * (K * K);
+        // paralist = update_lam_eff(tau, Mu, B, Pi, S, datamap, t_start, Tn, m, K, A, lam, eta);
+        paralist = update_lam_eff(tau, Mu, B, Pi, S, datamap, t_start, Tn, m, K, lam, eta);
+        arma::mat tau_new = paralist["tau"], Mu_new = paralist["Mu"], B_new = paralist["B"], S_new = paralist["S"];
+        arma::rowvec Pi_new = paralist["Pi"];
+        double lam_new = paralist["lam"];
+        tau = tau_new; 
+        Mu = Mu_new, B = B_new, S = S_new, Pi = Pi_new;
+        lam = lam_new;
+        start_pos = curr_pos;
+        ln_prev = ln_curr;
+        printf("iter: %d; number: %d \n", n, n_t); 
+        B.print();
+        Mu.print();
+        printf("lam: %2.3f", lam);
+
+        if (is_elbo) {
+            prevdata = alltimes.rows(0, end_pos - 1); // head_rows()
+            elbo = get_elbo_Hak(prevdata, 0.0, Tn, tau, Mu, B, Pi, A, lam, m, K);
+            elbo_vec(n) = elbo / ln_curr;
+        }
+
+        //S.print();
+        printf("=============\n");
+    }
+
+    return Rcpp::List::create(
+                          Rcpp::Named("Mu") = Mu,
+                          Rcpp::Named("B") = B,
+                          Rcpp::Named("Pi") = Pi,
+                          Rcpp::Named("lam") = lam,
+                          Rcpp::Named("tau") = tau,
+                          Rcpp::Named("elbo") = elbo_vec);
+}
+
+
+// [[Rcpp::export]]
+Rcpp::List online_estimator_eff_revised(
+    arma::mat alltimes,
+    Rcpp::List A,
+    int m,
+    int K,
+    double T,
+    double dT,
+    double lam,
+    arma::mat B_start,
+    arma::mat Mu_start,
+    arma::mat tau_start,
+    bool is_elbo = false
+    ){
+
+    // create empty map
+    unordered_map<string, std::deque<double>> datamap;
+    datamap = transfer_create_empty();
+
+    // initialization
+    arma::rowvec Pi(K);
+    Pi.fill(1.0 / K);
+    arma::mat B(K,K), Mu(K,K), S(m,K);
+    arma::mat tau(m,K);
+    for (int k = 0; k < K; k++) {
+        for (int l=0; l < K; l++) {
+            B(k,l) = myrunif();
+            Mu(k,l) = myrunif();
+        }
+    }
+    //B.fill(0.5), Mu.fill(0.5); 
+    S.fill(0.0);
+    //B = B_start, Mu = Mu_start;
+    for (int i = 0; i < m; i++) {
+        arma::rowvec tt(K);
+        for (int k = 0; k < K; k++) {
+            tt(k) = myrunif();
+        }
+        tt = tt / sum(tt);
+        tau.row(i) = tt;
+    }
+    //tau = tau_start;
+
+    int nall = alltimes.n_rows;
+    int start_pos = 0, curr_pos = 0, end_pos = 0, ln_prev = 0, ln_curr, n_t;
+    int N = floor(T / dT);
+
+    double R = 5.0;
+    
+    arma::vec elbo_vec(N);
+    double elbo = 0;
+    arma::mat prevdata;
+
+    double Tn, t_current, t_start, eta;
+    arma::rowvec event; 
+    arma::mat truncdata;
+    Rcpp::List paralist;
+
+    for (int n = 0; n < N; n++ ){
+        // R = min(5.0 / lam, 10.0);
+        Tn = (n + 1.0) * dT;
+        event = alltimes.row(start_pos);
+        t_current = event(2);
+        while (t_current <= Tn ) {
+            if (curr_pos >= nall - 1) {
+                break;
+            } else {
+                curr_pos += 1;
+                event = alltimes.row(curr_pos);
+                t_current = event(2);
+            }
+        }
+        end_pos = curr_pos;
+
+        if (end_pos <= start_pos)
+            continue;
+
+        truncdata = alltimes.rows(start_pos, end_pos - 1);
+
+        //datamap = transfer_eff2(datamap, truncdata, R);
+        // transfer_eff(datamap, truncdata, R);
+        transfer_dynamic(datamap, truncdata, R, Tn);
 
         t_start = Tn - dT;
         ln_curr = end_pos;
