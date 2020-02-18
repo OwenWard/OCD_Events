@@ -10,7 +10,7 @@ Hom_Pois_fit[454,]
 Hom_Hawk_fit <- PR_data
 Hom_Hawk_fit %>% head()
 saveRDS(Hom_Hawk_fit,file = "Simulations/Hom_Hawk_fit_college.RDS")
-
+Hom_Hawk_fit <- readRDS("Simulations/Hom_Hawk_fit_college.RDS")
 
 # then plot the estimated intensities from the online and batch methods 
 # and compare them....
@@ -63,7 +63,7 @@ points(events,rep(0.1,length(events)),col="red")
 
 plot(est_intensity_full$time.vec,est_intensity_full$lambda.t,typ='l')
 
-
+library(tidyverse)
 online_intens =as_tibble(est_intensity_online) %>% mutate(int = lambda.t/max(lambda.t),
                                                           model= "online") %>%
   select(time.vec,int,model)
@@ -87,5 +87,15 @@ total_intens %>% ggplot(aes(time.vec,int)) + geom_line(aes(colour=model)) +
   #geom_hline(yintercept = Hom_Pois_fit$Baseline_batch[i],colour="green")
 
 axis.ticks.x=element_blank()
+
+
+## just do the full version
+total_intens %>% filter(model == "full") %>%
+  ggplot(aes(time.vec,int)) + geom_line(col="red") +
+  xlab("Time") + ylab("Intensity") +
+  theme(axis.title=element_text(size=14),axis.text.y=element_blank(),
+        axis.ticks.y = element_blank() ) + 
+  geom_point(data = events_df,aes(value,y))
+
 
 ### then repeat this for Inhom Hawkes

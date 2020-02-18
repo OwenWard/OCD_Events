@@ -13,8 +13,8 @@ set.seed(100)
 ### Read in raw data and preprocess to our format ####
 # this section uses dplyr
 library(tidyverse)
-college = read.csv(gzfile("C:/Users/owenw/Downloads/CollegeMsg.txt.gz"))
-#college = read.csv(gzfile("C:/Users/owenw/Downloads/sx-mathoverflow.txt.gz"))
+#college = read.csv(gzfile("C:/Users/owenw/Downloads/CollegeMsg.txt.gz"))
+college = read.csv(gzfile("C:/Users/owenw/Downloads/sx-mathoverflow.txt.gz"))
 # although we call the dataset college here in can be any dataset
 #college = read.csv(gzfile("C:/Users/owenw/Downloads/email-Eu-core-temporal.txt.gz"))
 
@@ -105,19 +105,19 @@ summary(college$Time)
 
 # then do link prediction on the test set
 #train_time = 470.3
-train_time = 76.38
-#train_time = 1934
+#train_time = 76.38
+train_time = 1934
 #test_time = 804
-test_time = 193
-#test_time = 2351
+#test_time = 193
+test_time = 2351
 
 test_set = college_test %>% group_by(Send,Rec) %>% tally()
 
 #### Hom Poisson ####
 #dT = 2 # for emails# such that approx 400 windows for whole time period
 #dT = .5 #for college
-dT = 6 # for math
-K = 3 # 2 for college, 4 for email, 3 for math
+dT = 0.5 # for math
+K = 2 # 2 for college, 4 for email, 3 for math
 Pi = rep(1/K,K)
 B = matrix(runif(K*K),K,K)
 Mu = matrix(runif(K*K),K,K)
@@ -195,7 +195,8 @@ test_new <- college_test %>% group_by(Send,Rec) %>% summarise(test_times = list(
 train_new <- college_train %>% group_by(Send,Rec) %>% summarise(train_times = list(sort(Time)))
 
 PR_data <- test_new %>% left_join(train_new) 
-PR_data$Baseline <- mu
+PR_data$Baseline_online <- mu
+PR_data$Baseline_batch <- mu
 # then just compute the PR
 PR_data %>% 
   rowwise()%>%
@@ -303,8 +304,12 @@ test_new <- college_test %>% group_by(Send,Rec) %>% summarise(test_times = list(
 train_new <- college_train %>% group_by(Send,Rec) %>% summarise(train_times = list(sort(Time)))
 
 PR_data <- test_new %>% left_join(train_new) 
-PR_data$Baseline <- mu
-PR_data$alpha <- alpha
+PR_data$Baseline_online <- mu
+PR_data$Baseline_full <- mu
+PR_data$alpha_online <- alpha
+PR_data$alpha_full <- alpha
+PR_data$beta_online <- c(rep(results_hawkes_sim$lam,dim(PR_data)[1]))
+PR_data$beta_full <- c(rep(results_hawkes_sim$lam,dim(PR_data)[1]))
 # then just compute the PR
 PR_data %>% 
   rowwise()%>%
@@ -324,7 +329,7 @@ PR_data %>%
 
 # taking the mean of the time component?
 window = 1/7
-K <- 2 # 4 for email, 2 for college, 3 for math
+K <- 3 # 4 for email, 2 for college, 3 for math
 H <- 7
 dT = 0.5 # 2 for email, 0.5 for college, 6 for math
 MuA_start = array(0,c(K,K,H))
@@ -335,7 +340,7 @@ system.time(non_hom_pois_est <- nonhomoPois_estimator(as.matrix(college_train),A
 
 system.time(batch <- batch_nonhomoPois_estimator(as.matrix(college_train),A_test,m,K,H,window,T = train_time,dT,
                             gravity = 0.001,MuA_start,tau_start,
-                            itermax = 400,stop_eps = 0.01 ))
+                            itermax = 400,stop_eps = 0.002 ))
 
 # taking the average of these basis functions for link prediction
 dim(non_hom_pois_est$MuA)
@@ -368,6 +373,10 @@ pred_test_set %>%
   summarise(RMSE = sqrt(mean(diff_mean^2)),
             RMSE_0 = sqrt(mean(diff_zero^2)))
 
+## Pearson Residuals for this 
+
+
+
 
 ### InHomogeneous Hawkes ####
 
@@ -382,7 +391,7 @@ system.time(non_homo_Hawkes_batch <- batch_nonhomoHak_estimator(as.matrix(colleg
                                                     gravity = 0.001,MuA_start=MuA_start,
                                                     tau_start= tau_start,lam = 1,
                                                     B_start = B_start,
-                                                    itermax = 400,stop_eps = 0.01))
+                                                    itermax = 40,stop_eps = 0.01))
 
 
 

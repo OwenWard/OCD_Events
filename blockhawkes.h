@@ -1622,6 +1622,7 @@ Rcpp::List online_estimator_eff_revised(
     arma::mat B_start,
     arma::mat Mu_start,
     arma::mat tau_start,
+    int inter_T,
     bool is_elbo = false
     ){
 
@@ -1656,6 +1657,8 @@ Rcpp::List online_estimator_eff_revised(
     int nall = alltimes.n_rows;
     int start_pos = 0, curr_pos = 0, end_pos = 0, ln_prev = 0, ln_curr, n_t;
     int N = floor(T / dT);
+    int slices = int(N/inter_T);
+    int ind = 0;
 
     double R = 5.0;
     
@@ -1667,6 +1670,11 @@ Rcpp::List online_estimator_eff_revised(
     arma::rowvec event; 
     arma::mat truncdata;
     Rcpp::List paralist;
+    
+    // to inspect intermediate values of clustering
+    arma::cube inter_tau(m,K,slices+1);
+    arma::cube inter_B(K,K,N);
+    arma::cube inter_mu(K,K,N);
 
     for (int n = 0; n < N; n++ ){
         // R = min(5.0 / lam, 10.0);
@@ -1709,9 +1717,17 @@ Rcpp::List online_estimator_eff_revised(
         start_pos = curr_pos;
         ln_prev = ln_curr;
         printf("iter: %d; number: %d \n", n, n_t); 
+        inter_mu.slice(n) = Mu;
+        inter_B.slice(n) = B;
         B.print();
         Mu.print();
         printf("lam: %2.3f", lam);
+        
+        
+        if(n % inter_T == 0 ){
+          inter_tau.slice(ind) = tau;
+          ind = ind + 1;
+        }
 
         if (is_elbo) {
             prevdata = alltimes.rows(0, end_pos - 1); // head_rows()
@@ -1729,6 +1745,9 @@ Rcpp::List online_estimator_eff_revised(
                           Rcpp::Named("Pi") = Pi,
                           Rcpp::Named("lam") = lam,
                           Rcpp::Named("tau") = tau,
+                          Rcpp::Named("early_tau")= inter_tau,
+                          Rcpp::Named("inter_B") = inter_B,
+                          Rcpp::Named("inter_mu") = inter_mu,
                           Rcpp::Named("elbo") = elbo_vec);
 }
 
