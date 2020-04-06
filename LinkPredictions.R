@@ -2,7 +2,7 @@
 library(Rcpp)
 library(RcppArmadillo)
 library(dplyr)
-sourceCpp("C:/Users/owenw/Documents/Online_Point_Process/onlineblock.cpp")
+sourceCpp("onlineblock.cpp")
 
 ## 85% training, 15% test set, same as miscouridou et al
 

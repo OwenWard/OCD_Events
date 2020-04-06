@@ -5,7 +5,7 @@
 
 library(Rcpp)
 library(RcppArmadillo)
-sourceCpp("C:/Users/owenw/Documents/Online_Point_Process/onlineblock.cpp")
+sourceCpp("onlineblock.cpp")
 
 set.seed(100)
 
@@ -13,10 +13,10 @@ set.seed(100)
 ### Read in raw data and preprocess to our format ####
 # this section uses dplyr
 library(tidyverse)
-#college = read.csv(gzfile("C:/Users/owenw/Downloads/CollegeMsg.txt.gz"))
-college = read.csv(gzfile("C:/Users/owenw/Downloads/sx-mathoverflow.txt.gz"))
+#college = read.csv(gzfile("Data/CollegeMsg.txt.gz"))
+college = read.csv(gzfile("Data/sx-mathoverflow.txt.gz"))
 # although we call the dataset college here in can be any dataset
-#college = read.csv(gzfile("C:/Users/owenw/Downloads/email-Eu-core-temporal.txt.gz"))
+#college = read.csv(gzfile("Data/email-Eu-core-temporal.txt.gz"))
 
 
 dim(college)
