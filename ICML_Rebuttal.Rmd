@@ -1,0 +1,201 @@
+---
+title: "ICML Rebuttal Simulations"
+output: html_notebook
+---
+
+Here we wish to provide simulations in support of our ICML
+review rebuttal.
+
+## Demonstrate the importance of considering the temporal component of event streams
+
+We first wish to illustrate scenarios where it is necessary to
+consider the streaming component of arrival data to correctly
+identify community structure. We consider simulation studies
+and demonstrate how methods based on binning data of this
+form are not able to recover these communities.
+
+
+```{r load functions}
+library(Rcpp)
+library(RcppArmadillo)
+library(fcd) # before dplyr so select isn't masked
+library(tidyverse)
+library(lubridate)
+sourceCpp("C:/Users/owenw/Desktop/Online_Point_Process/onlineblock.cpp")
+
+```
+
+
+
+```{r simulate events}
+m <- 50
+K <- 2
+H <- 2
+MuA <- array(0,c(K,K,H))
+MuA[,,1] <- matrix(c(0.8,0.2,0.6,0.4),2,2)
+MuA[,,2] <- matrix(c(0.4,0.7,0.2,0.7),2,2)
+
+Mu <- matrix(c(0.6,0.2,0.3,0.5),K,K,byrow = TRUE)
+B <- matrix(c(0.1,0.02,0.01,0.05),K,K,byrow = TRUE)
+Pi <- matrix(c(0.4,0.6),1,2)
+Z <- c(rep(0,m*Pi[1]),rep(1,m*Pi[2]))
+Time <- 50
+
+A <- list()
+for(i in 1:m){
+  # could sample these here with SBM structure...
+  node_list <- c(1:m)
+  edge <- sample(node_list[-i], 10) - 1
+  edge <- sort(edge)
+  A[[i]] <- edge
+}
+
+#system.time(alltimes <- sampleBlockHak(Time, A, Z, Mu, B, lam = 1))
+system.time(alltimes <- sampleBlockHak_nonhomo(T=Time, A, Z, MuA, B, window, lam = 1))
+
+```
+
+
+```{r fit our model,eval=FALSE,echo=FALSE}
+Pi = rep(1/K,K)
+B = matrix(runif(K*K),K,K)
+tau = matrix(runif(m*K),nrow=m,ncol=K)
+tau = tau/rowSums(tau)
+S = matrix(0,nrow = m,ncol = K)
+
+dT <- 1
+inter_T <- 5
+
+# want to fit this with the Hawkes then, 
+results_online <- estimate_Poisson(full_data = alltimes,
+                                   A,m,K,Time,dT,B,
+                                   tau,Pi,S,inter_T,is_elbo = TRUE)
+
+```
+
+
+
+Then we wish to consider binning on this data. We can consider several
+scenarios:
+
+- Estimating the clusters at some intermediate time point
+- 
+
+
+
+### Bin Data
+
+First write a function to bin the data and construct adjacency matrices
+for each corresponding time period.
+
+```{r binning function}
+# assume initial time is 0 here
+# events a tibble with col names start end and time
+# the start and end are zero indexed
+
+
+bin_fun <- function(events,m,max_Time,window_size){
+  winds <- seq(from=window_size,to=max_Time,by= window_size)
+  adj <- array(0, dim = c(m,m,length(winds)))
+  for(i in 1:length(winds)){
+    # get edges in each window and then updating the corresponding
+    # entry in the adjacency matrix
+    upper <- winds[i]
+    lower <- upper-window_size
+    wind_events <- events %>% 
+      filter( Time < upper & Time > lower) %>%
+      group_by(start,end) %>% tally()
+    for(j in 1:nrow(wind_events)){
+       row <- wind_events$start[j]+1
+       col <- wind_events$end[j] + 1
+       adj[row,col,i] <- wind_events$n[j] 
+    }
+  }
+  return(adj)
+}
+
+# check this works
+test_events <- tibble(start = alltimes[,1],end = alltimes[,2],
+                      Time = alltimes[,3])
+
+out <- bin_fun(test_events,m,max_Time = 50,window_size = 0.5)
+sum(out) - nrow(alltimes)
+
+```
+
+
+```{r analyse binned version}
+sum_adj <- apply(out, c(1,2), sum)/dim(out)[3]
+#dim(sum_adj)
+#aricode::ARI(spectral.clustering(sum_adj,K=2),Z)
+
+nonHawkes_online <- nonhomoHak_estimator_eff_revised(alltimes,
+                                                     A,m,K,H,window,
+                                                     T = Time,dT=1,
+                                                     lam = 1.75,
+                                                     gravity = 0.001,
+                                                     B_start,
+                                                     MuA_start,
+                                                     tau_start,is_elbo = T)
+
+est_Z <- apply(nonHawkes_online$tau,1,which.max)
+
+```
+
+
+```{r compare results}
+# using sum of all events
+aricode::ARI(spectral.clustering(out[,,dim(out)[3]]),Z) 
+# using only events in final time window
+aricode::ARI(spectral.clustering(sum_adj,K=2),Z)
+# our method
+aricode::ARI(Z,est_Z)
+
+### considering just binary (so at least one event)
+out_bin <- out
+out_bin <- apply(out, c(2,3), function(x) as.numeric(x>0))
+aricode::ARI(spectral.clustering(out_bin[,,dim(out_bin)[3]]),Z) 
+# using only events in final time window
+sum_adj_bin <- apply(out_bin, c(1,2), sum)/dim(out_bin)[3]
+aricode::ARI(spectral.clustering(sum_adj,K=2),Z)
+# our method
+aricode::ARI(Z,est_Z)
+
+```
+
+
+So even this simple example indicates that spectral clustering is not able to
+handle this temporal dynamic. What about a more complicated model? This is the
+estimator proposed by https://projecteuclid.org/euclid.ejs/1550286096. 
+
+
+```{r}
+source("C:/Users/owenw/Documents/Github Local/Spectral_DSBM/R/pensky_fcns.R")
+
+l <- 2
+m <- 2 # need m =l for final time point
+m0 <- 1
+l0 <- 2
+r <- dim(out)[3]-1 # how many previous observations we have
+
+output <- pz_estimator_3(out,time = dim(out)[3],l0,m0,m,r = 99)
+
+aricode::ARI(spectral.clustering(output,K=2),Z)
+
+
+```
+
+
+Another comparison is to `dynsbm`, which is a similar model to ours but for discrete
+time.
+
+```{r try dynsbm model}
+library(dynsbm)
+Y <- aperm(out_bin,c(3,1,2))
+fit <- select.dynsbm(Y,Qmin = 1,Qmax = 4,edge.type = "binary",directed = TRUE,plot = FALSE)
+
+fit_2 <- fit[[2]] # enforcing two communities
+dim(fit_2$membership)
+est_z_dyn <- fit_2$membership[,dim(fit_2$membership)[1]]
+aricode::ARI(est_z_dyn,Z)
+```

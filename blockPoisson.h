@@ -307,16 +307,17 @@ Rcpp::List estimate_Poisson(
     }
     
     //cout<<B<<endl;
-    //printf("iter: %d; \n", n); 
+    //Rprintf("iter: %d; \n", n); 
     //B.print();
     //Pi.print();
     //S.print();
-    //printf("=============\n");
+    //Rprintf("=============\n");
+    //Rcout << Pi << endl;
     if(n % inter_T == 0 ){
       inter_tau.slice(ind) = tau;
       ind = ind + 1;
-      printf("iter: %d; \n", n);
-      printf("=============\n");
+      Rprintf("iter: %d; \n", n);
+      Rprintf("=============\n");
     }
     
   }
@@ -381,7 +382,7 @@ Rcpp::List batch_estimator_hom_Poisson(
   for (int iter = 0; iter < itermax; iter++) {
     eta = 1.0/ (K * K) /(iter + 1.0);
     //eta = 0.001;
-    //printf("eta: %f",eta);
+    //Rprintf("eta: %f",eta);
     
     // then do all the updates in here....
     // what happens to dT?
@@ -404,8 +405,8 @@ Rcpp::List batch_estimator_hom_Poisson(
     
     // then convert them
     tau = tau_new, B = B_new, Pi = Pi_new, S = S_new;
-    printf("gap: %2.3f", gap);
-    printf("=============\n");
+    Rprintf("gap: %2.3f", gap);
+    Rprintf("=============\n");
     B.print();
     if (gap < stop_eps){
       break;

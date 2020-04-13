@@ -163,7 +163,7 @@ Rcpp::List update_nonhomo(
 	int h1 = floor(t_start/window);
 	int h2 = floor(t_end/window);
 
-	//printf("h1: %d,  h2: %d \n", h1, h2);
+	//Rprintf("h1: %d,  h2: %d \n", h1, h2);
 	for (int w = h1; w <= h2; w++){
 		h = w % H;
 		if (h1 == h2){
@@ -300,10 +300,10 @@ Rcpp::List update_nonhomo(
     arma::cube grad_mu = P1_mu - P2_mu;
     //grad_mu.print();
     arma::mat B_new = B + eta * grad_B;
-    //printf("B new is: \n");   
+    //Rprintf("B new is: \n");   
     //B_new.print();
     arma::cube MuA_new = MuA + eta * grad_mu;
-    //printf("Mu new is: \n");
+    //Rprintf("Mu new is: \n");
     //Mu_new.print();
 
     // handle negative values and large gradient
@@ -383,7 +383,7 @@ Rcpp::List update_nonhomo_sparse(
 	int h1 = floor(t_start/window);
 	int h2 = floor(t_end/window);
 
-	//printf("h1: %d,  h2: %d \n", h1, h2);
+	//Rprintf("h1: %d,  h2: %d \n", h1, h2);
 	for (int w = h1; w <= h2; w++){
 		h = w % H;
 		if (h1 == h2){
@@ -536,10 +536,10 @@ Rcpp::List update_nonhomo_sparse(
     arma::cube grad_mu = P1_mu - P2_mu;
     //grad_mu.print();
     arma::mat B_new = B + eta * grad_B;
-    //printf("B new is: \n");   
+    //Rprintf("B new is: \n");   
     //B_new.print();
     arma::cube MuA_new = MuA + eta * grad_mu;
-    //printf("Mu new is: \n");
+    //Rprintf("Mu new is: \n");
     //Mu_new.print();
 
     // handle negative values and large gradient
@@ -677,18 +677,18 @@ Rcpp::List nonhomoHak_estimator(
 		trunc_pos_queue.push(start_pos);
   		start_pos = curr_pos;
   		ln_prev = ln_curr;
-  		printf("iter: %d; number: %d \n", n, n_t); 
+  		Rprintf("iter: %d; number: %d \n", n, n_t); 
   		//B.print();
   		//MuA.print();
   		//S.print();
-  		printf("lam: %2.3f \n", lam);
+  		Rprintf("lam: %2.3f \n", lam);
 
   		if (is_elbo){
   			prevdata = alltimes.rows(0, end_pos - 1); // head_rows()
         	elbo = get_elbo_nonhomoHak(prevdata, 0, T, tau, MuA, B, Pi, A, lam, m, K, H, window);
         	elbo_vec(n) = elbo / ln_curr;
   		}
-  		printf("=============\n");
+  		Rprintf("=============\n");
 	}
 
 	return Rcpp::List::create(
@@ -732,7 +732,7 @@ Rcpp::List update_nonhomo_eff(
 	int h1 = floor(t_start/window);
 	int h2 = floor(t_end/window);
 
-	//printf("h1: %d,  h2: %d \n", h1, h2);
+	//Rprintf("h1: %d,  h2: %d \n", h1, h2);
 	for (int w = h1; w <= h2; w++){
 		h = w % H;
 		if (h1 == h2){
@@ -906,10 +906,10 @@ Rcpp::List update_nonhomo_eff(
     arma::cube grad_mu = P1_mu - P2_mu;
     //grad_mu.print();
     arma::mat B_new = B + eta * grad_B;
-    //printf("B new is: \n");   
+    //Rprintf("B new is: \n");   
     //B_new.print();
     arma::cube MuA_new = MuA + eta * grad_mu;
-    //printf("Mu new is: \n");
+    //Rprintf("Mu new is: \n");
     //Mu_new.print();
 
     // handle negative values and large gradient
@@ -991,7 +991,7 @@ Rcpp::List update_nonhomo_eff_revised(
 	int h1 = floor(t_start/window);
 	int h2 = floor(t_end/window);
 
-	//printf("h1: %d,  h2: %d \n", h1, h2);
+	//Rprintf("h1: %d,  h2: %d \n", h1, h2);
 	for (int w = h1; w <= h2; w++){
 		h = w % H;
 		if (h1 == h2){
@@ -1176,10 +1176,10 @@ Rcpp::List update_nonhomo_eff_revised(
     arma::cube grad_mu = P1_mu - P2_mu;
     //grad_mu.print();
     arma::mat B_new = B + eta * grad_B;
-    //printf("B new is: \n");   
+    //Rprintf("B new is: \n");   
     //B_new.print();
     arma::cube MuA_new = MuA + eta * grad_mu;
-    //printf("Mu new is: \n");
+    //Rprintf("Mu new is: \n");
     //Mu_new.print();
 
     // handle negative values and large gradient
@@ -1333,18 +1333,18 @@ Rcpp::List nonhomoHak_estimator_eff(
 		MuA = MuA_new, B = B_new, S = S_new, Pi = Pi_new;
   		start_pos = curr_pos;
   		ln_prev = ln_curr;
-  		printf("iter: %d; number: %d \n", n, n_t); 
+  		Rprintf("iter: %d; number: %d \n", n, n_t); 
   		//B.print();
   		//MuA.print();
   		//S.print();
-  		printf("lam: %2.3f \n", lam);
+  		Rprintf("lam: %2.3f \n", lam);
 
   		if (is_elbo){
   			prevdata = alltimes.rows(0, end_pos - 1); // head_rows()
         	elbo = get_elbo_nonhomoHak(prevdata, 0, T, tau, MuA, B, Pi, A, lam, m, K, H, window);
         	elbo_vec(n) = elbo / ln_curr;
   		}
-  		printf("=============\n");
+  		Rprintf("=============\n");
 	}
 
 	return Rcpp::List::create(
@@ -1460,18 +1460,18 @@ Rcpp::List nonhomoHak_estimator_eff_revised(
 		MuA = MuA_new, B = B_new, S = S_new, Pi = Pi_new;
   		start_pos = curr_pos;
   		ln_prev = ln_curr;
-  		printf("iter: %d; number: %d \n", n, n_t); 
+  		Rprintf("iter: %d; number: %d \n", n, n_t); 
   		//B.print();
   		//MuA.print();
   		//S.print();
-  		printf("lam: %2.3f \n", lam);
+  		Rprintf("lam: %2.3f \n", lam);
 
   		if (is_elbo){
   			prevdata = alltimes.rows(0, end_pos - 1); // head_rows()
         	elbo = get_elbo_nonhomoHak(prevdata, 0, T, tau, MuA, B, Pi, A, lam, m, K, H, window);
         	elbo_vec(n) = elbo / ln_curr;
   		}
-  		printf("=============\n");
+  		Rprintf("=============\n");
 	}
 
 	return Rcpp::List::create(
@@ -1516,7 +1516,7 @@ Rcpp::List update_nonhomo_sparse_trunc(
 	int h1 = floor(t_start/window);
 	int h2 = floor(t_end/window);
 
-	//printf("h1: %d,  h2: %d \n", h1, h2);
+	//Rprintf("h1: %d,  h2: %d \n", h1, h2);
 	for (int w = h1; w <= h2; w++){
 		h = w % H;
 		if (h1 == h2){
@@ -1671,10 +1671,10 @@ Rcpp::List update_nonhomo_sparse_trunc(
     arma::cube grad_mu = P1_mu - P2_mu;
     //grad_mu.print();
     arma::mat B_new = B + eta * grad_B;
-    //printf("B new is: \n");   
+    //Rprintf("B new is: \n");   
     //B_new.print();
     arma::cube MuA_new = MuA + eta * grad_mu;
-    //printf("Mu new is: \n");
+    //Rprintf("Mu new is: \n");
     //Mu_new.print();
 
     // handle negative values and large gradient
@@ -1796,13 +1796,13 @@ Rcpp::List batch_nonhomoHak_estimator(
         tau = tau_new; 
         MuA = MuA_new, B = B_new, S = S_new, Pi = Pi_new;
         lam = lam_new;
-        printf("iter: %d \n", iter); 
+        Rprintf("iter: %d \n", iter); 
         // B.print();
         // Mu.print();
         Pi.print();
-        printf("lam: %2.3f", lam);
-        printf("gap: %2.3f", gap);
-        printf("=============\n");
+        Rprintf("lam: %2.3f", lam);
+        Rprintf("gap: %2.3f", gap);
+        Rprintf("=============\n");
         if (gap < stop_eps){
             break;
         }
@@ -1981,7 +1981,7 @@ Rcpp::List update_nonhomo_pois(
 	int h1 = floor(t_start/window);
 	int h2 = floor(t_end/window);
 
-	//printf("h1: %d,  h2: %d \n", h1, h2);
+	//Rprintf("h1: %d,  h2: %d \n", h1, h2);
 	for (int w = h1; w <= h2; w++){
 		h = w % H;
 		if (h1 == h2){
@@ -2127,7 +2127,7 @@ Rcpp::List update_nonhomo_pois(
     arma::cube grad_mu = P1_mu - P2_mu;
     //grad_mu.print();
     arma::cube MuA_new = MuA + eta * grad_mu;
-    //printf("Mu new is: \n");
+    //Rprintf("Mu new is: \n");
     //Mu_new.print();
 
     // handle negative values and large gradient
@@ -2197,7 +2197,7 @@ Rcpp::List update_nonhomo_pois_revised(
 	int h1 = floor(t_start/window);
 	int h2 = floor(t_end/window);
 
-	//printf("h1: %d,  h2: %d \n", h1, h2);
+	//Rprintf("h1: %d,  h2: %d \n", h1, h2);
 	for (int w = h1; w <= h2; w++){
 		h = w % H;
 		if (h1 == h2){
@@ -2353,7 +2353,7 @@ Rcpp::List update_nonhomo_pois_revised(
     arma::cube grad_mu = P1_mu - P2_mu;
     //grad_mu.print();
     arma::cube MuA_new = MuA + eta * grad_mu;
-    //printf("Mu new is: \n");
+    //Rprintf("Mu new is: \n");
     //Mu_new.print();
 
     // handle negative values and large gradient
@@ -2487,19 +2487,19 @@ Rcpp::List nonhomoPois_estimator(
 		arma::rowvec Pi_new = paralist["Pi"];
 		tau = tau_new; 
 		MuA = MuA_new, S = S_new, Pi = Pi_new;
-  		start_pos = curr_pos;
-  		ln_prev = ln_curr;
-  		printf("iter: %d; number: %d \n", n, n_t); 
+  	start_pos = curr_pos;
+  	ln_prev = ln_curr;
+  	Rprintf("iter: %d; number: %d \n", n, n_t); 
   		//MuA.print();
   		//S.print();
 
-  		if (is_elbo){
-  			prevdata = alltimes.rows(0, end_pos - 1); // head_rows()
-        	// elbo = get_elbo_nonhomoHak(prevdata, 0, T, tau, MuA, B, Pi, A, lam, m, K, H, window);
-        	elbo = 0;
-        	elbo_vec(n) = elbo / ln_curr;
-  		}
-  		printf("=============\n");
+		if (is_elbo){
+		  prevdata = alltimes.rows(0, end_pos - 1); // head_rows()
+		  // elbo = get_elbo_nonhomoHak(prevdata, 0, T, tau, MuA, B, Pi, A, lam, m, K, H, window);
+		  elbo = 0;
+		  elbo_vec(n) = elbo / ln_curr;
+		}
+  	Rprintf("=============\n");
 	}
 
 	return Rcpp::List::create(
@@ -2580,12 +2580,12 @@ Rcpp::List batch_nonhomoPois_estimator(
         gap = abs(MuA - MuA_new).max();
         tau = tau_new; 
         MuA = MuA_new, S = S_new, Pi = Pi_new;
-        printf("iter: %d \n", iter); 
+        Rprintf("iter: %d \n", iter); 
         // B.print();
         // Mu.print();
         Pi.print();
-        printf("gap: %2.3f", gap);
-        printf("=============\n");
+        Rprintf("gap: %2.3f", gap);
+        Rprintf("=============\n");
         if (gap < stop_eps){
             break;
         }

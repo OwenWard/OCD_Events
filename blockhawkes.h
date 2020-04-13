@@ -240,10 +240,10 @@ Rcpp::List update_on(
     arma::mat grad_mu = P1_mu - P2_mu;
     //grad_mu.print();
     arma::mat B_new = B + eta * grad_B;
-    //printf("B new is: \n");   
+    //Rprintf("B new is: \n");   
     //B_new.print();
     arma::mat Mu_new = Mu + eta * grad_mu;
-    //printf("Mu new is: \n");
+    //Rprintf("Mu new is: \n");
     //Mu_new.print();
 
     // handle negative values and large gradient
@@ -424,10 +424,10 @@ Rcpp::List update_lam_trunc(
     arma::mat grad_mu = P1_mu - P2_mu;
     //grad_mu.print();
     arma::mat B_new = B + eta * grad_B;
-    //printf("B new is: \n");   
+    //Rprintf("B new is: \n");   
     //B_new.print();
     arma::mat Mu_new = Mu + eta * grad_mu;
-    //printf("Mu new is: \n");
+    //Rprintf("Mu new is: \n");
     //Mu_new.print();
 
     // handle negative values and large gradient
@@ -620,7 +620,7 @@ Rcpp::List update_lam_stoch(
 
     } 
 
-    printf("zero_count: %d \n", zero_count);
+    Rprintf("zero_count: %d \n", zero_count);
 
 
     // update parameters
@@ -630,10 +630,10 @@ Rcpp::List update_lam_stoch(
     arma::mat grad_mu = P1_mu - P2_mu;
     //grad_mu.print();
     arma::mat B_new = B + eta * grad_B;
-    //printf("B new is: \n");   
+    //Rprintf("B new is: \n");   
     //B_new.print();
     arma::mat Mu_new = Mu + eta * grad_mu;
-    //printf("Mu new is: \n");
+    //Rprintf("Mu new is: \n");
     //Mu_new.print();
 
     // handle negative values and large gradient
@@ -770,10 +770,10 @@ Rcpp::List online_estimator(
 		trunc_pos_queue.push(start_pos);
   		start_pos = curr_pos;
   		ln_prev = ln_curr;
-  		printf("iter: %d; number: %d \n", n, n_t); 
+  		Rprintf("iter: %d; number: %d \n", n, n_t); 
   		B.print();
   		Mu.print();
-        printf("lam: %2.3f", lam);
+        Rprintf("lam: %2.3f", lam);
 
         if (is_elbo) {
             prevdata = alltimes.rows(0, end_pos - 1); // head_rows()
@@ -782,7 +782,7 @@ Rcpp::List online_estimator(
         }
 
   		//S.print();
-  		printf("=============\n");
+  		Rprintf("=============\n");
 	}
 
 	return Rcpp::List::create(
@@ -928,10 +928,10 @@ Rcpp::List update_lam(
     arma::mat grad_mu = P1_mu - P2_mu;
     //grad_mu.print();
     arma::mat B_new = B + eta * grad_B;
-    //printf("B new is: \n");   
+    //Rprintf("B new is: \n");   
     //B_new.print();
     arma::mat Mu_new = Mu + eta * grad_mu;
-    //printf("Mu new is: \n");
+    //Rprintf("Mu new is: \n");
     //Mu_new.print();
 
     // handle negative values and large gradient
@@ -1220,10 +1220,10 @@ Rcpp::List update_lam_eff(
     arma::mat grad_mu = P1_mu - P2_mu;
     //grad_mu.print();
     arma::mat B_new = B + eta * grad_B;
-    //printf("B new is: \n");   
+    //Rprintf("B new is: \n");   
     //B_new.print();
     arma::mat Mu_new = Mu + eta * grad_mu;
-    //printf("Mu new is: \n");
+    //Rprintf("Mu new is: \n");
     //Mu_new.print();
 
     // handle negative values and large gradient
@@ -1435,10 +1435,10 @@ Rcpp::List update_lam_eff_revised(
     arma::mat grad_mu = P1_mu - P2_mu;
     //grad_mu.print();
     arma::mat B_new = B + eta * grad_B;
-    //printf("B new is: \n");   
+    //Rprintf("B new is: \n");   
     //B_new.print();
     arma::mat Mu_new = Mu + eta * grad_mu;
-    //printf("Mu new is: \n");
+    //Rprintf("Mu new is: \n");
     //Mu_new.print();
 
     // handle negative values and large gradient
@@ -1585,10 +1585,10 @@ Rcpp::List online_estimator_eff(
         lam = lam_new;
         start_pos = curr_pos;
         ln_prev = ln_curr;
-        printf("iter: %d; number: %d \n", n, n_t); 
+        Rprintf("iter: %d; number: %d \n", n, n_t); 
         B.print();
         Mu.print();
-        printf("lam: %2.3f", lam);
+        Rprintf("lam: %2.3f", lam);
 
         if (is_elbo) {
             prevdata = alltimes.rows(0, end_pos - 1); // head_rows()
@@ -1597,7 +1597,7 @@ Rcpp::List online_estimator_eff(
         }
 
         //S.print();
-        printf("=============\n");
+        Rprintf("=============\n");
     }
 
     return Rcpp::List::create(
@@ -1716,12 +1716,12 @@ Rcpp::List online_estimator_eff_revised(
         lam = lam_new;
         start_pos = curr_pos;
         ln_prev = ln_curr;
-        printf("iter: %d; number: %d \n", n, n_t); 
+        Rprintf("iter: %d; number: %d \n", n, n_t); 
         inter_mu.slice(n) = Mu;
         inter_B.slice(n) = B;
         B.print();
         Mu.print();
-        printf("lam: %2.3f", lam);
+        Rprintf("lam: %2.3f", lam);
         
         
         if(n % inter_T == 0 ){
@@ -1736,7 +1736,7 @@ Rcpp::List online_estimator_eff_revised(
         }
 
         //S.print();
-        printf("=============\n");
+        Rprintf("=============\n");
     }
 
     return Rcpp::List::create(
@@ -1830,13 +1830,13 @@ Rcpp::List batch_estimator(
         tau = tau_new; 
         Mu = Mu_new, B = B_new, S = S_new, Pi = Pi_new;
         lam = lam_new;
-        printf("iter: %d \n", iter); 
+        Rprintf("iter: %d \n", iter); 
         B.print();
         Mu.print();
         Pi.print();
-        printf("lam: %2.3f", lam);
-        printf("gap: %2.3f", gap);
-        printf("=============\n");
+        Rprintf("lam: %2.3f", lam);
+        Rprintf("gap: %2.3f", gap);
+        Rprintf("=============\n");
         if (gap < stop_eps){
             break;
         }
