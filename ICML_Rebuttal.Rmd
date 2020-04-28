@@ -142,7 +142,7 @@ est_Z <- apply(nonHawkes_online$tau,1,which.max)
 
 ```
 
-
+Compare to the online procedure.
 ```{r compare results}
 # using sum of all events
 aricode::ARI(spectral.clustering(out[,,dim(out)[3]]),Z) 
@@ -198,4 +198,74 @@ fit_2 <- fit[[2]] # enforcing two communities
 dim(fit_2$membership)
 est_z_dyn <- fit_2$membership[,dim(fit_2$membership)[1]]
 aricode::ARI(est_z_dyn,Z)
+```
+
+## Compare for Homogeneous Hawkes process
+
+
+```{r sim homogeneous hawkes}
+m <- 50
+K <- 2
+Mu <- matrix(c(0.6,0.2,0.3,0.5),K,K,byrow = TRUE)
+B <- matrix(c(0.1,0.02,0.01,0.05),K,K,byrow = TRUE)
+Pi <- matrix(c(0.4,0.6),1,2)
+Z <- c(rep(0,m*Pi[1]),rep(1,m*Pi[2]))
+Time <- 50
+
+A <- list()
+for(i in 1:m){
+  # could sample these here with SBM structure...
+  node_list <- c(1:m)
+  edge <- sample(node_list[-i], 10) - 1
+  edge <- sort(edge)
+  A[[i]] <- edge
+}
+
+system.time(alltimes_hom <- sampleBlockHak(Time, A, Z, Mu, B, lam = 1))
+
+```
+
+
+
+Then bin this data and compare.
+
+
+```{r}
+test_events_hom_Hawkes <- tibble(start = alltimes_hom[,1],end = alltimes_hom[,2],
+                      Time = alltimes_hom[,3])
+
+out_hom <- bin_fun(test_events_hom_Hawkes,m,max_Time = 50,window_size = 0.5)
+sum(out_hom) - nrow(alltimes_hom)
+
+```
+
+
+Then evaluate spectral clustering in this setting.
+
+```{r}
+
+sum_adj_hom <- apply(out_hom, c(1,2), sum)/dim(out_hom)[3]
+aricode::ARI(spectral.clustering(sum_adj_hom,K=2),Z)
+
+
+```
+
+
+Compare to the online procedure.
+
+```{r}
+results_hawkes <-
+  online_estimator_eff_revised(as.matrix(alltimes_hom),
+                               A, 
+                               m, K,
+                               Time,
+                               dT=0.5, 
+                               lam = 1.75,
+                               B, Mu,
+                               tau,
+                               inter_T = 1, is_elbo = T)
+est_Z_hom <- apply(results_hawkes$tau,1,which.max)
+aricode::ARI(est_Z_hom,Z)
+
+
 ```

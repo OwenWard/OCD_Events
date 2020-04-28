@@ -13,8 +13,8 @@ set.seed(100)
 ### Read in raw data and preprocess to our format ####
 # this section uses dplyr
 library(tidyverse)
-#college = read.csv(gzfile("Data/CollegeMsg.txt.gz"))
-college = read.csv(gzfile("Data/sx-mathoverflow.txt.gz"))
+college = read.csv(gzfile("Data/CollegeMsg.txt.gz"))
+#college = read.csv(gzfile("Data/sx-mathoverflow.txt.gz"))
 # although we call the dataset college here in can be any dataset
 #college = read.csv(gzfile("Data/email-Eu-core-temporal.txt.gz"))
 
@@ -105,11 +105,11 @@ summary(college$Time)
 
 # then do link prediction on the test set
 #train_time = 470.3
-#train_time = 76.38
-train_time = 1934
+train_time = 76.38
+#train_time = 1934
 #test_time = 804
-#test_time = 193
-test_time = 2351
+test_time = 193
+#test_time = 2351
 
 test_set = college_test %>% group_by(Send,Rec) %>% tally()
 
@@ -117,7 +117,7 @@ test_set = college_test %>% group_by(Send,Rec) %>% tally()
 #dT = 2 # for emails# such that approx 400 windows for whole time period
 #dT = .5 #for college
 dT = 0.5 # for math
-K = 2 # 2 for college, 4 for email, 3 for math
+K = 4 # 2 for college, 4 for email, 3 for math
 Pi = rep(1/K,K)
 B = matrix(runif(K*K),K,K)
 Mu = matrix(runif(K*K),K,K)
@@ -210,8 +210,8 @@ PR_data %>%
 
 
 ### Hom Hawkes ####
-K = 2 # 4 for email, 2 for college, 3 for math
-dT = 0.5  # 2 for email, 0.5 for college, 6 for math
+K = 4 # 4 for email, 2 for college, 3 for math
+dT = 0.2  # 2 for email, 0.5 for college, 6 for math
 Pi = rep(1/K,K)
 B = matrix(runif(K*K),K,K)
 Mu = matrix(runif(K*K),K,K)
@@ -223,12 +223,12 @@ S = matrix(0,nrow = m,ncol = K)
 # online estimator
 system.time(results_hawkes_sim <- online_estimator_eff_revised(as.matrix(college_train), 
                                            A_test, m, K, T = train_time, dT, 
-                                           lam = 1, B, Mu, tau))
+                                           lam = 1, B, Mu, tau,inter_T = 1))
 #### here!
 # batch estimator..
 system.time(results_hawkes_batch <- batch_estimator(as.matrix(college_train), 
                                            A_test, m, K, T = train_time, dT, lam = 1, B, Mu, tau,
-                                      itermax =  400,stop_eps = 0.01))
+                                      itermax =  100,stop_eps = 0.01))
 
 
 

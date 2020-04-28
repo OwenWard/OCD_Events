@@ -72,7 +72,10 @@ arma::mat updateS(arma::mat data, arma::mat tau, arma::mat B,
       for(int j = 0; j < n; ++j){
         for(int l =0; l<K; ++l){
           int j_loc = edge(j);
-          S(i,k) = S(i,k) - tau(j_loc,l)*B(k,l)*dT;
+          if(i != j_loc){
+            S(i,k) = S(i,k) - tau(j_loc,l)*B(k,l)*dT;
+          }
+          
         }
       }
     }

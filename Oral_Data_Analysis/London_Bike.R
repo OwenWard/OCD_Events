@@ -54,7 +54,7 @@ for(i in 1:nrow(model_dat)){
   #print(j)
   #A[[j+1]] = c(A[[j+1]],j)
   #A[[k+1]] = c(A[[k+1]],k)
-  A[[j+1]] = c(A[[j+1]],model_dat$start_stat[i])
+  A[[j+1]] = c(A[[j+1]],model_dat$end_stat[i])
 }
 
 
@@ -62,7 +62,7 @@ A_test = lapply(A,unique)
 rm(A)
 
 
-K <- 3
+K <- 5
 #m <- 184
 Pi = rep(1/K,K)
 B = matrix(runif(K*K),K,K)

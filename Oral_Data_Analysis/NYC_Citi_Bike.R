@@ -27,11 +27,11 @@ citi_data$minutes <- citi_data$stoptime-start_time
 
 head(citi_data$minutes)
 
-
+#citi_data_full <- citi_data # so don't have to read in every time
 
 # this will actually be hours now
 citi_data <- citi_data %>% mutate(days = as.numeric(minutes/60)) %>%
-  filter(days < 7*24)
+  filter(days < 24) # for the full month 24*31
 
 
 
@@ -70,7 +70,7 @@ m <- length(unique(c(bike_data$`start station id`,
 
 citi_data$start_stat <- bike_data$`start station id` +1
 citi_data$end_stat <- bike_data$`end station id`+1
-# can use this to join then after
+# can use this to join them after
 
 
 
@@ -87,24 +87,29 @@ for(i in 1:nrow(bike_data)){
   #A[[j+1]] = c(A[[j+1]],emails$Rec[i])
 }
 
+#init_A <- A
+
 for(i in 1:nrow(bike_data)){
   j = bike_data$`start station id`[i]
   k = bike_data$`end station id`[i]
   #print(j)
   #A[[j+1]] = c(A[[j+1]],j)
   #A[[k+1]] = c(A[[k+1]],k)
-  A[[j+1]] = c(A[[j+1]],bike_data$`start station id`[i])
+  A[[j+1]] = c(A[[j+1]],bike_data$`end station id`[i])
 }
 
 
+
+
 A_test = lapply(A,unique)
+
 rm(A)
 
 
 
 
 
-K <- 3
+K <- 5
 #m <- 184
 Pi = rep(1/K,K)
 B = matrix(runif(K*K),K,K)
@@ -113,11 +118,11 @@ tau = matrix(runif(m*K),nrow=m,ncol=K)
 tau = tau/rowSums(tau)
 S = matrix(0,nrow = m,ncol = K)
 
-dT <- 1 # this is for a single day now
-inter_T <- 1
+dT <- 1 # this is for a single hour now
+inter_T <- 10
 
 
-Time = 7*24 # need to change this if the data changes
+Time = 24 # need to change this if the data changes
 
 online_pois <- estimate_Poisson(full_data = as.matrix(bike_data),
                                 #full_data = as.matrix(sample_data),
@@ -164,8 +169,25 @@ stations %>% left_join(station_clusts,
              stat_lat,color=as.factor(clust))) + 
   geom_point()
 
+### then to look at the inter group interactions
+citi_data %>% left_join(station_clusts,by = c("start_stat"="station")) %>%
+  rename(start_clust = clust) %>%
+  left_join(station_clusts,by = c("end_stat"="station")) %>%
+  rename(end_clust = clust) %>%
+  group_by(start_clust,end_clust) %>%
+  tally()
+
+citi_data %>% left_join(station_clusts,by = c("start_stat"="station")) %>%
+  rename(start_clust = clust) %>%
+  left_join(station_clusts,by = c("end_stat"="station")) %>%
+  rename(end_clust = clust) %>%
+  mutate(Time_Day = if_else(days < 12,"AM","PM")) %>%
+  group_by(start_clust,end_clust,Time_Day) %>%
+  tally() %>% print(n=38)
 
 
+
+####
 library(osmdata)
 #library(sf)
 library(ggmap)
@@ -182,9 +204,8 @@ ggmap(nyc_map) + geom_point(data = nyc_map_data,
 
 
 
-clust_data <- nyc_map_data %>% filter(clust == 3)
-ggmap(nyc_map) + geom_point(data = clust_data,
-                            aes(stat_lon,                                                    stat_lat)) +
+clust_data <- nyc_map_data %>% filter(clust == 4)
+ggmap(nyc_map) + geom_point(data = clust_data,aes(stat_lon,                                                    stat_lat)) +
   theme_nothing() 
 
 
@@ -237,8 +258,7 @@ nyc_map_data <- stations %>% left_join(station_clusts,
 
 
 ggmap(nyc_map) + geom_point(data = nyc_map_data,
-                            aes(stat_lon,                                                    stat_lat,color=as.factor(clust))) +
-  theme_nothing()
+                            aes(stat_lon,stat_lat,color=as.factor(clust)))
 
 
 
@@ -248,10 +268,26 @@ revgeo(longitude = clust_data$stat_lon,
        provider = 'photon',output = 'frame') 
 
 
+### then to look at the inter group interactions
+citi_data %>% left_join(station_clusts,by = c("start_stat"="station")) %>%
+  rename(start_clust = clust) %>%
+  left_join(station_clusts,by = c("end_stat"="station")) %>%
+  rename(end_clust = clust) %>%
+  group_by(start_clust,end_clust) %>%
+  tally()
+
+citi_data %>% left_join(station_clusts,by = c("start_stat"="station")) %>%
+  rename(start_clust = clust) %>%
+  left_join(station_clusts,by = c("end_stat"="station")) %>%
+  rename(end_clust = clust) %>%
+  mutate(Time_Day = if_else(days < 12,"AM","PM")) %>%
+  group_by(start_clust,end_clust,Time_Day) %>%
+  tally() %>% print(n=38)
+
 
 #### Hawkes Process ####
 
-K <- 3
+K <- 5
 Pi = rep(1/K,K)
 Mu = matrix(runif(K*K),K,K)
 B = matrix(runif(K*K),K,K)
@@ -260,7 +296,7 @@ tau = matrix(runif(m*K),nrow=m,ncol=K)
 tau = tau/rowSums(tau)
 S = matrix(0,nrow = m,ncol = K)
 
-
+dT <- 1
 results_hawkes <-
   online_estimator_eff_revised(as.matrix(bike_data),
                                A_test, 
@@ -278,7 +314,42 @@ est_Z_hawkes <- apply(results_hawkes$tau,1,which.max)
 results_hawkes$Pi
 results_hawkes$elbo[length(results_hawkes$elbo)]*dim(bike_data)[1]
 
+est_Z_hawkes <- apply(results_hawkes$tau,1,which.max)
 
+station_clusts <- tibble(station = 1:m,clust = est_Z_hawkes)
+
+stations %>% left_join(station_clusts, 
+                       by = c("stat_id" = "station")) %>%
+  ggplot(aes(stat_lon,
+             stat_lat,color=as.factor(clust))) + 
+  geom_point()
+
+citi_data %>% left_join(station_clusts,by = c("start_stat"="station")) %>%
+  rename(start_clust = clust) %>%
+  left_join(station_clusts,by = c("end_stat"="station")) %>%
+  rename(end_clust = clust) %>%
+  group_by(start_clust,end_clust) %>%
+  tally()
+
+citi_data %>% left_join(station_clusts,by = c("start_stat"="station")) %>%
+  rename(start_clust = clust) %>%
+  left_join(station_clusts,by = c("end_stat"="station")) %>%
+  rename(end_clust = clust) %>%
+  mutate(Time_Day = if_else(days < 12,"AM","PM")) %>%
+  group_by(start_clust,end_clust,Time_Day) %>%
+  tally() %>% print(n=38)
+
+
+nyc_map_data <- stations %>% left_join(station_clusts, 
+                                       by = c("stat_id" = "station"))
+
+
+clust_data <- nyc_map_data %>% filter(clust == 5)
+revgeo(longitude = clust_data$stat_lon,
+       latitude = clust_data$stat_lat,
+       provider = 'photon',output = 'frame') 
+
+####
 batch_hawkes <- batch_estimator(as.matrix(bike_data),
                                 A_test, 
                                 m, K,
@@ -293,7 +364,8 @@ batch_hawkes <- batch_estimator(as.matrix(bike_data),
 batch_hawkes$Mu
 batch_hawkes$B
 batch_hawkes$Pi
-batch_hawkes$
+
+est_Z_hawkes <- apply(batch_hawkes$tau,1,which.max)
 
 station_clusts <- tibble(station = 1:m,clust = est_Z_hawkes)
 
@@ -332,9 +404,9 @@ citi_data %>%
 
 
 #### Inhomogeneous Poisson ####
-window = 1/7
-K <- 3 
-H <- 7
+window = 1/10
+K <- 4
+H <- 2
 dT = 1 # 
 MuA_start = array(0,c(K,K,H))
 tau_start = matrix(0,m,K)
@@ -343,7 +415,10 @@ system.time(non_hom_pois_est <-
                                     A_test,m,K,H,window,
                                     T = Time,dT,
                                     gravity = 0.001,
-                                    MuA_start,tau_start) )
+                                    MuA_start,tau_start,
+                                    is_elbo = TRUE) )
+# this is the right one
+
 
 non_hom_pois_est$Pi
 est_non_hom_pois <- apply(non_hom_pois_est$tau,1,which.max)
@@ -355,14 +430,73 @@ stations %>% left_join(station_clusts,
   ggplot(aes(stat_lon,
              stat_lat,color=as.factor(clust))) + 
   geom_point()
+tail(non_hom_pois_est$elbo,1)
 
 
+
+# plot this on a map and evaluate what the second cluster corresponds to
+library(ggmap)
+library(osmdata)
+
+bbox <- getbb("Manhattan")
+bbox[1,] <- c(-74.04722,-73.906)
+bbox[2,] <- c(40.65,40.82)
+
+nyc_map <- get_map(bbox, maptype = "toner-background",
+                   zoom = 12,color = "bw")
+
+
+nyc_map_data <- stations %>% left_join(station_clusts, 
+                                       by = c("stat_id" = "station"))
+
+nyc_map_data <- nyc_map_data %>% mutate(Cluster = as.factor(clust))
+
+ggmap(nyc_map) + 
+  geom_point(data = nyc_map_data,
+      aes(stat_lon,stat_lat,color=Cluster)) +
+  scale_color_discrete(labels = c(1,2,3))+
+  #viridis::scale_color_viridis(discrete = TRUE)+
+  theme_minimal() +
+  theme(axis.text = element_blank(),
+                          axis.title = element_blank(),
+                          legend.position = "bottom") 
+# changed them from 2,3,4 to 1,2,3
+
+
+clust_data <- nyc_map_data %>% filter(clust == 2)
+revgeo(longitude = clust_data$stat_lon,
+       latitude = clust_data$stat_lat,
+       provider = 'photon',output = 'frame') 
+
+ggmap(nyc_map) + geom_point(data = clust_data,
+                            aes(stat_lon,stat_lat)) +
+  theme_nothing() 
+
+### then to look at the inter group interactions
+citi_data %>% left_join(station_clusts,by = c("start_stat"="station")) %>%
+  rename(start_clust = clust) %>%
+  left_join(station_clusts,by = c("end_stat"="station")) %>%
+  rename(end_clust = clust) %>%
+  group_by(start_clust,end_clust) %>%
+  tally()
+
+
+citi_data %>% left_join(station_clusts,by = c("start_stat"="station")) %>%
+  rename(start_clust = clust) %>%
+  left_join(station_clusts,by = c("end_stat"="station")) %>%
+  rename(end_clust = clust) %>%
+  mutate(Time_Day = if_else(days < 12,"AM","PM")) %>%
+  group_by(start_clust,end_clust,Time_Day) %>%
+  tally() %>% print(n=38)
+
+
+####
 system.time(batch <- 
               batch_nonhomoPois_estimator(as.matrix(bike_data),
                                           A_test,m,K,H,window,
                                           T = Time,dT,
                                           gravity = 0.001,MuA_start,tau_start,
-                                          itermax = 100,stop_eps = 0.01 ))
+                                          itermax = 50,stop_eps = 0.01 ))
 batch$Pi
 
 
@@ -389,7 +523,7 @@ revgeo(longitude = clust_data$stat_lon,
 B_start = matrix(0,K,K)
 nonHawkes_online <- nonhomoHak_estimator_eff_revised(as.matrix(bike_data),
                                                      A_test,m,K,H,window,
-                                                     T = Time,dT=1,
+                                                     T = Time,dT=12,
                                                      lam = 1.75,
                                                      gravity = 0.001,
                                                      B_start,
@@ -397,7 +531,7 @@ nonHawkes_online <- nonhomoHak_estimator_eff_revised(as.matrix(bike_data),
 
 nonHawkes_online$Pi
 nonHawkes_online$elbo[length(nonHawkes_online$elbo)]*dim(bike_data)[1]
-
+tail(online_pois$AveELBO*dim(bike_data)[1],1)
 
 #### try restrict to Manhattan ####
 zip_codes <- read_csv("C:/Users/owenw/Google Drive/Tian/Oral/data/zip_borough.csv")

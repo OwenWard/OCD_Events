@@ -15,6 +15,8 @@ enron[[9]][[4]]$LDC_topic
 
 enron_node_info <- vertex.attributes(enron)
 
+names <- enron_node_info$Name
+
 enron_attrib <- get.edge.attribute(enron)
 enron_attrib$Time
 enron_edges <- ends(enron,E(enron))
@@ -30,28 +32,47 @@ enron_df <- tibble(send=enron_data[,1],
                         time = enron_data[,3])
 enron_df %>% head()
 
+lower_time <- "2000-04-27 00:00:00 UTC"
+lower_time <- ymd_hms(lower_time)
+
 enron_df <- enron_df %>% mutate(send = as.numeric(send),
                   rec = as.numeric(rec),
                   time = ymd_hms(time),
                   year = year(time)) %>%
-  filter(year > 1995) %>%
+  filter(time > lower_time) %>%
   filter(send != rec) %>%
   distinct(,.keep_all = TRUE)
 
+na_locs <- which(names =="NA")
 
 enron_df %>% head()
 
 # select the data for the algorithm
 
-min_date <- min(enron_df$time)
+# min_date <- min(enron_df$time)
+# 
+# enron_dat <- enron_df %>%
+#   mutate(dur = time-min_date,
+#          send_id = send -1,
+#          rec_id = rec -1) %>%
+#   select(send_id,rec_id,dur)
+# 
+# enron_dat %>% head()
 
+# remove the people who are unknown
+names_keep <- names[-na_locs]
+enron_node_info$Note[-na_locs]
+
+id_keep <- 1:length(names)
+id_keep <- id_keep[-na_locs]
+
+# recode based on this
 enron_dat <- enron_df %>%
-  mutate(dur = time-min_date,
-         send_id = send -1,
-         rec_id = rec -1) %>%
-  select(send_id,rec_id,dur)
+  filter(send %in% id_keep & rec %in% id_keep) 
 
 enron_dat %>% head()
+
+
 
 enron_dat <- enron_dat %>% 
   mutate(days = as.numeric(dur/(24*3600)))

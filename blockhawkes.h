@@ -1301,20 +1301,22 @@ Rcpp::List update_lam_eff_revised(
         n_edge = edge.n_elem;
         for (int p = 0; p < n_edge; p++){
             int j = (int) edge(p);
-
-            for (k = 0; k < K; k++) {
+            if(i != j){
+              for (k = 0; k < K; k++) {
                 for (l = 0; l < K; l++) {
-                    P2_mu(k,l) = P2_mu(k,l) + tau(i,k) * tau(j,l) * (t_end - t_start);
+                  P2_mu(k,l) = P2_mu(k,l) + tau(i,k) * tau(j,l) * (t_end - t_start);
                 }
+              }
+              
+              // update S, second part
+              for (k = 0; k < K; k++) {
+                for (l = 0; l < K; l++) {
+                  S_tp(i,k) = S_tp(i,k) - tau(j,l) * Mu(k,l) * (t_end - t_start);
+                }
+                
+              }
             }
-
-            // update S, second part
-            for (k = 0; k < K; k++) {
-                for (l = 0; l < K; l++) {
-                    S_tp(i,k) = S_tp(i,k) - tau(j,l) * Mu(k,l) * (t_end - t_start);
-                }
             
-            }
         }
     }
 

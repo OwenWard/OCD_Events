@@ -289,7 +289,8 @@ recov$step <- as.factor(recov$step)
 as_tibble(recov) %>% 
   ggplot(aes(iters,diff_B)) + geom_line(aes(color=step)) +
   xlab("Time Windows") +
-  ylab("Difference in Rate Parameters") +
+  #ylab("Difference in Rate Parameters") +
+  ylab("Difference") +
   scale_color_manual(name = "Parameter",values=c("blue","red"))+
   #geom_line(aes(iters,diff_mu),col = "red") +
   theme(axis.title=element_text(size=14),legend.position = "right")
