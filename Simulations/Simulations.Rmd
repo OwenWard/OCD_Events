@@ -5,11 +5,16 @@ output:
   pdf_document: default
 ---
 
+```{r setup}
+knitr::opts_knit$set(root.dir = "C:/Users/owenw/Documents/Github Local/OCD_Events")
+```
+
+
 ```{r, echo=FALSE, message=FALSE}
 #source("comparison_fcns.R")
 library(Rcpp)
 library(RcppArmadillo)
-sourceCpp("onlineblock.cpp")
+sourceCpp("CPP/onlineblock.cpp")
 set.seed(200)
 ```
 
