@@ -1,0 +1,183 @@
+---
+title: "Simulation Results"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(Rcpp)
+library(RcppArmadillo)
+
+
+sourceCpp("../cpp_files/onlineblock.cpp")
+
+theme_set(theme_classic())
+
+set.seed(200)
+
+```
+
+
+```{r set plot parameters}
+axis_nums <- 12
+axis_text <- 14
+
+theme_update(axis.title = element_text(size = axis_text),
+             axis.text = element_text(size=axis_nums))
+```
+
+
+
+This notebook will contain all simulation results in support of
+the paper "Online Community Detection for Event Streams on Large 
+Networks".
+
+
+## Comparison to Aggregation of Windowed Data
+
+
+## Parmaeter and Community Recovery
+
+
+We then wish to establish the performance of our proposed estimation
+procedure in terms of community recovery in simulation examples. To
+do this we simulate data under each of the proposed block structures
+and evaluate community recovery for this simulated data,
+comparing to the known true cluster assignments.
+
+```{r sim homogeneous Poisson, cache=TRUE}
+Time = 500 # total time
+K <- 3 # number of communities
+Mu <- matrix(c(0.6,0.2,0.3,0.1,1.0,0.4,0.5,0.4,0.8),
+             K,K,byrow = TRUE) # block level rates between communities
+B_Pois <- matrix(0,K,K,byrow = TRUE) # block level excitation, none here
+m <- 100 # number of nodes
+Pi <- matrix(c(0.4,0.3,0.3),1,3) # proportion of nodes in each community
+Z <- c(rep(0,m*Pi[1]),rep(1,m*Pi[2]),rep(2,m*Pi[3])) # assignment vector
+# of nodes to communities
+
+
+A <- list() # store edge structure
+for(i in 1:m){
+  # could sample these here with SBM structure...
+  node_list <- c(1:m)
+  edge <- sample(node_list[-i], 40) - 1
+  edge <- sort(edge)
+  A[[i]] <- edge
+}
+
+# then store these events
+pois_events <- sampleBlockHak(Time, A, Z, 
+                              Mu, B_Pois,lam = 1)
+
+
+```
+
+```{r fit homogeneous Poisson, echo=TRUE, results='hide', cache=TRUE}
+Pi = rep(1/K,K)
+B = matrix(runif(K*K),K,K)
+diag(B) = rnorm(K,mean = 1, sd = 0.1)
+tau = matrix(runif(m*K),nrow=m,ncol=K)
+tau = tau/rowSums(tau)
+S = matrix(0,nrow = m,ncol = K)
+
+dT <- 5
+inter_T <- 5
+
+results_online <- estimate_Poisson(full_data = pois_events,
+                                   A,m,K,Time,dT,
+                                   step = 0.5,
+                                   B,
+                                   tau,Pi,S,inter_T,is_elbo = TRUE)
+
+```
+
+We can compare the estimated and true rate matrix.
+
+```{r compare Poisson matrix}
+results_online$B
+Mu
+
+```
+
+## Informal Convergence of Proposed Method
+
+```{r informal convergence plots}
+iter = seq(dT,Time,dT)
+av_elbo = results_online$AveELBO
+ll = results_online$logL
+elbo = as_tibble(cbind(iter,elbo = as.vector(av_elbo),ll= as.vector(ll)))
+plot_1 <- ggplot(data = elbo, aes(iter,av_elbo)) + 
+  geom_line() + 
+  xlab("Time") + ylab("Average ELBO") 
+
+plot_2 <- ggplot(data = elbo, aes(iter,ll)) + 
+  geom_line()+ylab("Average Log likelihood") + xlab("Time")
+
+plot_1
+plot_2
+
+```
+
+```{r community recovery metrics}
+est_Z = apply(results_online$tau,1,which.max)
+cat("Estimated Adjusted Rand Index:",
+    mclust::adjustedRandIndex(Z,est_Z), "\n",
+    sep = " ")
+cat("Estimated Normalised Mutual Information:",
+    aricode::NMI(Z,est_Z), "\n",
+    sep = " ")
+
+```
+```{r online nmi plot}
+time_points = dim(results_online$early_tau)[3]-1
+early_nmi = rep(0,time_points)
+for(i in 1:time_points){
+  est_Z = apply(results_online$early_tau[,,i],1,which.max)
+  early_nmi[i]= aricode::NMI(Z,est_Z)
+}
+
+online_nmi = cbind(iters = seq(from = dT*inter_T,by = dT*inter_T,length.out = time_points),early_nmi)
+
+as_tibble(online_nmi) %>% ggplot(aes(iters,early_nmi)) + geom_line() +
+  ylab("Online NMI") + xlab("Time")
+```
+
+Do we want to run multiple simulations and get the average of the plot across 
+those? I think possibly...
+
+## Rate of Convergence Simulations
+
+
+As discussed in our paper, we provide results on the convergence 
+rate in terms of step size. 
+
+```{r convergence single step size}
+inter_B = results_online$inter_B
+norm_B = apply(inter_B,c(3),sum)
+
+## need to adjust this also for sampling size
+b_recov = cbind(iters = seq(dT,500,dT),diff = abs(sum(Mu)-norm_B)/K^2)
+
+as_tibble(b_recov) %>% 
+  ggplot(aes(iters,diff)) + geom_line() + xlab("Time") +
+  ylab("Difference in Rate Parameters") + ggtitle(latex2exp::TeX( 
+    'Step size of $\\alpha = 0.5$') )
+```
+
+We also wish to compare these results for multiple values of $\alpha$,
+in support of the theoretical results presented in our paper.
+
+```{r}
+
+```
+
+
+
+
