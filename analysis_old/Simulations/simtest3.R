@@ -1,6 +1,6 @@
 library(Rcpp)
 library(RcppArmadillo)
-sourceCpp("onlineblock.cpp")
+sourceCpp("CPP/onlineblock.cpp")
 
 # test case 1
 T <- 200
