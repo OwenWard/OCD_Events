@@ -6,10 +6,13 @@ output:
     toc_depth: 2
     toc_float: true
     code_folding: hide
+    fig_width: 6
+    fig_height: 4.5
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r setup, include=FALSE, cache=TRUE}
+knitr::opts_chunk$set(echo = TRUE, fig.path = "figure/",
+                      dev = 'png', fig.height = 4.5, fig.width = 6)
 library(tidyverse)
 library(Rcpp)
 library(RcppArmadillo)
@@ -24,7 +27,7 @@ set.seed(200)
 ```
 
 
-```{r set plot parameters}
+```{r set_plot_parameters}
 axis_nums <- 12
 axis_text <- 14
 
@@ -51,7 +54,7 @@ do this we simulate data under each of the proposed block structures
 and evaluate community recovery for this simulated data,
 comparing to the known true cluster assignments.
 
-```{r sim homogeneous Poisson, cache=TRUE}
+```{r sim_homogeneous_Poisson, cache=TRUE}
 Time = 500 # total time
 K <- 3 # number of communities
 Mu <- matrix(c(0.6,0.2,0.3,0.1,1.0,0.4,0.5,0.4,0.8),
@@ -79,7 +82,7 @@ pois_events <- sampleBlockHak(Time, A, Z,
 
 ```
 
-```{r fit homogeneous Poisson, echo=TRUE, results='hide', cache=TRUE}
+```{r fit_homogeneous_Poisson, echo=TRUE, results='hide',cache=TRUE}
 Pi = rep(1/K,K)
 B = matrix(runif(K*K),K,K)
 diag(B) = rnorm(K,mean = 1, sd = 0.1)
@@ -92,7 +95,7 @@ inter_T <- 5
 
 results_online <- estimate_Poisson(full_data = pois_events,
                                    A,m,K,Time,dT,
-                                   step = 0.5,
+                                   step_size = 0.5,
                                    B,
                                    tau,Pi,S,inter_T,is_elbo = TRUE)
 
@@ -100,15 +103,17 @@ results_online <- estimate_Poisson(full_data = pois_events,
 
 We can compare the estimated and true rate matrix.
 
-```{r compare Poisson matrix}
+```{r compare_Poisson_matrix}
+cat("Estimated Poisson rate matrix \n")
 results_online$B
+cat("True Poisson rate matrix \n")
 Mu
 
 ```
 
 ## Informal Convergence of Proposed Method
 
-```{r informal convergence plots}
+```{r informal_convergence_plots}
 iter = seq(dT,Time,dT)
 av_elbo = results_online$AveELBO
 ll = results_online$logL
@@ -125,7 +130,7 @@ plot_2
 
 ```
 
-```{r community recovery metrics}
+```{r community_recovery_metrics}
 est_Z = apply(results_online$tau,1,which.max)
 cat("Estimated Adjusted Rand Index:",
     mclust::adjustedRandIndex(Z,est_Z), "\n",
@@ -135,7 +140,7 @@ cat("Estimated Normalised Mutual Information:",
     sep = " ")
 
 ```
-```{r online nmi plot}
+```{r online_nmi_plot}
 time_points = dim(results_online$early_tau)[3]-1
 early_nmi = rep(0,time_points)
 for(i in 1:time_points){
@@ -158,7 +163,7 @@ those? I think possibly...
 As discussed in our paper, we provide results on the convergence 
 rate in terms of step size. 
 
-```{r convergence single step size}
+```{r convergence_single_step_size}
 inter_B = results_online$inter_B
 norm_B = apply(inter_B,c(3),sum)
 
@@ -174,10 +179,201 @@ as_tibble(b_recov) %>%
 We also wish to compare these results for multiple values of $\alpha$,
 in support of the theoretical results presented in our paper.
 
-```{r}
+```{r sims_multiple_step_sizes,results='hide',cache=TRUE}
+results_alpha_05 <- estimate_Poisson(full_data = pois_events,
+                                   A,m,K,Time,dT,
+                                   step_size = 0.5,
+                                   B,
+                                   tau,Pi,S,inter_T,is_elbo = FALSE)
+
+results_alpha_025 <- estimate_Poisson(full_data = pois_events,
+                                   A,m,K,Time,dT,
+                                   step_size = 0.25,
+                                   B,
+                                   tau,Pi,S,inter_T,is_elbo = FALSE)
+results_alpha_075 <- estimate_Poisson(full_data = pois_events,
+                                   A,m,K,Time,dT,
+                                   step_size = 0.75,
+                                   B,
+                                   tau,Pi,S,inter_T,is_elbo = FALSE)
 
 ```
 
 
 
+```{r convergence_data}
+inter_B_05 <- results_alpha_05$inter_B
+rm(results_alpha_05)
 
+inter_B_025 <- results_alpha_025$inter_B
+rm(results_alpha_025)
+
+inter_B_075 <- results_alpha_075$inter_B
+rm(results_alpha_075)
+
+
+norm_B_05 = apply(inter_B_05,c(3),sum)
+b_recov_05 = cbind(iters = seq(dT,Time,dT),
+                   diff = abs(sum(Mu)-norm_B_05)/K^2)
+
+
+norm_B_025 = apply(inter_B_025,c(3),sum)
+b_recov_025 = cbind(iters = seq(dT,Time,dT),
+                   diff = abs(sum(Mu)-norm_B_025)/K^2)
+
+
+norm_B_075 = apply(inter_B_075,c(3),sum)
+b_recov_075 = cbind(iters = seq(dT,Time,dT),
+                   diff = abs(sum(Mu)-norm_B_075)/K^2)
+
+```
+
+
+```{r summarise data}
+
+recov <- bind_rows(as_tibble(b_recov_025),
+                   as_tibble(b_recov_05)) %>%
+  bind_rows(as_tibble(b_recov_075))
+
+num_iters <- length(seq(dT,Time,dT))
+
+recov$step_size <- c(rep("alpha_025",num_iters),
+                     rep("alpha_05",num_iters),
+                     rep("alpha_075",num_iters))
+# saveRDS(recov, file = "step_sims")
+
+```
+
+```{r plot_rate for steps}
+ggplot(data = recov,aes(x=iters,y=diff,))+
+  geom_line(aes(colour=step_size)) + 
+  # scale_color_manual(name = "Step Size")
+  #                    #values=c("blue","red","black")) +
+  xlab("Time") + ylab("Difference in rate matrix") +
+  scale_color_discrete(labels = unname(latex2exp::TeX(c("$\\alpha = \ 0.25",
+                                                        "$\\alpha = \ 0.50",
+                                                        "$\\alpha = \ 0.75"))) ) +
+  theme(legend.title = element_blank())
+
+# recov %>% filter(step_size == "alpha_025") %>%
+#   ggplot(aes(iters,diff)) + geom_line()
+
+```
+
+
+
+```{r load_old_data, include=FALSE,eval=FALSE}
+eta025 <- readRDS("../analysis_old/Simulations/eta025.RDS")
+eta050 <- readRDS("../analysis_old/Simulations/eta050.RDS")
+eta075 <- readRDS("../analysis_old/Simulations/eta075.RDS")
+
+
+eta_df = rbind(eta025,eta050)
+eta_df = rbind(eta_df,eta075)
+step = c(rep("eta025",200),rep("eta050",200),rep("eta075",200))
+eta_df$step <- step
+eta_df$step = as.factor(eta_df$step)
+
+
+ggplot(data = eta_df,aes(x=iters,y=diff,))+
+  geom_line(aes(colour=step)) + 
+  scale_color_manual(name = "Step Size",values=c("blue","red","black"))
+
+
+```
+
+
+
+## Average NMI
+
+We want to repeat the above plot where we examine the
+cluster recovery over time, now considering multiple simulated
+datasets. To do this we will run this here and cache the results.
+
+```{r average_nmi_sim, cache=TRUE, results='hide'}
+n_sims <- 100
+
+# then run the sims here
+Time <- 500
+dT <- 5
+inter_T <- 5
+inters <- Time/(dT*inter_T)
+sim_nmi = matrix(nrow=n_sims,ncol=inters)
+
+
+for(iter in 1:n_sims) {
+  print(iter)
+  Time = 500
+  #dT = 10
+  K <- 3
+  Mu <- matrix(c(0.6,0.2,0.3,0.1,1.0,0.4,0.5,0.4,0.8),K,K,byrow = TRUE)
+  B_Pois <- matrix(0,K,K,byrow = TRUE)
+  m <- 100
+  Pi <- matrix(c(0.4,0.3,0.3),1,3)
+  Z <- c(rep(0,m*Pi[1]),rep(1,m*Pi[2]),rep(2,m*Pi[3]))
+  
+  A <- list()
+  for(i in 1:m){
+    # could sample these here with SBM structure...
+    edge_list <- c(1:m)
+    edge <- sample(edge_list[-i], 40) - 1
+    edge <- sort(edge)
+    A[[i]] <- edge
+  }
+  
+  system.time(alltimes <- sampleBlockHak(Time, A, Z, Mu, B_Pois, lam = 1))
+  
+  
+  
+  Pi = rep(1/K,K)
+  B = matrix(runif(K*K),K,K)
+  diag(B) = rnorm(3,mean = 1, sd = 0.1)
+  tau = matrix(runif(m*K),nrow=m,ncol=K)
+  tau = tau/rowSums(tau)
+  S = matrix(0,nrow = m,ncol = K)
+  results_online <- estimate_Poisson(full_data = alltimes,
+                                     A,m,K,Time,dT,
+                                     step_size = 0.5,
+                                     B,
+                                     tau,Pi,S,inter_T,is_elbo = FALSE)
+  #print(results_online$Pi)
+  time_points = dim(results_online$early_tau)[3]-1
+  early_nmi = rep(0,time_points)
+  for(i in 1:time_points){
+    est_Z = apply(results_online$early_tau[,,i],1,which.max)
+    early_nmi[i]= aricode::NMI(Z,est_Z)
+  }
+  
+  #online_nmi = cbind(windows = seq(50,500,50),early_nmi)
+  online_nmi = cbind(iters = seq(from = dT*inter_T,
+                                 by = dT*inter_T,
+                                 length.out = time_points),early_nmi)
+  sim_nmi[iter,] = early_nmi
+}
+
+
+```
+
+
+```{r average_nmi_plot}
+new_sim_nmi = t(sim_nmi)
+colnames(new_sim_nmi) = paste("Sim",c(1:n_sims),sep="")
+
+nmi_online = as_tibble(new_sim_nmi)
+nmi_online$Windows = seq(dT*inter_T,Time,dT*inter_T)
+
+
+nmi_online %>% pivot_longer(
+  cols = starts_with("Sim")) %>%
+  group_by(Windows) %>%
+  summarise(Ave = mean(value),sdev = sd(value)) %>%
+  mutate(se = sdev/sqrt(50)) %>%
+  ggplot(aes(Windows,Ave)) + geom_line() + geom_point() +
+  geom_errorbar(aes(ymin=Ave-se, ymax=Ave+se), width=.1,color="blue") +
+  ylab("Average NMI") + xlab("Time")
+
+```
+
+
+
+## Intensity Plots
