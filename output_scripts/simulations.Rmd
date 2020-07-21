@@ -136,7 +136,7 @@ for(i in seq_along(m_values)) {
     for(k in 1:m_nodes){
       # could sample these here with SBM structure...
       node_list <- c(1:m_nodes)
-      edge <- sample(node_list[-k], 20) - 1
+      edge <- sample(node_list[-k], 15) - 1
       edge <- sort(edge)
       A[[k]] <- edge
     }
