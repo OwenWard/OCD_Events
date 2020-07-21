@@ -276,7 +276,7 @@ no_methods <- 3 #ours, sum all, pz_estimator
 
 
 l <- 2
-m_pz <- 2 # need m =l for final time point
+m <- 2 # need m =l for final time point
 m0 <- 1
 l0 <- 2
 
