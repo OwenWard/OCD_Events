@@ -348,7 +348,7 @@ for(i in seq_along(m_values)) {
     pz_est <- pz_estimator_3(out,time = Time,
                              l0 = l0,
                              m0 = m0,
-                             m = m_pz,
+                             m = m,
                              r= Time-1)
     results$SC_PZ[j] <- aricode::NMI(fcd::spectral.clustering(pz_est,K=2),Z)
     # our method
