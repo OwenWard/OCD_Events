@@ -209,7 +209,7 @@ for(i in seq_along(m_values)) {
     system.time(alltimes <- sampleBlockHak(Time,A, Z, Mu, B, lam = 1))
     ### fit the models
     B_start <- matrix(runif(K*K),K,K)
-    MuA_start <- array(runif(K*K*H),c(K,K,H))
+    # MuA_start <- array(runif(K*K*H),c(K,K,H))
     Mu_start <- matrix(runif(K*K),K,K)
     
     tau_start = matrix(runif(m_nodes*K),nrow=m_nodes,ncol=K)
