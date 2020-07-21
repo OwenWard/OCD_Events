@@ -3,7 +3,7 @@
 ### code for cluster
 .libPaths("/moto/stats/users/ogw2103/rpackages/")
 setwd("/moto/stats/users/ogw2103/Code/OCD_Events/Sims/")
-
+n_sims <- 100
 ###
 
 
