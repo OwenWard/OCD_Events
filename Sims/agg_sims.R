@@ -266,7 +266,7 @@ set.seed(200)
 #   geom_line() +
 #   geom_errorbar(aes(ymin = lower, ymax = upper))
 
-saveRDS(all_results, file = "Sims/output_sims/agg_comp_hawk.RDS")
+#saveRDS(all_results, file = "Sims/output_sims/agg_comp_hawk.RDS")
 
 #### Block Poisson ####
 
