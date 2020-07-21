@@ -1,7 +1,7 @@
 #### Simulation to show the difficulties of binning data ####
 
 ### code for cluster
-.libPaths("/moto/stats/user/ogw2103/rpackages/")
+.libPaths("/moto/stats/users/ogw2103/rpackages/")
 setwd("/moto/stats/users/ogw2103/Code/OCD_Events/Sims/")
 
 ###
@@ -14,7 +14,7 @@ library(RcppArmadillo)
 
 sourceCpp("../cpp_files/onlineblock.cpp")
 
-source("Sims/pensky_fcns.R")
+source("pensky_fcns.R")
 
 bin_fun <- function(events,m,max_Time,window_size){
   winds <- seq(from=window_size,to=max_Time,by= window_size)
