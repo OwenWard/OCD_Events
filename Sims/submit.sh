@@ -9,7 +9,7 @@
 #SBATCH --mail-user=ogw2103@columbia.edu
 #SBATCH --mail-type=ALL
 
-module load R
+module load R/4.0.1
 echo "Launching R"
 date
 
