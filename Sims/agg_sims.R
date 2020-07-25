@@ -362,7 +362,7 @@ for(i in seq_along(m_values)) {
 }
 
 
-saveRDS(all_results, file = "Sims/output_sims/agg_comp_pois.RDS")
+saveRDS(all_results, file = "agg_comp_pois.RDS")
 
 # all_results %>%
 #   bind_rows() %>%
