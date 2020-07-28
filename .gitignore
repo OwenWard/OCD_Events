@@ -5,3 +5,4 @@
 output_scripts/simulations_cache
 output_scripts/figure
 output_scripts/*.html
+analysis_old/Simulations/*.RDS

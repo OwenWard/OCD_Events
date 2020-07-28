@@ -96,7 +96,7 @@ bin_fun <- function(events,m,max_Time,window_size){
 
 
 
-```{r poisson-aggregate-comparison, results = 'hide', cache=TRUE,message=FALSE,warning=FALSE}
+```{r poisson-aggregate-comparison, eval=FALSE,include=FALSE ,results = 'hide', cache=TRUE,message=FALSE,warning=FALSE}
 n_sims <- 20
 m_values <- c(50,100,250,500)
 no_methods <- 3 #ours, sum all, pz_estimator
@@ -187,6 +187,14 @@ for(i in seq_along(m_values)) {
   all_results[[i]] <- results
   
 }
+```
+
+
+```{r fig-agg-rank-pois}
+all_results <- readRDS("../Sims/output_sims/agg_comp_pois.RDS")
+
+n_sims <- 100
+m_values <- c(50,100,250,500)
 
 pois_agg <- all_results %>%
   bind_rows() %>%
@@ -197,7 +205,7 @@ pois_agg <- all_results %>%
   mutate(lower = max(NMI - se,0), upper = min(NMI + se,1)) %>%
   ggplot(aes(nodes,NMI,colour = Method)) + 
   geom_line() +
-  geom_errorbar(aes(ymin = lower, ymax = upper)) + 
+  geom_errorbar(aes(ymin = lower, ymax = upper),width=10) + 
   scale_x_continuous(breaks = m_values)
 
 pois_agg
@@ -215,7 +223,7 @@ Note, our method seems to require knowing the window size to recover the
 community structure.
 
 
-```{r full agg sim, cache=TRUE, results='hide',message=FALSE,warning=FALSE}
+```{r full agg sim, cache=TRUE, results='hide',message=FALSE,warning=FALSE,eval=FALSE,include=FALSE}
 n_sims <- 20
 m_values <- c(50,100,250,500)
 no_methods <- 3 #ours, sum all, pz_estimator
@@ -316,7 +324,10 @@ for(i in seq_along(m_values)) {
 
 ```
 
-```{r inhawkes-aggregation-comparison, message=FALSE,warning=FALSE}
+```{r fig-agg-rank-inhawkes, message=FALSE,warning=FALSE}
+
+all_results <- readRDS("../Sims/output_sims/agg_comp_inhom_hawk_wind_75.RDS")
+
 inhaw_agg <- all_results %>%
   bind_rows() %>%
   pivot_longer(cols=SC_Sum:SC_PZ, names_to = "Method") %>%
@@ -326,7 +337,7 @@ inhaw_agg <- all_results %>%
   mutate(lower = max(NMI - se,0), upper = min(NMI + se,1)) %>%
   ggplot(aes(nodes,NMI,colour = Method)) + 
   geom_line() +
-  geom_errorbar(aes(ymin = lower, ymax = upper)) +
+  geom_errorbar(aes(ymin = lower, ymax = upper),width = 10) +
   scale_x_continuous(breaks = m_values)
 
 inhaw_agg
@@ -334,85 +345,34 @@ inhaw_agg
 ```
 
 
-```{r simulate inhom Hawkes, results='hide',eval=FALSE}
-m <- 50
-K <- 2
-H <- 2
-MuA <- array(0,c(K,K,H))
-MuA[,,1] <- matrix(c(0.8,0.2,0.6,0.4),2,2)
-MuA[,,2] <- matrix(c(0.4,0.7,0.2,0.7),2,2)
+## Hawkes
 
-Mu <- matrix(c(0.6,0.2,0.3,0.5),K,K,byrow = TRUE)
-B <- matrix(c(0.1,0.02,0.01,0.05),K,K,byrow = TRUE)
-Pi <- matrix(c(0.4,0.6),1,2)
-Z <- c(rep(0,m*Pi[1]),rep(1,m*Pi[2]))
-Time <- 50
+```{r}
+all_results <- readRDS("../Sims/output_sims/agg_comp_hawk.RDS")
 
-A <- list()
-for(i in 1:m){
-  # could sample these here with SBM structure...
-  node_list <- c(1:m)
-  edge <- sample(node_list[-i], 10) - 1
-  edge <- sort(edge)
-  A[[i]] <- edge
-}
+haw_agg <- all_results %>%
+  bind_rows() %>%
+  pivot_longer(cols=SC_Sum:SC_PZ, names_to = "Method") %>%
+  group_by(nodes,Method) %>%
+  summarise(NMI = mean(value), se = sd(value)/sqrt(n_sims)) %>%
+  rowwise() %>%
+  mutate(lower = max(NMI - se,0), upper = min(NMI + se,1)) %>%
+  ggplot(aes(nodes,NMI,colour = Method)) + 
+  geom_line() +
+  geom_errorbar(aes(ymin = lower, ymax = upper),width = 10) +
+  scale_x_continuous(breaks = m_values)
 
-system.time(alltimes <- sampleBlockHak_nonhomo(Time,
-                                                   A, Z, MuA, B, 
-                                               window = 1, lam = 1))
+haw_agg
+
+
 ```
 
 
 
-```{r functions for binned data,results='hide',eval=FALSE}
 
-bin_fun <- function(events,m,max_Time,window_size){
-  winds <- seq(from=window_size,to=max_Time,by= window_size)
-  adj <- array(0, dim = c(m,m,length(winds)))
-  for(i in 1:length(winds)){
-    # get edges in each window and then updating the corresponding
-    # entry in the adjacency matrix
-    upper <- winds[i]
-    lower <- upper-window_size
-    wind_events <- events %>% 
-      filter( Time < upper & Time > lower) %>%
-      group_by(start,end) %>% tally()
-    for(j in 1:nrow(wind_events)){
-       row <- wind_events$start[j]+1
-       col <- wind_events$end[j] + 1
-       adj[row,col,i] <- wind_events$n[j] 
-    }
-  }
-  return(adj)
-}
 
-test_events <- tibble(start = alltimes[,1],end = alltimes[,2],
-                      Time = alltimes[,3])
 
-out <- bin_fun(test_events,m,max_Time = Time,window_size = 1)
-sum(out) - nrow(alltimes)
 
-```
-```{r fit our model, results='hide',eval=FALSE}
-B_start <- matrix(runif(K*K),K,K)
-MuA_start <- array(runif(K*K*H),c(K,K,H))
-
-tau_start = matrix(runif(m*K),nrow=m,ncol=K)
-tau_start = tau_start/rowSums(tau_start)
-
-nonHawkes_online <- nonhomoHak_estimator_eff_revised(alltimes,
-                                                     A,m,K,H,
-                                                     window = 0.999,
-                                                     T = Time,dT=10,
-                                                     lam = 1.75,
-                                                     gravity = 0.001,
-                                                     B_start,
-                                                     MuA_start,
-                                                     tau_start)
-
-est_Z <- apply(nonHawkes_online$tau,1,which.max)
-
-```
 
 This recovers the clusters with the correct window size...., which the binning
 methods do not, even with the correct window size.
@@ -773,3 +733,5 @@ nmi_online %>% pivot_longer(
 
 
 ## Intensity Plots
+
+
