@@ -326,7 +326,7 @@ for(i in seq_along(m_values)) {
 
 ```{r fig-agg-rank-inhawkes, message=FALSE,warning=FALSE}
 
-all_results <- readRDS("../Sims/output_sims/agg_comp_inhom_hawk_wind_75.RDS")
+all_results <- readRDS("../Sims/output_sims/agg_comp_inhom_hawk_wind_85.RDS")
 
 inhaw_agg <- all_results %>%
   bind_rows() %>%
