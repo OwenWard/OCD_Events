@@ -101,9 +101,9 @@ for(i in seq_along(m_values)) {
     tau_start = tau_start/rowSums(tau_start)
 
     nonHawkes_online <- nonhomoHak_estimator_eff_revised(alltimes,
-                                                         A,m_nodes,K,H,
+                                                         A,m_nodes,K,H*4,
                                                          window = 0.75,
-                                                         T = Time,dT=10,
+                                                         T = Time,dT=1,
                                                          lam = 1.75,
                                                          gravity = 0.001,
                                                          B_start,
@@ -116,7 +116,7 @@ for(i in seq_along(m_values)) {
     test_events <- tibble(start = alltimes[,1],end = alltimes[,2],
                           Time = alltimes[,3])
 
-    out <- bin_fun(test_events,m_nodes,max_Time = Time,window_size = 1)
+    out <- bin_fun(test_events,m_nodes,max_Time = Time,window_size = 0.1)
 
     ### store the results
     # using sum of all events
