@@ -42,7 +42,7 @@ theme_set(theme_classic())
 set.seed(200)
 
 # ##### Inhomogeneous Hawkes ####
-
+common_window <- 1
 ###n_sims <- 100
 m_values <- c(50,100,250,500)
 no_methods <- 3 #ours, sum all, pz_estimator
@@ -94,6 +94,7 @@ for(i in seq_along(m_values)) {
                                                    A, Z, MuA, B,
                                                    window = 1, lam = 1))
     ### fit the models
+    H_est <- 4
     B_start <- matrix(runif(K*K),K,K)
     MuA_start <- array(runif(K*K*H),c(K,K,H))
 
@@ -101,9 +102,9 @@ for(i in seq_along(m_values)) {
     tau_start = tau_start/rowSums(tau_start)
 
     nonHawkes_online <- nonhomoHak_estimator_eff_revised(alltimes,
-                                                         A,m_nodes,K,H*4,
-                                                         window = 0.75,
-                                                         T = Time,dT=1,
+                                                         A,m_nodes,K,H_est,
+                                                         window = 1,
+                                                         T = Time,dT= common_window,
                                                          lam = 1.75,
                                                          gravity = 0.001,
                                                          B_start,
@@ -116,7 +117,7 @@ for(i in seq_along(m_values)) {
     test_events <- tibble(start = alltimes[,1],end = alltimes[,2],
                           Time = alltimes[,3])
 
-    out <- bin_fun(test_events,m_nodes,max_Time = Time,window_size = 0.1)
+    out <- bin_fun(test_events,m_nodes,max_Time = Time,window_size = common_window)
 
     ### store the results
     # using sum of all events
@@ -126,11 +127,12 @@ for(i in seq_along(m_values)) {
     sum_adj <- apply(out, c(1,2), sum)#/dim(out)[3]
     results$SC_Sum[j] <- aricode::NMI(fcd::spectral.clustering(sum_adj,K=2),Z)
     # pz
-    pz_est <- pz_estimator_3(out,time = Time,
+    pz_est <- pz_estimator_3(out,time = Time/common_window,
                              l0 = l0,
                              m0 = m0,
                              m = m,
-                             r= Time-1)
+                             r= (Time/common_window)-1) 
+    # need to make this more flexible in general
     results$SC_PZ[j] <- aricode::NMI(fcd::spectral.clustering(pz_est,K=2),Z)
     # our method
     results$OCD[j] <- aricode::NMI(Z,est_Z)
@@ -142,8 +144,10 @@ for(i in seq_along(m_values)) {
 
 }
 
-
-saveRDS(all_results, file = "Sims/output_sims/agg_comp_inhom_hawk_wind_85.RDS")
+beepr::beep()
+saveRDS(all_results, file = paste("Sims/output_sims/agg_comp_inhom_hawk_true_H_2_dT",
+    common_window,"H_",H,".RDS",sep =""))
+beepr::beep()
 
 ##### Plot Inhom Hawkes ####
 plot_results <- all_results %>%
@@ -165,6 +169,8 @@ plot_results
 ####
 
 ####n_sims <- 20
+common_window <- 5
+
 m_values <- c(50,100,250,500)
 no_methods <- 3 #ours, sum all, pz_estimator
 
@@ -197,7 +203,7 @@ for(i in seq_along(m_values)) {
     B <- matrix(c(0.1,0.02,0.01,0.05),K,K,byrow = TRUE)
     Pi <- matrix(c(0.4,0.6),1,2)
     Z <- c(rep(0,m_nodes*Pi[1]),rep(1,m_nodes*Pi[2]))
-    Time <- 200
+    Time <- 100
 
     A <- list()
     for(k in 1:m_nodes){
@@ -219,7 +225,7 @@ for(i in seq_along(m_values)) {
 
     Hawkes_online <- online_estimator_eff_revised(alltimes,
                                                          A,m_nodes,K,
-                                                         T = Time,dT=5,
+                                                         T = Time,dT=common_window,
                                                          lam = 1.25,
                                                          B_start,
                                                          Mu_start,
@@ -231,7 +237,7 @@ for(i in seq_along(m_values)) {
     test_events <- tibble(start = alltimes[,1],end = alltimes[,2],
                           Time = alltimes[,3])
 
-    out <- bin_fun(test_events,m_nodes,max_Time = Time,window_size = 1)
+    out <- bin_fun(test_events,m_nodes,max_Time = Time,window_size = common_window)
 
     ### store the results
     # using sum of all events
@@ -241,11 +247,11 @@ for(i in seq_along(m_values)) {
     sum_adj <- apply(out, c(1,2), sum)#/dim(out)[3]
     results$SC_Sum[j] <- aricode::NMI(fcd::spectral.clustering(sum_adj,K=2),Z)
     # pz
-    pz_est <- pz_estimator_3(out,time = Time,
+    pz_est <- pz_estimator_3(out,time = Time/common_window,
                              l0 = l0,
                              m0 = m0,
                              m = m,
-                             r= Time-1)
+                             r= (Time/common_window)-1)
     results$SC_PZ[j] <- aricode::NMI(fcd::spectral.clustering(pz_est,K=2),Z)
     # our method
     results$OCD[j] <- aricode::NMI(Z,est_Z)
@@ -256,6 +262,13 @@ for(i in seq_along(m_values)) {
   all_results[[i]] <- results
 
 }
+
+saveRDS(all_results, file = paste("Sims/output_sims/agg_comp_hawk_dT",
+                                  common_window,".RDS",sep =""))
+
+beepr::beep()
+
+####
 
 all_results %>%
   bind_rows() %>%
@@ -273,6 +286,7 @@ saveRDS(all_results, file = "Sims/output_sims/agg_comp_hawk.RDS")
 #### Block Poisson ####
 
 ####n_sims <- 5
+common_window <- 5
 m_values <- c(50,100,250,500)
 no_methods <- 3 #ours, sum all, pz_estimator
 
@@ -326,10 +340,10 @@ for(i in seq_along(m_values)) {
     S = matrix(0,nrow = m_nodes,ncol = K)
     
     poisson_online <- estimate_Poisson(full_data = alltimes,
-                     A,m_nodes,K,Time,dT = 5,
+                     A,m_nodes,K,Time,dT = common_window,
                      step_size = 0.5,
                      B,
-                     tau,Pi,S,inter_T = 1,is_elbo = FALSE)
+                     tau,Pi,S,inter_T = 10,is_elbo = FALSE)
     
     est_Z <- apply(poisson_online$tau,1,which.max)
     
@@ -337,7 +351,7 @@ for(i in seq_along(m_values)) {
     test_events <- tibble(start = alltimes[,1],end = alltimes[,2],
                           Time = alltimes[,3])
     
-    out <- bin_fun(test_events,m_nodes,max_Time = Time,window_size = 1)
+    out <- bin_fun(test_events,m_nodes,max_Time = Time,window_size = common_window)
     
     ### store the results
     # using sum of all events
@@ -347,11 +361,11 @@ for(i in seq_along(m_values)) {
     sum_adj <- apply(out, c(1,2), sum)#/dim(out)[3]
     results$SC_Sum[j] <- aricode::NMI(fcd::spectral.clustering(sum_adj,K=2),Z)
     # pz
-    pz_est <- pz_estimator_3(out,time = Time,
+    pz_est <- pz_estimator_3(out,time = Time/common_window,
                              l0 = l0,
                              m0 = m0,
                              m = m,
-                             r= Time-1)
+                             r= (Time/common_window)-1)
     results$SC_PZ[j] <- aricode::NMI(fcd::spectral.clustering(pz_est,K=2),Z)
     # our method
     results$OCD[j] <- aricode::NMI(Z,est_Z)
@@ -364,18 +378,19 @@ for(i in seq_along(m_values)) {
 }
 
 
-saveRDS(all_results, file = "Sims/output_sims/agg_comp_pois.RDS")
+saveRDS(all_results, file = paste("Sims/output_sims/agg_comp_pois_dT",
+                                  common_window,".RDS",sep = ""))
 beepr::beep()
 
-# all_results %>%
-#   bind_rows() %>%
-#   pivot_longer(cols=SC_Sum:SC_PZ, names_to = "Method") %>%
-#   group_by(nodes,Method) %>%
-#   summarise(NMI = mean(value), se = sd(value)/sqrt(n_sims)) %>%
-#   rowwise() %>%
-#   mutate(lower = max(NMI - se,0), upper = min(NMI + se,1)) %>%
-#   ggplot(aes(nodes,NMI,colour = Method)) + 
-#   geom_line() +
-#   geom_errorbar(aes(ymin = lower, ymax = upper)) + 
-#   scale_x_continuous(breaks = m_values)
+all_results %>%
+  bind_rows() %>%
+  pivot_longer(cols=SC_Sum:SC_PZ, names_to = "Method") %>%
+  group_by(nodes,Method) %>%
+  summarise(NMI = mean(value), se = sd(value)/sqrt(n_sims)) %>%
+  rowwise() %>%
+  mutate(lower = max(NMI - se,0), upper = min(NMI + se,1)) %>%
+  ggplot(aes(nodes,NMI,colour = Method)) +
+  geom_line() +
+  geom_errorbar(aes(ymin = lower, ymax = upper)) +
+  scale_x_continuous(breaks = m_values)
 
