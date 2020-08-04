@@ -2,6 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
+*.gz
 output_scripts/simulations_cache
 output_scripts/figure
 output_scripts/*.html
