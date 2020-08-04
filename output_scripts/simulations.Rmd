@@ -1,6 +1,9 @@
 ---
 title: "Simulation Results"
 output:
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
   html_document:
     toc: yes
     toc_depth: 3
@@ -60,6 +63,9 @@ where we construct an estimator matrix described there and perform spectral clus
 
 For each, we compare the estimated community structure using spectral clustering
 with a known number of communities to the results obtained from our procedure.
+We consider a window size of $dT=0.5,1,5$ for each model, where this window size
+is used to aggregate the data for the binned estimator and also the batch size in 
+our data processing step.
 
 ### Block Poisson
 
@@ -69,129 +75,10 @@ nodes. As the number of nodes increase and these interactions become sparse,
 we see that comparison methods which aggregate data are unable to recover the
 community structure.
 
-```{r functions for binning}
-source("C:/Users/owenw/Documents/Github_Local/Spectral_DSBM/R/pensky_fcns.R")
 
 
-bin_fun <- function(events,m,max_Time,window_size){
-  winds <- seq(from=window_size,to=max_Time,by= window_size)
-  adj <- array(0, dim = c(m,m,length(winds)))
-  for(i in 1:length(winds)){
-    # get edges in each window and then updating the corresponding
-    # entry in the adjacency matrix
-    upper <- winds[i]
-    lower <- upper-window_size
-    wind_events <- events %>% 
-      filter( Time < upper & Time > lower) %>%
-      group_by(start,end) %>% tally()
-    for(j in 1:nrow(wind_events)){
-      row <- wind_events$start[j]+1
-      col <- wind_events$end[j] + 1
-      adj[row,col,i] <- wind_events$n[j] 
-    }
-  }
-  return(adj)
-}
-```
-
-
-
-```{r poisson-aggregate-comparison, eval=FALSE,include=FALSE ,results = 'hide', cache=TRUE,message=FALSE,warning=FALSE}
-n_sims <- 20
-m_values <- c(50,100,250,500)
-no_methods <- 3 #ours, sum all, pz_estimator
-
-
-l <- 2
-m <- 2 # need m =l for final time point
-m0 <- 1
-l0 <- 2
-
-
-all_results <- list(rep(tibble(),length(m_values)))
-#all_results <- tibble()
-
-for(i in seq_along(m_values)) {
-  m_nodes <- m_values[i]
-  #results <- matrix(NA, nrow = n_sims,ncol = no_methods )
-  # then each sim
-  results <- matrix(NA, nrow = n_sims,ncol = no_methods+2 )
-  colnames(results) <- c("SC_Sum","OCD","SC_PZ","nodes","sim")
-  results <- as_tibble(results)
-  for(j in 1:n_sims) {
-    print(j)
-    K <- 2
-    # H <- 2
-    # MuA <- array(0,c(K,K,H))
-    # MuA[,,1] <- matrix(c(0.8,0.2,0.6,0.4),2,2)
-    # MuA[,,2] <- matrix(c(0.4,0.7,0.2,0.7),2,2)
-    
-    Mu <- matrix(c(0.6,0.2,0.3,0.5),K,K,byrow = TRUE)
-    B <- matrix(0,K,K,byrow = TRUE)
-    Pi <- matrix(c(0.4,0.6),1,2)
-    Z <- c(rep(0,m_nodes*Pi[1]),rep(1,m_nodes*Pi[2]))
-    Time <- 100
-    
-    A <- list()
-    for(k in 1:m_nodes){
-      # could sample these here with SBM structure...
-      node_list <- c(1:m_nodes)
-      edge <- sample(node_list[-k], 15) - 1
-      edge <- sort(edge)
-      A[[k]] <- edge
-    }
-    
-    system.time(alltimes <- sampleBlockHak(Time,A, Z, Mu, B, lam = 1))
-    ### fit the models
-    Pi = rep(1/K,K)
-    B = matrix(runif(K*K),K,K)
-    #diag(B) = rnorm(K,mean = 1, sd = 0.1)
-    tau = matrix(runif(m_nodes*K),nrow=m_nodes,ncol=K)
-    tau = tau/rowSums(tau)
-    S = matrix(0,nrow = m_nodes,ncol = K)
-    
-    poisson_online <- estimate_Poisson(full_data = alltimes,
-                     A,m_nodes,K,Time,dT = 5,
-                     step_size = 0.5,
-                     B,
-                     tau,Pi,S,inter_T = 1,is_elbo = FALSE)
-    
-    est_Z <- apply(poisson_online$tau,1,which.max)
-    
-    
-    test_events <- tibble(start = alltimes[,1],end = alltimes[,2],
-                          Time = alltimes[,3])
-    
-    out <- bin_fun(test_events,m_nodes,max_Time = Time,window_size = 1)
-    
-    ### store the results
-    # using sum of all events
-    
-    #results$sum[j] <- aricode::NMI(fcd::spectral.clustering(out[,,dim(out)[3]]),Z) 
-    # using only events in final time window
-    sum_adj <- apply(out, c(1,2), sum)#/dim(out)[3]
-    results$SC_Sum[j] <- aricode::NMI(fcd::spectral.clustering(sum_adj,K=2),Z)
-    # pz
-    pz_est <- pz_estimator_3(out,time = Time,
-                             l0 = l0,
-                             m0 = m0,
-                             m = m,
-                             r= Time-1)
-    results$SC_PZ[j] <- aricode::NMI(fcd::spectral.clustering(pz_est,K=2),Z)
-    # our method
-    results$OCD[j] <- aricode::NMI(Z,est_Z)
-    results$nodes[j] <- m_nodes
-    results$sim[j] <- j
-    
-  }
-  all_results[[i]] <- results
-  
-}
-```
-
-
-```{r fig-agg-rank-pois}
-all_results <- readRDS("../Sims/output_sims/agg_comp_pois.RDS")
+```{r fig-agg-rank-pois-dT05}
+all_results <- readRDS("../Sims/output_sims/agg_comp_pois_dT0.5.RDS")
 
 n_sims <- 100
 m_values <- c(50,100,250,500)
@@ -206,7 +93,38 @@ pois_agg <- all_results %>%
   ggplot(aes(nodes,NMI,colour = Method)) + 
   geom_line() +
   geom_errorbar(aes(ymin = lower, ymax = upper),width=10) + 
-  scale_x_continuous(breaks = m_values)
+  scale_x_continuous(breaks = m_values) + ggtitle("dT=0.5")
+
+pois_agg
+
+all_results <- readRDS("../Sims/output_sims/agg_comp_pois_dT1.RDS")
+pois_agg <- all_results %>%
+  bind_rows() %>%
+  pivot_longer(cols=SC_Sum:SC_PZ, names_to = "Method") %>%
+  group_by(nodes,Method) %>%
+  summarise(NMI = mean(value), se = sd(value)/sqrt(n_sims)) %>%
+  rowwise() %>%
+  mutate(lower = max(NMI - se,0), upper = min(NMI + se,1)) %>%
+  ggplot(aes(nodes,NMI,colour = Method)) + 
+  geom_line() +
+  geom_errorbar(aes(ymin = lower, ymax = upper),width=10) + 
+  scale_x_continuous(breaks = m_values) + ggtitle("dT=1")
+
+pois_agg
+
+
+all_results <- readRDS("../Sims/output_sims/agg_comp_pois_dT5.RDS")
+pois_agg <- all_results %>%
+  bind_rows() %>%
+  pivot_longer(cols=SC_Sum:SC_PZ, names_to = "Method") %>%
+  group_by(nodes,Method) %>%
+  summarise(NMI = mean(value), se = sd(value)/sqrt(n_sims)) %>%
+  rowwise() %>%
+  mutate(lower = max(NMI - se,0), upper = min(NMI + se,1)) %>%
+  ggplot(aes(nodes,NMI,colour = Method)) + 
+  geom_line() +
+  geom_errorbar(aes(ymin = lower, ymax = upper),width=10) + 
+  scale_x_continuous(breaks = m_values) + ggtitle("dT=5")
 
 pois_agg
 
@@ -219,114 +137,15 @@ pois_agg
 We can also repeat this with an inhomogeneous Hawkes structure. Here aggregation
 methods are unable to recover this community structure.
 
-Note, our method seems to require knowing the window size to recover the
-community structure.
+Note, our method requires a flexible enough non-parametric function, i.e a large
+value of H.
 
 
-```{r full agg sim, cache=TRUE, results='hide',message=FALSE,warning=FALSE,eval=FALSE,include=FALSE}
-n_sims <- 20
-m_values <- c(50,100,250,500)
-no_methods <- 3 #ours, sum all, pz_estimator
 
-
-l <- 2
-m <- 2 # need m =l for final time point
-m0 <- 1
-l0 <- 2
-
-# results <- matrix(NA, nrow = n_sims,ncol = no_methods+2 )
-# 
-# all_results <- list(m_50 = results, m_100 = results, m_200 = results,
-#                     m_500 = results)
-all_results <- list(rep(tibble(),length(m_values)))
-#all_results <- tibble()
-
-for(i in seq_along(m_values)) {
-  m_nodes <- m_values[i]
-  #results <- matrix(NA, nrow = n_sims,ncol = no_methods )
-  # then each sim
-  results <- matrix(NA, nrow = n_sims,ncol = no_methods+2 )
-  colnames(results) <- c("SC_Sum","OCD","SC_PZ","nodes","sim")
-  results <- as_tibble(results)
-  for(j in 1:n_sims) {
-    K <- 2
-    H <- 2
-    MuA <- array(0,c(K,K,H))
-    MuA[,,1] <- matrix(c(0.8,0.2,0.6,0.4),2,2)
-    MuA[,,2] <- matrix(c(0.4,0.7,0.2,0.7),2,2)
-    
-    Mu <- matrix(c(0.6,0.2,0.3,0.5),K,K,byrow = TRUE)
-    B <- matrix(c(0.1,0.02,0.01,0.05),K,K,byrow = TRUE)
-    Pi <- matrix(c(0.4,0.6),1,2)
-    Z <- c(rep(0,m_nodes*Pi[1]),rep(1,m_nodes*Pi[2]))
-    Time <- 100
-    
-    A <- list()
-    for(k in 1:m_nodes){
-      # could sample these here with SBM structure...
-      node_list <- c(1:m_nodes)
-      edge <- sample(node_list[-k], 20) - 1
-      edge <- sort(edge)
-      A[[k]] <- edge
-    }
-    
-    system.time(alltimes <- sampleBlockHak_nonhomo(Time,
-                                                   A, Z, MuA, B, 
-                                                   window = 1, lam = 1))
-    ### fit the models
-    B_start <- matrix(runif(K*K),K,K)
-    MuA_start <- array(runif(K*K*H),c(K,K,H))
-    
-    tau_start = matrix(runif(m_nodes*K),nrow=m_nodes,ncol=K)
-    tau_start = tau_start/rowSums(tau_start)
-    
-    nonHawkes_online <- nonhomoHak_estimator_eff_revised(alltimes,
-                                                         A,m_nodes,K,H,
-                                                         window = 0.999,
-                                                         T = Time,dT=10,
-                                                         lam = 1.75,
-                                                         gravity = 0.001,
-                                                         B_start,
-                                                         MuA_start,
-                                                         tau_start)
-    
-    est_Z <- apply(nonHawkes_online$tau,1,which.max)
-    
-    
-    test_events <- tibble(start = alltimes[,1],end = alltimes[,2],
-                          Time = alltimes[,3])
-    
-    out <- bin_fun(test_events,m_nodes,max_Time = Time,window_size = 1)
-    
-    ### store the results
-    # using sum of all events
-    
-    #results$sum[j] <- aricode::NMI(fcd::spectral.clustering(out[,,dim(out)[3]]),Z) 
-    # using only events in final time window
-    sum_adj <- apply(out, c(1,2), sum)#/dim(out)[3]
-    results$SC_Sum[j] <- aricode::NMI(fcd::spectral.clustering(sum_adj,K=2),Z)
-    # pz
-    pz_est <- pz_estimator_3(out,time = Time,
-                             l0 = l0,
-                             m0 = m0,
-                             m = m,
-                             r= Time-1)
-    results$SC_PZ[j] <- aricode::NMI(fcd::spectral.clustering(pz_est,K=2),Z)
-    # our method
-    results$OCD[j] <- aricode::NMI(Z,est_Z)
-    results$nodes[j] <- m_nodes
-    results$sim[j] <- j
-    
-  }
-  all_results[[i]] <- results
-  
-}
-
-```
 
 ```{r fig-agg-rank-inhawkes, message=FALSE,warning=FALSE}
 
-all_results <- readRDS("../Sims/output_sims/agg_comp_inhom_hawk_wind_85.RDS")
+all_results <- readRDS("../Sims/output_sims/agg_comp_inhom_hawk_dT0.5H_4.RDS")
 
 inhaw_agg <- all_results %>%
   bind_rows() %>%
@@ -338,17 +157,75 @@ inhaw_agg <- all_results %>%
   ggplot(aes(nodes,NMI,colour = Method)) + 
   geom_line() +
   geom_errorbar(aes(ymin = lower, ymax = upper),width = 10) +
-  scale_x_continuous(breaks = m_values)
+  scale_x_continuous(breaks = m_values) +
+  ggtitle("dT=0.5,H=4,true H = 4")
+
+inhaw_agg
+
+all_results <- readRDS("../Sims/output_sims/agg_comp_inhom_hawk_dT1H_4.RDS")
+
+inhaw_agg <- all_results %>%
+  bind_rows() %>%
+  pivot_longer(cols=SC_Sum:SC_PZ, names_to = "Method") %>%
+  group_by(nodes,Method) %>%
+  summarise(NMI = mean(value), se = sd(value)/sqrt(n_sims)) %>%
+  rowwise() %>%
+  mutate(lower = max(NMI - se,0), upper = min(NMI + se,1)) %>%
+  ggplot(aes(nodes,NMI,colour = Method)) + 
+  geom_line() +
+  geom_errorbar(aes(ymin = lower, ymax = upper),width = 10) +
+  scale_x_continuous(breaks = m_values) +
+  ggtitle("dT=1,H=4,true H = 4")
+
+inhaw_agg
+
+
+all_results <- readRDS("../Sims/output_sims/agg_comp_inhom_hawk_dT5H_4.RDS")
+
+inhaw_agg <- all_results %>%
+  bind_rows() %>%
+  pivot_longer(cols=SC_Sum:SC_PZ, names_to = "Method") %>%
+  group_by(nodes,Method) %>%
+  summarise(NMI = mean(value), se = sd(value)/sqrt(n_sims)) %>%
+  rowwise() %>%
+  mutate(lower = max(NMI - se,0), upper = min(NMI + se,1)) %>%
+  ggplot(aes(nodes,NMI,colour = Method)) + 
+  geom_line() +
+  geom_errorbar(aes(ymin = lower, ymax = upper),width = 10) +
+  scale_x_continuous(breaks = m_values) +
+  ggtitle("dT=5,H=4,true H = 4")
+
+inhaw_agg
+
+
+all_results <- readRDS("../Sims/output_sims/agg_comp_inhom_hawk_true_H_2_dT1H_2.RDS")
+
+inhaw_agg <- all_results %>%
+  bind_rows() %>%
+  pivot_longer(cols=SC_Sum:SC_PZ, names_to = "Method") %>%
+  group_by(nodes,Method) %>%
+  summarise(NMI = mean(value), se = sd(value)/sqrt(n_sims)) %>%
+  rowwise() %>%
+  mutate(lower = max(NMI - se,0), upper = min(NMI + se,1)) %>%
+  ggplot(aes(nodes,NMI,colour = Method)) + 
+  geom_line() +
+  geom_errorbar(aes(ymin = lower, ymax = upper),width = 10) +
+  scale_x_continuous(breaks = m_values) +
+  ggtitle("dT=1,H=4,true H = 2")
 
 inhaw_agg
 
 ```
 
+Here the estimation procedure is somewhat more complex, depending on the number
+of basis window functions chosen and the length of the corresponding window
+of these basis functions.
 
-## Hawkes
 
-```{r}
-all_results <- readRDS("../Sims/output_sims/agg_comp_hawk.RDS")
+### Hawkes
+
+```{r,message=FALSE}
+all_results <- readRDS("../Sims/output_sims/agg_comp_hawk_dT0.5.RDS")
 
 haw_agg <- all_results %>%
   bind_rows() %>%
@@ -360,10 +237,46 @@ haw_agg <- all_results %>%
   ggplot(aes(nodes,NMI,colour = Method)) + 
   geom_line() +
   geom_errorbar(aes(ymin = lower, ymax = upper),width = 10) +
-  scale_x_continuous(breaks = m_values)
+  scale_x_continuous(breaks = m_values) +
+  ggtitle("dT=0.5")
 
 haw_agg
 
+
+all_results <- readRDS("../Sims/output_sims/agg_comp_hawk_dT1.RDS")
+
+haw_agg <- all_results %>%
+  bind_rows() %>%
+  pivot_longer(cols=SC_Sum:SC_PZ, names_to = "Method") %>%
+  group_by(nodes,Method) %>%
+  summarise(NMI = mean(value), se = sd(value)/sqrt(n_sims)) %>%
+  rowwise() %>%
+  mutate(lower = max(NMI - se,0), upper = min(NMI + se,1)) %>%
+  ggplot(aes(nodes,NMI,colour = Method)) + 
+  geom_line() +
+  geom_errorbar(aes(ymin = lower, ymax = upper),width = 10) +
+  scale_x_continuous(breaks = m_values) +
+  ggtitle("dT=1")
+
+haw_agg
+
+
+all_results <- readRDS("../Sims/output_sims/agg_comp_hawk_dT5.RDS")
+
+haw_agg <- all_results %>%
+  bind_rows() %>%
+  pivot_longer(cols=SC_Sum:SC_PZ, names_to = "Method") %>%
+  group_by(nodes,Method) %>%
+  summarise(NMI = mean(value), se = sd(value)/sqrt(n_sims)) %>%
+  rowwise() %>%
+  mutate(lower = max(NMI - se,0), upper = min(NMI + se,1)) %>%
+  ggplot(aes(nodes,NMI,colour = Method)) + 
+  geom_line() +
+  geom_errorbar(aes(ymin = lower, ymax = upper),width = 10) +
+  scale_x_continuous(breaks = m_values) +
+  ggtitle("dT=5")
+
+haw_agg
 
 ```
 
