@@ -1,9 +1,6 @@
 ---
 title: "Simulation Results"
 output:
-  pdf_document:
-    toc: yes
-    toc_depth: '3'
   html_document:
     toc: yes
     toc_depth: 3
@@ -11,6 +8,9 @@ output:
     code_folding: hide
     fig_width: 6
     fig_height: 4.5
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
 ---
 
 ```{r setup, include=FALSE}
@@ -97,6 +97,11 @@ pois_agg <- all_results %>%
 
 pois_agg
 
+```
+
+
+```{r fig-agg-rank-pois-dT1}
+
 all_results <- readRDS("../Sims/output_sims/agg_comp_pois_dT1.RDS")
 pois_agg <- all_results %>%
   bind_rows() %>%
@@ -111,7 +116,10 @@ pois_agg <- all_results %>%
   scale_x_continuous(breaks = m_values) + ggtitle("dT=1")
 
 pois_agg
+```
 
+
+```{r fig-agg-rank-pois-dT5}
 
 all_results <- readRDS("../Sims/output_sims/agg_comp_pois_dT5.RDS")
 pois_agg <- all_results %>%
@@ -224,7 +232,7 @@ of these basis functions.
 
 ### Hawkes
 
-```{r,message=FALSE}
+```{r hawkes-sim-dT-05,message=FALSE}
 all_results <- readRDS("../Sims/output_sims/agg_comp_hawk_dT0.5.RDS")
 
 haw_agg <- all_results %>%
@@ -242,6 +250,9 @@ haw_agg <- all_results %>%
 
 haw_agg
 
+```
+
+```{r hawkes-sim-dT-1}
 
 all_results <- readRDS("../Sims/output_sims/agg_comp_hawk_dT1.RDS")
 
@@ -260,7 +271,10 @@ haw_agg <- all_results %>%
 
 haw_agg
 
+```
 
+
+```{r hawkes-sim-dT-5}
 all_results <- readRDS("../Sims/output_sims/agg_comp_hawk_dT5.RDS")
 
 haw_agg <- all_results %>%
@@ -291,7 +305,7 @@ This recovers the clusters with the correct window size...., which the binning
 methods do not, even with the correct window size.
 
 
-```{r, include=TRUE,echo=TRUE,eval=FALSE}
+```{r comp-estimators, include=TRUE,echo=TRUE,eval=FALSE}
 # using sum of all events
 aricode::ARI(fcd::spectral.clustering(out[,,dim(out)[3]]),Z) 
 # using only events in final time window
@@ -649,6 +663,160 @@ nmi_online %>% pivot_longer(
 
 
 
+## Link Prediction
+
+We wish to demonstrate the advantage of this model in terms of link 
+prediction also. To do this, we consider online event prediction,
+where we predict the number of events in a short future time window,
+update the model using the data from that period and then predict for 
+the following time period. In this way we can track the evolution
+of the predictions from our model as successive events have been analysed,
+with the hope that predictions will improve over time.
+
+
+We first simulate events from a homogeneous Poisson process.
+
+```{r simulate data for link prediction homog Poisson}
+Time <- 200
+dT <- 10
+inter_T <- 1
+K <- 3
+B_true <- matrix(c(0.6,0.2,0.3,0.1,1.0,0.4,0.5,0.4,0.8),K,K,byrow = TRUE)
+B_Pois <- matrix(0,K,K,byrow = TRUE)
+m <- 100
+Pi <- matrix(c(0.4,0.3,0.3),1,3)
+Z <- c(rep(0,m*Pi[1]),rep(1,m*Pi[2]),rep(2,m*Pi[3]))
+
+A <- list()
+for(i in 1:m){
+  # could sample these here with SBM structure...
+  edge_list <- c(1:m)
+  edge <- sample(edge_list[-i], 40) - 1
+  edge <- sort(edge)
+  A[[i]] <- edge
+}
+
+system.time(alltimes <- sampleBlockHak(Time, A, Z, B_true, B_Pois, lam = 1))
+```
+To perform link prediction, we want to first estimate the initial 
+model on the first half of this data, then iterate over the second half
+of events, in several increments, each time predicting for the next increment.
+
+We can do this using only a single increment of the data by
+passing the previous estimates in as the initial estimates for each stage.
+
+
+```{r initial fit link prediction homog Poisson}
+train_time <- 100
+
+training_data <- alltimes[alltimes[,3]<= train_time,]
+test_data <- alltimes[alltimes[,3]> train_time,]
+
+## fit initial model on training data
+B <- matrix(rexp(K*K),K,K)
+tau <- matrix(runif(m*K),nrow=m,ncol=K)
+tau <- tau/rowSums(tau)
+S <- matrix(0,nrow = m,ncol = K)
+Pi <- rep(1/K,K)
+
+training_fit <- estimate_Poisson(training_data,A,m,K,T = train_time,
+                                dT = 1, step_size = 0.5,
+                                B,tau,Pi,S,inter_T)
+
+# pass these in and repeatedly update them
+S_start <- training_fit$S
+tau_start <- training_fit$tau
+B_start <- training_fit$B
+Pi_start <- training_fit$Pi
+
+
+```
+
+
+Link prediction is relatively easy for this Poisson model.
+
+```{r link pred homog Poisson,results='hide',message=FALSE,warning=FALSE}
+time_windows <- seq(train_time,Time, by = 5)
+
+test_data <- as_tibble(test_data)
+colnames(test_data) <- c("send","rec","Time")
+
+overall_pred <- tibble()
+
+
+for(i in 1:(length(time_windows)-1)) {
+  start_time <- time_windows[i]
+  end_time <- time_windows[i+1]
+  
+  training_data <- as_tibble(training_data)
+  colnames(training_data) <- c("send","rec","Time")
+  
+  training_counts <- training_data %>%
+    group_by(send,rec) %>% tally()
+  
+  data_batch <- test_data %>% 
+    filter(Time > start_time & Time < end_time)
+  
+  ### link predict for this data ###
+  curr_z <- apply(tau_start,1,which.max)
+  z_tibble <- tibble(id = 1:m-1, z = curr_z)
+  
+  train_pred <- training_counts %>% 
+    left_join(z_tibble, by = c("send"="id")) %>%
+    left_join(z_tibble, by = c("rec" = "id")) %>%
+    rowwise() %>%
+    mutate(est_int = B_start[z.x,z.y]) %>%
+    mutate(pred_count = est_int*(end_time-start_time))
+  
+  true_counts <- data_batch %>%
+    group_by(send,rec) %>%
+    tally()
+  
+  difference <- train_pred %>% 
+    full_join(true_counts, by = c("send","rec")) %>% 
+    mutate(across(starts_with("n."),~replace_na(.x,0))) %>%
+    mutate(diff = n.y-pred_count) %>%
+    select(send,rec,pred_count,n.y,diff)
+  
+  current_result <- difference %>% ungroup() %>%
+    summarise(norm = sqrt(sum(diff^2)))
+  
+  current_result$end <- end_time
+  overall_pred <- bind_rows(overall_pred,current_result)
+  
+  ### then update the model params ####
+  current_fit <- estimate_Poisson(as.matrix(data_batch),A,m,K,T = end_time,
+                                  dT = 0.01, step_size = 0.5,
+                                  B = B_start,tau = tau_start,
+                                  Pi = Pi_start,
+                                  S = S_start, inter_T)
+  
+  # update these params #
+  S_start <- current_fit$S
+  tau_start <- current_fit$tau
+  B_start <- current_fit$B
+  Pi_start <- current_fit$Pi
+  
+  ## update the training data
+  training_data <- alltimes[alltimes[,3]<= end_time,]
+  
+
+  
+  
+}
+
+```
+
+
+```{r fig-event-pred-homog-poisson}
+
+overall_pred %>% ggplot(aes(end,norm)) + geom_line()
+
+```
+
+
+
+
 ## Supplementary Plots
 
 Here we recreate the plots from the supplementary material
@@ -658,7 +826,7 @@ also, using a Hawkes process.
 ### Hawkes covergence
 
 
-```{r}
+```{r hawkes-sim-data}
 Time <- 200
 dT <- 1.25
 inter_T <- 5
@@ -684,7 +852,7 @@ system.time(alltimes_hawkes <- sampleBlockHak(Time, A, Z, Mu_H, B_H, lam = 1))
 
 Recovery in this setting is possible, but unsurprisingly more difficult.
 
-```{r, results='hide'}
+```{r hawkes-sim-fit, results='hide'}
 
 
 Pi = rep(1/K,K)
@@ -705,7 +873,7 @@ results_hawkes_sim <- online_estimator_eff_revised(alltimes_hawkes,
 ```
 
 Plot the ELBO
-```{r}
+```{r hawkes-elbo}
 # only makes sense if is_elbo = T above
 dT = 1
 iter = seq(dT,Time,dT)
@@ -720,7 +888,7 @@ ggplot(data = elbo, aes(iter,av_elbo)) + geom_line() +
 
 
 
-```{r}
+```{r hawkes-clust-result}
 results_hawkes_sim$Mu
 Mu_H
 
@@ -733,7 +901,7 @@ mclust::adjustedRandIndex(Z,apply(results_hawkes_sim$tau,1,which.max))
 
 We can also inspect the community recovery over time for this model.
 
-```{r}
+```{r hawkes-online-nmi}
 inter_T <- 10
 time_points = dim(results_hawkes_sim$early_tau)[3]-1
 early_nmi = rep(0,time_points)
@@ -750,7 +918,7 @@ as_tibble(online_nmi) %>% ggplot(aes(iters,early_nmi)) + geom_line() +
 
 ```
 
-```{r}
+```{r fig-par-convergence-hawkes}
 inter_B = results_hawkes_sim$inter_B
 norm_B = apply(inter_B,c(3),sum)
 
@@ -784,8 +952,8 @@ as_tibble(recov) %>%
 ### Online NMI, Hawkes 
 
 
-```{r}
-n_sims <- 5
+```{r hawkes_sims, cache=TRUE,results='hide'}
+n_sims <- 50
 
 
 results <- tibble()
@@ -793,8 +961,8 @@ results <- tibble()
 for(iter in 1:n_sims) {
   print(iter)
   ## sample data
-  Time <- 200
-  dT <- 5
+  Time <- 100
+  dT <- 1
   inter_T <- 5
   K <- 3
   Mu_H <- matrix(c(0.6,0.2,0.3,0.1,1.0,0.4,0.5,0.2,0.75),K,K,byrow = TRUE)
@@ -805,7 +973,7 @@ for(iter in 1:n_sims) {
   
   A <- list()
   for(i in 1:m){
-    edge <- sample(m, 25) - 1
+    edge <- sample(m, 40) - 1
     edge <- sort(edge)
     A[[i]] <- edge
   }
@@ -832,7 +1000,7 @@ for(iter in 1:n_sims) {
   time_points = dim(results_hawkes_sim$early_tau)[3]-1
   early_nmi = rep(0,time_points)
   for(i in 1:time_points){
-    est_Z = apply(results_online$early_tau[,,i],1,which.max)
+    est_Z = apply(results_hawkes_sim$early_tau[,,i],1,which.max)
     early_nmi[i]= aricode::NMI(Z,est_Z)
   }
   
@@ -849,23 +1017,14 @@ for(iter in 1:n_sims) {
 
 ```
 
-```{r}
-# new_sim_nmi = t(results)
-# colnames(new_sim_nmi) = paste("Sim",c(1:n_sims),sep="")
-# 
-# 
-# 
-# new_sim_nmi
-# 
-# nmi_online = as_tibble(new_sim_nmi )
-# nmi_online %>% head()
-# nmi_online$Windows = seq(dT*inter_T,200,dT*inter_T)
-
-results
-results %>% 
-  group_by(iters) %>%
-  summarise(ave = mean(early_nmi),
-            se = sd(early_nmi))
+```{r fig-online-nmi-hawkes}
+results %>%
+group_by(iters) %>%
+  summarise(Ave = mean(early_nmi),sdev = sd(early_nmi)) %>%
+  mutate(se = sdev/sqrt(n_sims)) %>%
+  ggplot(aes(iters,Ave)) + geom_line() + geom_point() +
+  geom_errorbar(aes(ymin=Ave-se, ymax=Ave+se), width=.1,color="blue") +
+  ylab("Average NMI") + xlab("Time")
 
 ```
 
