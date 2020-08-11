@@ -320,8 +320,8 @@ Rcpp::List estimate_Poisson(
     if(n % inter_T == 0 ){
       inter_tau.slice(ind) = tau;
       ind = ind + 1;
-      Rprintf("iter: %d; \n", n);
-      Rprintf("=============\n");
+      //Rprintf("iter: %d; \n", n);
+      //Rprintf("=============\n");
     }
     
     

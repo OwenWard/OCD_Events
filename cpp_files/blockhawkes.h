@@ -1718,11 +1718,11 @@ Rcpp::List online_estimator_eff_revised(
         lam = lam_new;
         start_pos = curr_pos;
         ln_prev = ln_curr;
-        Rprintf("iter: %d; number: %d \n", n, n_t); 
+        //Rprintf("iter: %d; number: %d \n", n, n_t); 
         inter_mu.slice(n) = Mu;
         inter_B.slice(n) = B;
-        B.print();
-        Mu.print();
+        //B.print();
+        //Mu.print();
         Rprintf("lam: %2.3f", lam);
         
         
