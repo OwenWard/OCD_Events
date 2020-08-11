@@ -1,7 +1,7 @@
 library(tidyverse)
-#library(Rcpp)
-#library(RcppArmadillo)
-#sourceCpp("cpp_files/onlineblock.cpp")
+library(Rcpp)
+library(RcppArmadillo)
+sourceCpp("cpp_files/onlineblock.cpp")
 
 ### some other data ####
 fb_wall <- read_tsv(gzfile("data/facebook-wall.txt.gz"))
@@ -187,3 +187,81 @@ id_code <- faculty_staff %>% mutate(new_id = as.numeric(factor(uni,levels = user
 
 
 ### emails now in the format for algorithm
+
+A = list()
+
+for(i in 1:m){
+  A[[i+1]] = i
+}
+
+for(i in 1:nrow(emails)){
+  j = emails$Send[i]
+  k = emails$Rec[i]
+  #print(j)
+  #A[[j+1]] = j
+  #A[[k+1]] = k
+  A[[j+1]] = c(A[[j+1]],emails$Rec[i])
+}
+A_test = lapply(A,unique)
+
+
+# now can fit this, Poisson ####
+
+Time <- 147
+dT <- 0.5
+K <- 200
+Pi <- rep(1/K,K)
+B <- matrix(runif(K*K),K,K)
+tau <- matrix(runif(m*K),nrow=m,ncol=K)
+tau <- tau/rowSums(tau)
+S <- matrix(0,nrow = m,ncol = K)
+
+
+results <- estimate_Poisson(full_data = as.matrix(emails),
+                 A_test,m,K,Time,dT,
+                 step_size = 0.5,
+                 B,
+                 tau,Pi,S,inter_T = 10,is_elbo = FALSE)
+
+est_z <- apply(results$tau,1,which.max)
+
+
+est_clust <- tibble(new_id = 1:m, clust = est_z) %>%
+  mutate(new_id = new_id - 1) %>%
+  right_join(id_code, by = "new_id")
+
+est_clust %>% group_by(clust,adm_department) %>%
+  count() %>%
+  arrange(desc(n))
+
+
+aricode::NMI(est_clust$clust,est_clust$adm_department)
+
+
+### Inhom Hawkes ####
+
+K <- 20
+H <- 4
+window <- 1/H
+
+MuA = array(0,dim=c(K,K,H))
+
+results_nhawkes_sim <- nonhomoHak_estimator_eff(as.matrix(emails),A_test,
+                                                m,K,H,
+                                                window,
+                                                T=145,dT=3,
+                                                lam = 0.1, gravity = 0.01,
+                                                B,MuA,tau)
+
+est_z = apply(results_nhawkes_sim$tau,1,which.max)
+
+est_clust <- tibble(new_id = 1:m, clust = est_z) %>%
+  mutate(new_id = new_id - 1) %>%
+  right_join(id_code, by = "new_id")
+
+est_clust %>% group_by(clust,adm_department) %>%
+  count() %>%
+  arrange(desc(n))
+
+
+aricode::NMI(est_clust$clust,est_clust$adm_department)

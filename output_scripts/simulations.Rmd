@@ -648,3 +648,224 @@ nmi_online %>% pivot_longer(
 ## Intensity Plots
 
 
+
+## Supplementary Plots
+
+Here we recreate the plots from the supplementary material
+also, using a Hawkes process.
+
+
+### Hawkes covergence
+
+
+```{r}
+Time <- 200
+dT <- 1.25
+inter_T <- 5
+K <- 3
+Mu_H <- matrix(c(0.6,0.2,0.3,0.1,1.0,0.4,0.5,0.2,0.75),K,K,byrow = TRUE)
+B_H <- matrix(c(0.5,0.1,0.3,0.4,0.4,0.4,0.2,0.6,0.2),K,K,byrow = TRUE)
+m <- 100
+Pi <- matrix(c(0.4,0.3,0.3),1,3)
+Z <- c(rep(0,m*Pi[1]),rep(1,m*Pi[2]),rep(2,m*Pi[3]))
+
+A <- list()
+for(i in 1:m){
+  edge <- sample(m, 15) - 1
+  edge <- sort(edge)
+  A[[i]] <- edge
+}
+
+system.time(alltimes_hawkes <- sampleBlockHak(Time, A, Z, Mu_H, B_H, lam = 1))
+
+
+
+```
+
+Recovery in this setting is possible, but unsurprisingly more difficult.
+
+```{r, results='hide'}
+
+
+Pi = rep(1/K,K)
+Mu = matrix(runif(K*K),K,K)
+B = matrix(runif(K*K),K,K)
+#diag(B) = rnorm(3,mean = 1, sd = 0.1)
+tau = matrix(runif(m*K),nrow=m,ncol=K)
+tau = tau/rowSums(tau)
+S = matrix(0,nrow = m,ncol = K)
+
+
+results_hawkes_sim <- online_estimator_eff_revised(alltimes_hawkes,
+                                                   A, m, K, Time, dT=1,
+                                                   lam = 1, B, Mu,
+                                                   tau,inter_T = 10,
+                                                   is_elbo = T)
+
+```
+
+Plot the ELBO
+```{r}
+# only makes sense if is_elbo = T above
+dT = 1
+iter = seq(dT,Time,dT)
+av_elbo = results_hawkes_sim$elbo
+ll = results_hawkes_sim$logL
+elbo = as_tibble(cbind(iter,elbo = as.vector(av_elbo),ll= as.vector(ll)))
+ggplot(data = elbo, aes(iter,av_elbo)) + geom_line() + 
+  xlab("Time") + ylab("Average ELBO") +      
+  theme(axis.title=element_text(size=14))
+
+```
+
+
+
+```{r}
+results_hawkes_sim$Mu
+Mu_H
+
+results_hawkes_sim$B
+B_H
+
+mclust::adjustedRandIndex(Z,apply(results_hawkes_sim$tau,1,which.max))
+
+```
+
+We can also inspect the community recovery over time for this model.
+
+```{r}
+inter_T <- 10
+time_points = dim(results_hawkes_sim$early_tau)[3]-1
+early_nmi = rep(0,time_points)
+for(i in 1:time_points){
+  est_Z = apply(results_hawkes_sim$early_tau[,,i],1,which.max)
+  early_nmi[i]= aricode::NMI(Z,est_Z)
+}
+
+online_nmi = cbind(iters = seq(from = inter_T,by = inter_T,length.out = time_points),early_nmi)
+
+as_tibble(online_nmi) %>% ggplot(aes(iters,early_nmi)) + geom_line() +
+  ylab("Online NMI") + xlab("Time")+
+  theme(axis.title=element_text(size=14))
+
+```
+
+```{r}
+inter_B = results_hawkes_sim$inter_B
+norm_B = apply(inter_B,c(3),sum)
+
+inter_mu = results_hawkes_sim$inter_mu
+norm_mu = apply(inter_mu,c(3),sum)
+
+## need to adjust this also for sampling size
+dT = 1
+b_recov = cbind(iters = seq(dT,Time,dT),diff_B = abs(sum(B_H)-norm_B)/K^2)
+#plot(b_recov[,1],b_recov[,2],type="l")
+mu_recov = cbind(iters = seq(dT,Time,dT),
+                diff_mu = abs(sum(Mu_H)-norm_mu)/K^2 )
+
+pars <- c(rep("b",Time),rep("mu",Time))
+recov <- rbind(b_recov,mu_recov)
+recov <- as_tibble(recov)
+recov$step <- pars
+recov$step <- as.factor(recov$step)
+
+as_tibble(recov) %>% 
+  ggplot(aes(iters,diff_B)) + geom_line(aes(color=step)) +
+  xlab("Time Windows") +
+  #ylab("Difference in Rate Parameters") +
+  ylab("Difference") +
+  scale_color_manual(name = "Parameter",values=c("blue","red"))+
+  #geom_line(aes(iters,diff_mu),col = "red") +
+  theme(axis.title=element_text(size=14),legend.position = "right")
+
+```
+
+### Online NMI, Hawkes 
+
+
+```{r}
+n_sims <- 5
+
+
+results <- tibble()
+
+for(iter in 1:n_sims) {
+  print(iter)
+  ## sample data
+  Time <- 200
+  dT <- 5
+  inter_T <- 5
+  K <- 3
+  Mu_H <- matrix(c(0.6,0.2,0.3,0.1,1.0,0.4,0.5,0.2,0.75),K,K,byrow = TRUE)
+  B_H <- matrix(c(0.5,0.1,0.3,0.4,0.4,0.4,0.2,0.6,0.2),K,K,byrow = TRUE)
+  m <- 100
+  Pi <- matrix(c(0.4,0.3,0.3),1,3)
+  Z <- c(rep(0,m*Pi[1]),rep(1,m*Pi[2]),rep(2,m*Pi[3]))
+  
+  A <- list()
+  for(i in 1:m){
+    edge <- sample(m, 25) - 1
+    edge <- sort(edge)
+    A[[i]] <- edge
+  }
+  
+  alltimes_hawkes <- sampleBlockHak(Time, A, Z, Mu_H, B_H, lam = 1)
+  
+  ### never estimate the model here
+  
+  Pi = rep(1/K,K)
+  Mu = matrix(runif(K*K),K,K)
+  B = matrix(runif(K*K),K,K)
+  #diag(B) = rnorm(3,mean = 1, sd = 0.1)
+  tau = matrix(runif(m*K),nrow=m,ncol=K)
+  tau = tau/rowSums(tau)
+  S = matrix(0,nrow = m,ncol = K)
+  
+  
+  results_hawkes_sim <- online_estimator_eff_revised(alltimes_hawkes,
+                                                     A, m, K, Time, dT,
+                                                     lam = 1, B, Mu,
+                                                     tau,inter_T,
+                                                     is_elbo = F)
+  
+  time_points = dim(results_hawkes_sim$early_tau)[3]-1
+  early_nmi = rep(0,time_points)
+  for(i in 1:time_points){
+    est_Z = apply(results_online$early_tau[,,i],1,which.max)
+    early_nmi[i]= aricode::NMI(Z,est_Z)
+  }
+  
+  #online_nmi = cbind(windows = seq(50,500,50),early_nmi)
+  online_nmi <- as_tibble(cbind(iters = seq(from = dT*inter_T,
+                                 by = dT*inter_T,
+                                 length.out = time_points),early_nmi))
+  online_nmi$sim_num <- iter
+  #results[iter, ] <- early_nmi
+  results <- bind_rows(results,online_nmi)
+  
+}
+
+
+```
+
+```{r}
+# new_sim_nmi = t(results)
+# colnames(new_sim_nmi) = paste("Sim",c(1:n_sims),sep="")
+# 
+# 
+# 
+# new_sim_nmi
+# 
+# nmi_online = as_tibble(new_sim_nmi )
+# nmi_online %>% head()
+# nmi_online$Windows = seq(dT*inter_T,200,dT*inter_T)
+
+results
+results %>% 
+  group_by(iters) %>%
+  summarise(ave = mean(early_nmi),
+            se = sd(early_nmi))
+
+```
+
