@@ -1624,7 +1624,7 @@ Rcpp::List online_estimator_eff_revised(
     arma::mat B_start,
     arma::mat Mu_start,
     arma::mat tau_start,
-    arma::mat s_start,
+    arma::mat S_start,
     int inter_T,
     bool is_elbo = false
     ){
@@ -1751,6 +1751,7 @@ Rcpp::List online_estimator_eff_revised(
                           Rcpp::Named("Pi") = Pi,
                           Rcpp::Named("lam") = lam,
                           Rcpp::Named("tau") = tau,
+                          Rcpp::Named("S") = S,
                           Rcpp::Named("early_tau")= inter_tau,
                           Rcpp::Named("inter_B") = inter_B,
                           Rcpp::Named("inter_mu") = inter_mu,
