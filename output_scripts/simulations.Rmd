@@ -58,7 +58,8 @@ We consider two methods for aggregation of the data.
 
 1. Constructing a count matrix, with each entry describing all directed interactions
 between two nodes, and performing spectral clustering on this count matrix.
-2. We follow [Pensky and Zhang](https://projecteuclid.org/euclid.ejs/1550286096),
+2. We follow 
+[Pensky and Zhang](https://projecteuclid.org/euclid.ejs/1550286096),
 where we construct an estimator matrix described there and perform spectral clustering on this matrix. 
 
 For each, we compare the estimated community structure using spectral clustering
@@ -166,7 +167,8 @@ inhaw_agg <- all_results %>%
   geom_line() +
   geom_errorbar(aes(ymin = lower, ymax = upper),width = 10) +
   scale_x_continuous(breaks = m_values) +
-  ggtitle("dT=0.5,H=4,true H = 4")
+  #ggtitle("dT=0.5,H=4,true H = 4") +
+  NULL
 
 inhaw_agg
 
@@ -368,7 +370,7 @@ pois_events <- sampleBlockHak(Time, A, Z,
 ```{r fit_homogeneous_Poisson, echo=TRUE, results='hide',cache=TRUE}
 Pi = rep(1/K,K)
 B = matrix(runif(K*K),K,K)
-diag(B) = rnorm(K,mean = 1, sd = 0.1)
+#diag(B) = rnorm(K,mean = 1, sd = 0.1)
 tau = matrix(runif(m*K),nrow=m,ncol=K)
 tau = tau/rowSums(tau)
 S = matrix(0,nrow = m,ncol = K)
@@ -674,6 +676,8 @@ of the predictions from our model as successive events have been analysed,
 with the hope that predictions will improve over time.
 
 
+### Homogeneous Poisson
+
 We first simulate events from a homogeneous Poisson process.
 
 ```{r simulate data for link prediction homog Poisson}
@@ -706,8 +710,8 @@ We can do this using only a single increment of the data by
 passing the previous estimates in as the initial estimates for each stage.
 
 
-```{r initial fit link prediction homog Poisson}
-train_time <- 100
+```{r initial fit link prediction homog Poisson, results='hide'}
+train_time <- 75
 
 training_data <- alltimes[alltimes[,3]<= train_time,]
 test_data <- alltimes[alltimes[,3]> train_time,]
@@ -786,24 +790,26 @@ for(i in 1:(length(time_windows)-1)) {
   
   ### then update the model params ####
   current_fit <- estimate_Poisson(as.matrix(data_batch),A,m,K,T = end_time,
-                                  dT = 0.01, step_size = 0.5,
+                                  dT = 0.1, step_size = 0.5,
                                   B = B_start,tau = tau_start,
                                   Pi = Pi_start,
                                   S = S_start, inter_T)
   
-  # update these params #
+  # update these params ##
   S_start <- current_fit$S
   tau_start <- current_fit$tau
   B_start <- current_fit$B
   Pi_start <- current_fit$Pi
   
-  ## update the training data
+  ## update the training data ##
   training_data <- alltimes[alltimes[,3]<= end_time,]
   
 
   
   
 }
+
+#beepr::beep()
 
 ```
 
@@ -814,6 +820,604 @@ overall_pred %>% ggplot(aes(end,norm)) + geom_line()
 
 ```
 
+
+### Link Prediction for Hawkes
+
+We now want to repeat this simulation example for some
+more expressive intensity functions, first the Hawkes process.
+
+```{r link prediction hawkes sim data}
+Time <- 200
+inter_T <- 5
+K <- 3
+Mu_H <- matrix(c(0.6,0.2,0.3,0.1,1.0,0.4,0.5,0.2,0.75),K,K,byrow = TRUE)
+B_H <- matrix(c(0.5,0.1,0.3,0.4,0.4,0.4,0.2,0.6,0.2),K,K,byrow = TRUE)
+m <- 100
+Pi <- matrix(c(0.4,0.3,0.3),1,3)
+Z <- c(rep(0,m*Pi[1]),rep(1,m*Pi[2]),rep(2,m*Pi[3]))
+
+A <- list()
+for(i in 1:m){
+  edge <- sample(m, 40) - 1
+  edge <- sort(edge)
+  A[[i]] <- edge
+}
+
+system.time(alltimes_hawkes <- sampleBlockHak(Time, A, Z, Mu_H, B_H, lam = 1))
+
+
+```
+
+
+```{r hawkes link predict fit training,results='hide'}
+#train_time <- 50
+
+training_data_hawkes <- alltimes_hawkes[alltimes_hawkes[,3]<= train_time,]
+test_data_hawkes <- alltimes_hawkes[alltimes_hawkes[,3]> train_time,]
+
+## fit initial model on training data
+Pi = rep(1/K,K)
+Mu = matrix(runif(K*K),K,K)
+B = matrix(runif(K*K),K,K)
+tau = matrix(runif(m*K),nrow=m,ncol=K)
+tau = tau/rowSums(tau)
+S = matrix(0,nrow = m,ncol = K)
+
+out <- capture.output( training_fit_hawkes <-
+                  online_estimator_eff_revised(training_data_hawkes,
+                                               A, m,
+                                               K,
+                                               T = train_time,
+                                               dT=0.1,
+                                               lam = 1,
+                                               B, Mu,
+                                               tau, S,
+                                               inter_T = 10,
+                                               is_elbo = F) )
+
+# pass these in and repeatedly update them
+S_start <- training_fit_hawkes$S
+tau_start <- training_fit_hawkes$tau
+B_start <- training_fit_hawkes$B
+Mu_start <- training_fit_hawkes$Mu
+Pi_start <- training_fit_hawkes$Pi
+lam_start <- training_fit_hawkes$lam
+
+```
+
+
+
+```{r hawkes link prediction sim data, results='hide',cache=TRUE}
+time_windows <- seq(train_time,Time, by = 5)
+
+test_data_hawkes <- as_tibble(test_data_hawkes)
+colnames(test_data_hawkes) <- c("send","rec","Time")
+
+overall_pred <- tibble()
+
+
+for(i in 1:(length(time_windows)-1)) {
+  start_time <- time_windows[i]
+  end_time <- time_windows[i+1]
+  
+  # training_data <- as_tibble(training_data)
+  # colnames(training_data) <- c("send","rec","Time")
+  # 
+  # training_counts <- training_data %>%
+  #   group_by(send,rec) %>% tally()
+  
+  data_batch <- test_data_hawkes %>% 
+    filter(Time > start_time & Time < end_time)
+  
+  ### link predict for this data ###
+  curr_z <- apply(tau_start,1,which.max)
+  
+  est <- Predict_Counts_Hawkes(startT = start_time,
+                              finalT = end_time,
+                              A, curr_z-1,
+                              Mu_start,
+                              B_start,
+                              m,
+                              lam_start)
+  est <- est[-1,]
+  colnames(est) <- c("send","rec","n_pred")
+  est <- as_tibble(est)
+  
+  true_counts <- data_batch %>%
+    group_by(send,rec) %>%
+    tally()
+  
+  difference <- true_counts %>%
+    full_join(est, by = c("send","rec")) %>%
+    mutate(across(starts_with("n"),~replace_na(.x,0))) %>%
+    mutate(diff = n - n_pred)
+  
+  # 
+  # difference <- train_pred %>% 
+  #   full_join(true_counts, by = c("send","rec")) %>% 
+  #   mutate(across(starts_with("n."),~replace_na(.x,0))) %>%
+  #   mutate(diff = n.y-pred_count) %>%
+  #   select(send,rec,pred_count,n.y,diff)
+  # 
+  current_result <- difference %>% ungroup() %>%
+    summarise(norm = sqrt(sum(diff^2)))
+  # 
+  current_result$end <- end_time
+  overall_pred <- bind_rows(overall_pred,current_result)
+  
+  ### then update the model params ####
+  current_fit_hawkes <- online_estimator_eff_revised(as.matrix(data_batch),
+                                                   A, m, K, T = end_time,
+                                                   dT = 0.2,
+                                                   lam = lam_start,
+                                                   B_start = B_start ,
+                                                   Mu_start = Mu_start,
+                                                   tau_start = tau_start,
+                                                   S_start = S_start,
+                                                   inter_T = 10,
+                                                   is_elbo = F) 
+  
+  # update these params ##
+  S_start <- current_fit_hawkes$S
+  tau_start <- current_fit_hawkes$tau
+  B_start <- current_fit_hawkes$B
+  Mu_start <- current_fit_hawkes$Mu
+  Pi_start <- current_fit_hawkes$Pi
+  lam_start <- current_fit_hawkes$lam
+  #print(lam_start)
+  
+  
+
+}
+
+#beepr::beep()
+```
+
+```{r hawkes link pred plot}
+overall_pred %>%
+  ggplot(aes(end,norm)) + geom_line()
+```
+
+What about repeating this over multiple fits for the same data?
+
+```{r hawkes link pred multiple fits, cache=TRUE,results='hide'}
+all_preds <- tibble()
+
+n_sims <- 20
+
+for(sim in 1:n_sims) {
+  #train_time <- 100
+
+  training_data_hawkes <- alltimes_hawkes[alltimes_hawkes[,3]<= train_time,]
+  test_data_hawkes <- alltimes_hawkes[alltimes_hawkes[,3]> train_time,]
+  
+  ## fit initial model on training data
+  Pi = rep(1/K,K)
+  Mu = matrix(runif(K*K),K,K)
+  B = matrix(runif(K*K),K,K)
+  tau = matrix(runif(m*K),nrow=m,ncol=K)
+  tau = tau/rowSums(tau)
+  S = matrix(0,nrow = m,ncol = K)
+  
+  out <- capture.output( training_fit_hawkes <-
+                    online_estimator_eff_revised(training_data_hawkes,
+                                                 A, m, K, T= train_time,
+                                                 dT=0.1,
+                                                 lam = 1, B, Mu,
+                                                 tau, S, 
+                                                 inter_T = 10,
+                                                 is_elbo = F) )
+  
+  # pass these in and repeatedly update them
+  S_start <- training_fit_hawkes$S
+  tau_start <- training_fit_hawkes$tau
+  B_start <- training_fit_hawkes$B
+  Mu_start <- training_fit_hawkes$Mu
+  Pi_start <- training_fit_hawkes$Pi
+  lam_start <- training_fit_hawkes$lam
+  
+  
+  time_windows <- seq(train_time,Time, by = 5)
+
+  test_data_hawkes <- as_tibble(test_data_hawkes)
+  colnames(test_data_hawkes) <- c("send","rec","Time")
+  
+  overall_pred <- tibble()
+
+  
+  for(i in 1:(length(time_windows)-1)) {
+    start_time <- time_windows[i]
+    end_time <- time_windows[i+1]
+    
+    # training_data <- as_tibble(training_data)
+    # colnames(training_data) <- c("send","rec","Time")
+    # 
+    # training_counts <- training_data %>%
+    #   group_by(send,rec) %>% tally()
+    
+    data_batch <- test_data_hawkes %>% 
+      filter(Time > start_time & Time < end_time)
+    
+    ### link predict for this data ###
+    curr_z <- apply(tau_start,1,which.max)
+    
+    est <- Predict_Counts_Hawkes(startT = start_time,
+                                finalT = end_time,
+                                A, curr_z-1,
+                                Mu_start,
+                                B_start,
+                                m,
+                                lam_start)
+    est <- est[-1,]
+    colnames(est) <- c("send","rec","n_pred")
+    est <- as_tibble(est)
+    
+    true_counts <- data_batch %>%
+      group_by(send,rec) %>%
+      tally()
+    
+    difference <- true_counts %>%
+      full_join(est, by = c("send","rec")) %>%
+      mutate(across(starts_with("n"),~replace_na(.x,0))) %>%
+      mutate(diff = n - n_pred)
+    
+    # 
+    # difference <- train_pred %>% 
+    #   full_join(true_counts, by = c("send","rec")) %>% 
+    #   mutate(across(starts_with("n."),~replace_na(.x,0))) %>%
+    #   mutate(diff = n.y-pred_count) %>%
+    #   select(send,rec,pred_count,n.y,diff)
+    # 
+    current_result <- difference %>% ungroup() %>%
+      summarise(norm = sqrt(sum(diff^2)))
+    # 
+    current_result$end <- end_time
+    current_result$sim <- sim
+    overall_pred <- bind_rows(overall_pred,current_result)
+    
+    ### then update the model params ####
+    current_fit_hawkes <- online_estimator_eff_revised(as.matrix(data_batch),
+                                                     A, m, K, T = end_time,
+                                                     dT = 0.2,
+                                                     lam = lam_start,
+                                                     B_start = B_start ,
+                                                     Mu_start = Mu_start,
+                                                     tau_start = tau_start,
+                                                     S_start = S_start,
+                                                     inter_T = 10,
+                                                     is_elbo = F) 
+    
+    # update these params ##
+    S_start <- current_fit_hawkes$S
+    tau_start <- current_fit_hawkes$tau
+    B_start <- current_fit_hawkes$B
+    Mu_start <- current_fit_hawkes$Mu
+    Pi_start <- current_fit_hawkes$Pi
+    lam_start <- current_fit_hawkes$lam
+    
+    
+  
+  }
+  
+  all_preds <- bind_rows(all_preds,overall_pred)
+  
+}
+
+#beepr::beep()
+
+```
+
+
+```{r plot these predictions}
+all_preds %>% ggplot(aes(end,norm)) +
+  geom_smooth() + geom_point() +
+  geom_line(aes(colour = as.factor(sim))) + theme(legend.position = "none")
+```
+
+### Link Prediction Inhom Hawkes
+
+```{r sim data inhom hawkes }
+
+Time <- 200
+dT <- 10
+inter_T <- 1
+
+K <- 2
+H <- 2
+MuA <- array(0,c(K,K,H))
+MuA[,,1] <- matrix(c(0.8,0.2,0.6,0.4),2,2)
+MuA[,,2] <- matrix(c(0.4,0.7,0.2,0.7),2,2)
+B <- matrix(c(0.2,0.05,0.3,0.15),K,K,byrow = TRUE)
+m <- 100
+Pi <- matrix(c(0.4,0.6),1,2)
+Z <- c(rep(0,m*Pi[1]),rep(1,m*Pi[2]))
+
+A <- list()
+for(i in 1:m){
+  # could sample these here with SBM structure...
+  edge_list <- c(1:m)
+  edge <- sample(edge_list[-i], 40) - 1
+  edge <- sort(edge)
+  A[[i]] <- edge
+}
+
+alltimes_hawkes <- sampleBlockHak_nonhomo(Time,A, Z, MuA, B,
+                                                   window = 1, lam = 1.25)
+
+```
+
+```{r fit initial, results='hide'}
+#train_time <- 50
+
+training_data_hawkes <- alltimes_hawkes[alltimes_hawkes[,3]<= train_time,]
+test_data_hawkes <- alltimes_hawkes[alltimes_hawkes[,3]> train_time,]
+
+## fit initial model on training data
+H <- 4
+fit_wind <- 0.25
+Pi <- rep(1/K,K)
+Mu_A <- array(runif(K*K*H),dim=c(K,K,H))
+B <- matrix(runif(K*K),K,K)
+tau <- matrix(runif(m*K),nrow=m,ncol=K)
+tau <- tau/rowSums(tau)
+S <- matrix(0,nrow = m,ncol = K)
+
+training_fit_hawkes<-nonhomoHak_estimator_eff_revised(training_data_hawkes,
+                                                   A, m, K,H,
+                                                   window = fit_wind,
+                                                   T = train_time,
+                                                   dT=0.1,
+                                                   lam = 1,
+                                                   gravity = 0.01,
+                                                   B_start = B,
+                                                   MuA_start = Mu_A,
+                                                   tau_start = tau, 
+                                                   S_start = S, 
+                                                   Pi_start = Pi,
+                                                   is_elbo = F)
+
+# pass these in and repeatedly update them
+S_start <- training_fit_hawkes$S
+tau_start <- training_fit_hawkes$tau
+B_start <- training_fit_hawkes$B
+MuA_start <- training_fit_hawkes$MuA
+Pi_start <- training_fit_hawkes$Pi
+lam_start <- training_fit_hawkes$lam
+
+print(lam_start)
+
+```
+
+
+
+
+```{r link pred inhom hawkes,results= 'hide'}
+time_windows <- seq(train_time,Time, by = 5)
+
+test_data_hawkes <- as_tibble(test_data_hawkes)
+colnames(test_data_hawkes) <- c("send","rec","Time")
+
+overall_pred <- tibble()
+
+
+for(i in 1:(length(time_windows)-1)) {
+  start_time <- time_windows[i]
+  end_time <- time_windows[i+1]
+  
+  # training_data <- as_tibble(training_data)
+  # colnames(training_data) <- c("send","rec","Time")
+  # 
+  # training_counts <- training_data %>%
+  #   group_by(send,rec) %>% tally()
+  
+  data_batch <- test_data_hawkes %>% 
+    filter(Time > start_time & Time < end_time)
+  
+  ### link predict for this data ###
+  curr_z <- apply(tau_start,1,which.max)
+  baseline = apply(MuA_start,c(1,2),mean)
+  
+  est <- Predict_Counts_Hawkes(startT = start_time,
+                              finalT = end_time,
+                              A, curr_z-1,
+                              baseline,
+                              B_start,
+                              m,
+                              lam_start)
+  est <- est[-1,]
+  colnames(est) <- c("send","rec","n_pred")
+  est <- as_tibble(est)
+  
+  true_counts <- data_batch %>%
+    group_by(send,rec) %>%
+    tally()
+  
+  difference <- true_counts %>%
+    full_join(est, by = c("send","rec")) %>%
+    mutate(across(starts_with("n"),~replace_na(.x,0))) %>%
+    mutate(diff = n - n_pred)
+  
+  # 
+  # difference <- train_pred %>% 
+  #   full_join(true_counts, by = c("send","rec")) %>% 
+  #   mutate(across(starts_with("n."),~replace_na(.x,0))) %>%
+  #   mutate(diff = n.y-pred_count) %>%
+  #   select(send,rec,pred_count,n.y,diff)
+  # 
+  current_result <- difference %>% ungroup() %>%
+    summarise(norm = sqrt(sum(diff^2)))
+  # 
+  current_result$end <- end_time
+  overall_pred <- bind_rows(overall_pred,current_result)
+  
+  ### then update the model params ####
+  current_fit_hawkes <- nonhomoHak_estimator_eff_revised(as.matrix(data_batch),
+                                                   A, m, K,H,
+                                                   window = fit_wind,
+                                                   T = end_time,
+                                                   dT=0.1,
+                                                   lam = lam_start,
+                                                   gravity = 0.01,
+                                                   B_start = B_start,
+                                                   MuA_start = MuA_start,
+                                                   tau_start = tau_start, 
+                                                   S_start = S_start, 
+                                                   Pi_start = Pi_start,
+                                                   is_elbo = F)
+  
+  
+  # update these params ##
+  S_start <- current_fit_hawkes$S
+  tau_start <- current_fit_hawkes$tau
+  B_start <- current_fit_hawkes$B
+  MuA_start <- current_fit_hawkes$MuA
+  Pi_start <- current_fit_hawkes$Pi
+  lam_start <- current_fit_hawkes$lam
+  print(lam_start)
+  
+
+}
+
+
+```
+
+
+```{r inhom hawkes plot one fit}
+overall_pred %>% ggplot(aes(end,norm)) + geom_line()
+```
+
+Lets repeat this for multiple simulations.
+
+
+```{r inhom hawkes multiple sims, cache=TRUE,results='hide'}
+
+n_sims <- 50
+all_preds <- tibble()
+
+for(sims in 1:n_sims) {
+  #train_time <- 50
+
+  training_data_hawkes <- alltimes_hawkes[alltimes_hawkes[,3]<= train_time,]
+  test_data_hawkes <- alltimes_hawkes[alltimes_hawkes[,3]> train_time,]
+  
+  ## fit initial model on training data
+  H <- 6
+  fit_wind <- 0.25
+  Pi <- rep(1/K,K)
+  Mu_A <- array(runif(K*K*H),dim=c(K,K,H))
+  B <- matrix(runif(K*K),K,K)
+  tau <- matrix(runif(m*K),nrow=m,ncol=K)
+  tau <- tau/rowSums(tau)
+  S <- matrix(0,nrow = m,ncol = K)
+  
+  training_fit_hawkes <-nonhomoHak_estimator_eff_revised(training_data_hawkes,
+                                                     A, m, K,H,
+                                                     window = fit_wind,
+                                                     T = train_time,
+                                                     dT=0.1,
+                                                     lam = 1,
+                                                     gravity = 0.01,
+                                                     B_start = B,
+                                                     MuA_start = Mu_A,
+                                                     tau_start = tau, 
+                                                     S_start = S, 
+                                                     Pi_start = Pi,
+                                                     is_elbo = F)
+  
+  # pass these in and repeatedly update them
+  S_start <- training_fit_hawkes$S
+  tau_start <- training_fit_hawkes$tau
+  B_start <- training_fit_hawkes$B
+  MuA_start <- training_fit_hawkes$MuA
+  Pi_start <- training_fit_hawkes$Pi
+  lam_start <- training_fit_hawkes$lam
+  
+  ###
+  time_windows <- seq(train_time,Time, by = 5)
+
+  test_data_hawkes <- as_tibble(test_data_hawkes)
+  colnames(test_data_hawkes) <- c("send","rec","Time")
+  
+  overall_pred <- tibble()
+  
+  
+  for(i in 1:(length(time_windows)-1)) {
+    start_time <- time_windows[i]
+    end_time <- time_windows[i+1]
+    
+    # training_data <- as_tibble(training_data)
+    # colnames(training_data) <- c("send","rec","Time")
+    # 
+    # training_counts <- training_data %>%
+    #   group_by(send,rec) %>% tally()
+    
+    data_batch <- test_data_hawkes %>% 
+      filter(Time > start_time & Time < end_time)
+    
+    ### link predict for this data ###
+    curr_z <- apply(tau_start,1,which.max)
+    baseline = apply(MuA_start,c(1,2),mean)
+    
+    est <- Predict_Counts_Hawkes(startT = start_time,
+                                finalT = end_time,
+                                A, curr_z-1,
+                                baseline,
+                                B_start,
+                                m,
+                                lam_start)
+    est <- est[-1,]
+    colnames(est) <- c("send","rec","n_pred")
+    est <- as_tibble(est)
+    
+    true_counts <- data_batch %>%
+      group_by(send,rec) %>%
+      tally()
+    
+    difference <- true_counts %>%
+      full_join(est, by = c("send","rec")) %>%
+      mutate(across(starts_with("n"),~replace_na(.x,0))) %>%
+      mutate(diff = n - n_pred)
+    
+    current_result <- difference %>% ungroup() %>%
+      summarise(norm = sqrt(sum(diff^2)))
+    # 
+    current_result$end <- end_time
+    overall_pred <- bind_rows(overall_pred,current_result)
+    overall_pred$sim <- sims
+    all_preds <- bind_rows(all_preds,overall_pred)
+    
+    ### then update the model params ####
+    current_fit_hawkes <- nonhomoHak_estimator_eff_revised(as.matrix(data_batch),
+                                                     A, m, K,H,
+                                                     window = fit_wind,
+                                                     T = end_time,
+                                                     dT=0.2,
+                                                     lam = lam_start,
+                                                     gravity = 0.01,
+                                                     B_start = B_start,
+                                                     MuA_start = MuA_start,
+                                                     tau_start = tau_start, 
+                                                     S_start = S_start, 
+                                                     Pi_start = Pi_start,
+                                                     is_elbo = F)
+    # update these params ##
+    S_start <- current_fit_hawkes$S
+    tau_start <- current_fit_hawkes$tau
+    B_start <- current_fit_hawkes$B
+    MuA_start <- current_fit_hawkes$MuA
+    Pi_start <- current_fit_hawkes$Pi
+    lam_start <- current_fit_hawkes$lam
+  }
+}
+
+```
+
+```{r plot these predictions inhom hawkes}
+all_preds %>% ggplot(aes(as.factor(end),norm)) + 
+  geom_point() + geom_smooth(se = FALSE) +
+  #geom_boxplot() +
+  labs(x = "Prediction End Time", y = "Norm of Predictions")
+```
 
 
 
@@ -828,7 +1432,7 @@ also, using a Hawkes process.
 
 ```{r hawkes-sim-data}
 Time <- 200
-dT <- 1.25
+dT <- 0.5
 inter_T <- 5
 K <- 3
 Mu_H <- matrix(c(0.6,0.2,0.3,0.1,1.0,0.4,0.5,0.2,0.75),K,K,byrow = TRUE)
@@ -844,7 +1448,8 @@ for(i in 1:m){
   A[[i]] <- edge
 }
 
-system.time(alltimes_hawkes <- sampleBlockHak(Time, A, Z, Mu_H, B_H, lam = 1))
+system.time(alltimes_hawkes <- sampleBlockHak(Time, A, Z, Mu_H, B_H,
+                                              lam = 1))
 
 
 
@@ -858,16 +1463,17 @@ Recovery in this setting is possible, but unsurprisingly more difficult.
 Pi = rep(1/K,K)
 Mu = matrix(runif(K*K),K,K)
 B = matrix(runif(K*K),K,K)
-#diag(B) = rnorm(3,mean = 1, sd = 0.1)
 tau = matrix(runif(m*K),nrow=m,ncol=K)
 tau = tau/rowSums(tau)
 S = matrix(0,nrow = m,ncol = K)
 
 
 results_hawkes_sim <- online_estimator_eff_revised(alltimes_hawkes,
-                                                   A, m, K, Time, dT=1,
+                                                   A, m, K, Time, 
+                                                   dT=0.5,
                                                    lam = 1, B, Mu,
-                                                   tau,inter_T = 10,
+                                                   tau, S,
+                                                   inter_T = 10,
                                                    is_elbo = T)
 
 ```
@@ -926,13 +1532,13 @@ inter_mu = results_hawkes_sim$inter_mu
 norm_mu = apply(inter_mu,c(3),sum)
 
 ## need to adjust this also for sampling size
-dT = 1
+dT = 0.5
 b_recov = cbind(iters = seq(dT,Time,dT),diff_B = abs(sum(B_H)-norm_B)/K^2)
 #plot(b_recov[,1],b_recov[,2],type="l")
 mu_recov = cbind(iters = seq(dT,Time,dT),
                 diff_mu = abs(sum(Mu_H)-norm_mu)/K^2 )
 
-pars <- c(rep("b",Time),rep("mu",Time))
+pars <- c(rep("b",Time/dT),rep("mu",Time/dT))
 recov <- rbind(b_recov,mu_recov)
 recov <- as_tibble(recov)
 recov$step <- pars
@@ -945,7 +1551,8 @@ as_tibble(recov) %>%
   ylab("Difference") +
   scale_color_manual(name = "Parameter",values=c("blue","red"))+
   #geom_line(aes(iters,diff_mu),col = "red") +
-  theme(axis.title=element_text(size=14),legend.position = "right")
+  #theme(axis.title=element_text(size=14),legend.position = "right")
+  NULL
 
 ```
 
@@ -961,8 +1568,8 @@ results <- tibble()
 for(iter in 1:n_sims) {
   print(iter)
   ## sample data
-  Time <- 100
-  dT <- 1
+  Time <- 500
+  dT <- 5
   inter_T <- 5
   K <- 3
   Mu_H <- matrix(c(0.6,0.2,0.3,0.1,1.0,0.4,0.5,0.2,0.75),K,K,byrow = TRUE)
@@ -994,7 +1601,7 @@ for(iter in 1:n_sims) {
   results_hawkes_sim <- online_estimator_eff_revised(alltimes_hawkes,
                                                      A, m, K, Time, dT,
                                                      lam = 1, B, Mu,
-                                                     tau,inter_T,
+                                                     tau,S,inter_T,
                                                      is_elbo = F)
   
   time_points = dim(results_hawkes_sim$early_tau)[3]-1

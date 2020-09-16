@@ -100,6 +100,7 @@ for(i in seq_along(m_values)) {
 
     tau_start = matrix(runif(m_nodes*K),nrow=m_nodes,ncol=K)
     tau_start = tau_start/rowSums(tau_start)
+    Pi_start = rep(1/K,K)
 
     nonHawkes_online <- nonhomoHak_estimator_eff_revised(alltimes,
                                                          A,m_nodes,K,H_est,
@@ -109,7 +110,8 @@ for(i in seq_along(m_values)) {
                                                          gravity = 0.001,
                                                          B_start,
                                                          MuA_start,
-                                                         tau_start)
+                                                         tau_start,
+                                                         Pi_start)
 
     est_Z <- apply(nonHawkes_online$tau,1,which.max)
 
