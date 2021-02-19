@@ -248,6 +248,7 @@ Rcpp::List estimate_Poisson(
     int K,
     double T,
     double dT,
+    double step_size,
     arma::mat B,
     arma::mat tau, 
     arma::rowvec Pi,
@@ -293,7 +294,7 @@ Rcpp::List estimate_Poisson(
     elbo_dat = full_data.rows(0,end_pos); 
     //cout<<size(sub_data)<<endl;
     start_pos = curr_pos;
-    eta = 1/pow(1+n, .5)/sub_data.n_rows*(K*K);
+    eta = 1/pow(1+n, step_size)/sub_data.n_rows*(K*K);
     S = updateS(sub_data,tau,B,A,S,K,m,dT);
     //cout<<"S works"<<endl;
     tau = updateTau(S,Pi,m,K); 
@@ -319,12 +320,13 @@ Rcpp::List estimate_Poisson(
     if(n % inter_T == 0 ){
       inter_tau.slice(ind) = tau;
       ind = ind + 1;
-      Rprintf("iter: %d; \n", n);
-      Rprintf("=============\n");
+      //Rprintf("iter: %d; \n", n);
+      //Rprintf("=============\n");
     }
     
+    
   }
-  
+  Rprintf("Step Size: %f \n", step_size);
   return Rcpp::List::create(Named("S")= S,
                             Named("tau")=tau,
                             Named("early_tau")= inter_tau,

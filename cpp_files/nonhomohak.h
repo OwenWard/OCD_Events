@@ -1376,6 +1376,8 @@ Rcpp::List nonhomoHak_estimator_eff_revised(
 	arma::mat B_start,
 	arma::cube MuA_start,
 	arma::mat tau_start,
+	arma::mat S_start,
+	arma::rowvec Pi_start,
 	bool is_elbo = false
 	){
 
@@ -1384,29 +1386,33 @@ Rcpp::List nonhomoHak_estimator_eff_revised(
 
 	// initialization
 	arma::rowvec Pi(K);
-	Pi.fill(1.0 / K);
+	// Pi.fill(1.0 / K);
 	arma::mat B(K,K), S(m,K);
 	arma::cube MuA(K,K,H);
 	arma::mat tau(m,K);
-	B.fill(0.5), MuA.fill(0.5), S.fill(0.0);
-	for (int k = 0; k < K; k++) {
-        for (int l=0; l < K; l++) {
-            B(k,l) = myrunif();
-            for(int h = 0; h < H; h++) {
-            	MuA(k,l,h) = myrunif();
-            }            
-        }
-    }
-	//B = B_start, Mu = Mu_start;
-	for (int i = 0; i < m; i++) {
-		arma::rowvec tt(K);
-		for (int k = 0; k < K; k++) {
-			tt(k) = myrunif();
-		}
-		tt = tt / sum(tt);
-		tau.row(i) = tt;
-	}
-	//tau = tau_start;
+  // 	B.fill(0.5), MuA.fill(0.5), S.fill(0.0);
+  // 	for (int k = 0; k < K; k++) {
+  //         for (int l=0; l < K; l++) {
+  //             B(k,l) = myrunif();
+  //             for(int h = 0; h < H; h++) {
+  //             	MuA(k,l,h) = myrunif();
+  //             }            
+  //         }
+  //     }
+  // 	B = B_start, MuA = MuA_start;
+  // 	for (int i = 0; i < m; i++) {
+  // 		arma::rowvec tt(K);
+  // 		for (int k = 0; k < K; k++) {
+  // 			tt(k) = myrunif();
+  // 		}
+  // 		tt = tt / sum(tt);
+  // 		tau.row(i) = tt;
+  // 	}
+	tau = tau_start;
+	Pi = Pi_start;
+	S = S_start;
+	MuA = MuA_start;
+	B = B_start;
 
 	int nall = alltimes.n_rows;
 	int start_pos = 0, curr_pos = 0, end_pos = 0, ln_prev = 0, ln_curr, n_t;
@@ -1483,6 +1489,7 @@ Rcpp::List nonhomoHak_estimator_eff_revised(
                           Rcpp::Named("Pi") = Pi,
                           Rcpp::Named("lam") = lam,
                           Rcpp::Named("tau") = tau,
+                          Rcpp::Named("S") = S,
                           Rcpp::Named("elbo") = elbo_vec);
 }
 

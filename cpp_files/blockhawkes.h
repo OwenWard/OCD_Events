@@ -1624,6 +1624,7 @@ Rcpp::List online_estimator_eff_revised(
     arma::mat B_start,
     arma::mat Mu_start,
     arma::mat tau_start,
+    arma::mat S_start,
     int inter_T,
     bool is_elbo = false
     ){
@@ -1637,24 +1638,27 @@ Rcpp::List online_estimator_eff_revised(
     Pi.fill(1.0 / K);
     arma::mat B(K,K), Mu(K,K), S(m,K);
     arma::mat tau(m,K);
-    for (int k = 0; k < K; k++) {
-        for (int l=0; l < K; l++) {
-            B(k,l) = myrunif();
-            Mu(k,l) = myrunif();
-        }
-    }
+    // for (int k = 0; k < K; k++) {
+    //     for (int l=0; l < K; l++) {
+    //         B(k,l) = myrunif();
+    //         Mu(k,l) = myrunif();
+    //     }
+    // }
     //B.fill(0.5), Mu.fill(0.5); 
-    S.fill(0.0);
+    //S.fill(0.0);
     //B = B_start, Mu = Mu_start;
-    for (int i = 0; i < m; i++) {
-        arma::rowvec tt(K);
-        for (int k = 0; k < K; k++) {
-            tt(k) = myrunif();
-        }
-        tt = tt / sum(tt);
-        tau.row(i) = tt;
-    }
-    //tau = tau_start;
+    // for (int i = 0; i < m; i++) {
+    //     arma::rowvec tt(K);
+    //     for (int k = 0; k < K; k++) {
+    //         tt(k) = myrunif();
+    //     }
+    //     tt = tt / sum(tt);
+    //     tau.row(i) = tt;
+    // }
+    tau = tau_start;
+    B = B_start;
+    Mu = Mu_start;
+    S = S_start;
 
     int nall = alltimes.n_rows;
     int start_pos = 0, curr_pos = 0, end_pos = 0, ln_prev = 0, ln_curr, n_t;
@@ -1718,11 +1722,11 @@ Rcpp::List online_estimator_eff_revised(
         lam = lam_new;
         start_pos = curr_pos;
         ln_prev = ln_curr;
-        Rprintf("iter: %d; number: %d \n", n, n_t); 
+        //Rprintf("iter: %d; number: %d \n", n, n_t); 
         inter_mu.slice(n) = Mu;
         inter_B.slice(n) = B;
-        B.print();
-        Mu.print();
+        //B.print();
+        //Mu.print();
         Rprintf("lam: %2.3f", lam);
         
         
@@ -1747,6 +1751,7 @@ Rcpp::List online_estimator_eff_revised(
                           Rcpp::Named("Pi") = Pi,
                           Rcpp::Named("lam") = lam,
                           Rcpp::Named("tau") = tau,
+                          Rcpp::Named("S") = S,
                           Rcpp::Named("early_tau")= inter_tau,
                           Rcpp::Named("inter_B") = inter_B,
                           Rcpp::Named("inter_mu") = inter_mu,
