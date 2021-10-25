@@ -1,10 +1,10 @@
 #### helper functions
 
-
+library(here)
 library(tidyverse)
 library(Rcpp)
 library(RcppArmadillo)
-sourceCpp("cpp_files/onlineblock.cpp")
+sourceCpp(here("cpp_files", "onlineblock.cpp"))
 library(ppsbm)
 
 #### function to process output from ppsbm
