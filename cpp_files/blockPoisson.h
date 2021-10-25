@@ -1,15 +1,11 @@
 #include "onlineblock.h"
 
-
-
-
 // [[Rcpp::export]]
 arma::rowvec initPi(int K){
   arma::rowvec Pi(K);
   Pi.fill(1.0);
   return Pi/K;
 }
-
 
 // [[Rcpp::export]]
 arma::mat initS(int m, int K){
@@ -22,9 +18,6 @@ arma::mat initB(int K){
   arma::mat B(K,K);
   return B.randu(K,K);
 }
-
-
-
 
 // [[Rcpp::export]]
 arma::mat updateTau(arma::mat S, arma::rowvec Pi, int m, int K){
@@ -50,9 +43,14 @@ arma::rowvec updatePi(arma::mat tau, int K){
 }
 
 // [[Rcpp::export]]
-arma::mat updateS(arma::mat data, arma::mat tau, arma::mat B,
-                  Rcpp::List A, //arma::mat A,
-                  arma::mat S, int K, int m, double dT){
+arma::mat updateS(arma::mat data, //event triples in current window
+                  arma::mat tau, // current var approx for groups
+                  arma::mat B, // current rate matrix
+                  Rcpp::List A, //current edge list set
+                  arma::mat S, // current S iteration
+                  int K, // number of groups
+                  int m, // number of nodes
+                  double dT){ // length of time window
   int nrow = data.n_rows;
   for(int n = 0; n < nrow; ++n){
     arma::rowvec event = data.row(n);
@@ -75,7 +73,6 @@ arma::mat updateS(arma::mat data, arma::mat tau, arma::mat B,
           if(i != j_loc){
             S(i,k) = S(i,k) - tau(j_loc,l)*B(k,l)*dT;
           }
-          
         }
       }
     }
@@ -84,9 +81,14 @@ arma::mat updateS(arma::mat data, arma::mat tau, arma::mat B,
 }
 
 // [[Rcpp::export]]
-arma::mat updateB(arma::mat data, arma::mat tau, arma::mat B, int K,
+arma::mat updateB(arma::mat data,
+                  arma::mat tau,
+                  arma::mat B,
+                  int K,
                   Rcpp::List A, //arma::mat A,
-                  int m , double dT, double eta){
+                  int m ,
+                  double dT,
+                  double eta){
   arma::mat X1,X2, gradB, B_new;
   X1.zeros(K,K);
   X2.zeros(K,K);
@@ -124,9 +126,11 @@ arma::mat updateB(arma::mat data, arma::mat tau, arma::mat B, int K,
   // cout<<duration.count()<<endl;
   gradB = X1/B - X2;
   //cout << gradB << endl;
-  B_new = B + eta*gradB; //previously had division of n_row here
+  B_new = B + eta*gradB; 
+  //previously had division of n_row here
   // create matrix of 0.001 then take max element wise
   // prevent large updates
+  // this essentially discards the updates potentially, why?
   for (int k = 0; k < K; k++) {
     for (int l = 0; l < K; l++) {
       if (B_new(k,l) <= 0.0)
@@ -142,14 +146,19 @@ arma::mat updateB(arma::mat data, arma::mat tau, arma::mat B, int K,
 }
 
 
-// then the full thing in one function
-
+// then the full thing in one function for a single update
 // [[Rcpp::export]]
 Rcpp::List update_Poisson(
-    arma::mat data, arma::mat tau, 
-    arma::mat B, arma::rowvec Pi,
-    arma::mat S, Rcpp::List A, //arma::mat A,
-    int m, int K, double eta, double dT){
+    arma::mat data,
+    arma::mat tau, 
+    arma::mat B,
+    arma::rowvec Pi,
+    arma::mat S, 
+    Rcpp::List A, //arma::mat A,
+    int m,
+    int K,
+    double eta,
+    double dT){
   
   S = updateS(data,tau,B,A,S,K,m,dT);
   tau = updateTau(S,Pi,m,K); 
@@ -239,7 +248,7 @@ double computeLL(arma::mat data, arma::mat tau,
   return LL;
 }
 
-
+// full online estimation procedure
 // [[Rcpp::export]]
 Rcpp::List estimate_Poisson(
     arma::mat full_data, 
@@ -288,24 +297,26 @@ Rcpp::List estimate_Poisson(
     }
     end_pos = curr_pos;
     arma::mat sub_data, elbo_dat;
-    sub_data = full_data.rows(start_pos,end_pos);
+    sub_data = full_data.rows(start_pos, end_pos);
     cum_events += sub_data.n_rows;
     elbo_dat = full_data.rows(0,end_pos); 
     //cout<<size(sub_data)<<endl;
     start_pos = curr_pos;
-    eta = 1/pow(1+n, .5)/sub_data.n_rows*(K*K);
-    S = updateS(sub_data,tau,B,A,S,K,m,dT);
+    eta = 1/pow(1 + n, .5)/sub_data.n_rows*(K*K);
+    S = updateS(sub_data, tau, B, A, S, K, m, dT);
     //cout<<"S works"<<endl;
     tau = updateTau(S,Pi,m,K); 
     //cout<<"update tau"<<endl;
-    B = updateB(sub_data,tau,B,K,A,m,dT,eta);
+    B = updateB(sub_data, tau, B, K, A, m, dT, eta);
     inter_B.slice(n) = B;
     //cout<<"update B"<<endl;
     Pi = updatePi(tau,K);
     if (is_elbo) {
-      curr_elbo(n) = computeELBO(elbo_dat,tau,B,Pi,A,m,K,dT);
+      curr_elbo(n) = computeELBO(elbo_dat, tau, B, Pi, A, m, K, dT);
       ave_elbo(n) = curr_elbo(n)/cum_events;
-      curr_ll(n) = computeLL(elbo_dat,tau,B,Pi,A,m,K,t_curr);
+      cout<<ave_elbo(n)<<endl;
+      cout<<n<<endl;
+      curr_ll(n) = computeLL(elbo_dat, tau, B, Pi, A, m, K, t_curr);
       ave_ll(n) = curr_ll(n)/cum_events;
     }
     
@@ -320,6 +331,8 @@ Rcpp::List estimate_Poisson(
       inter_tau.slice(ind) = tau;
       ind = ind + 1;
       Rprintf("iter: %d; \n", n);
+      // these numbers make no sense...
+      Rprintf("Curr Ave ELBO: %f; \n", ave_elbo(n));
       Rprintf("=============\n");
     }
     
@@ -337,8 +350,7 @@ Rcpp::List estimate_Poisson(
 
 
 
-
-// batch optimization
+// batch optimization of all data
 // [[Rcpp::export]]
 Rcpp::List batch_estimator_hom_Poisson(
     arma::mat alltimes,
@@ -379,7 +391,7 @@ Rcpp::List batch_estimator_hom_Poisson(
   
   arma::vec curr_elbo;
   curr_elbo.zeros(itermax);
-  double elbo_gap = 2147483647;
+  // double elbo_gap = gap;
   
   
   for (int iter = 0; iter < itermax; iter++) {
@@ -389,7 +401,7 @@ Rcpp::List batch_estimator_hom_Poisson(
     
     // then do all the updates in here....
     // what happens to dT?
-    S.fill(0.0);
+    S.fill(1.0/K);
     arma::mat S_new = updateS(alltimes,tau,B,A,S,K,m,T);
     //cout<<"S works"<<endl;
     arma::mat tau_new = updateTau(S_new,Pi,m,K); 
@@ -402,9 +414,9 @@ Rcpp::List batch_estimator_hom_Poisson(
     // need to check this
     // then compare gap...
     gap = abs(B - B_new).max();
-    if(iter > 0){
-      elbo_gap = abs(curr_elbo(iter) - curr_elbo(iter-1));
-    }
+    // if(iter > 0){
+    //   double elbo_gap = abs(curr_elbo(iter) - curr_elbo(iter-1));
+    // }
     
     // then convert them
     tau = tau_new, B = B_new, Pi = Pi_new, S = S_new;
