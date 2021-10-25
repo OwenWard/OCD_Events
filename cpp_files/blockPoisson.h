@@ -390,8 +390,12 @@ Rcpp::List batch_estimator_hom_Poisson(
   double eta = 1.0/nall * (K * K);
   
   arma::vec curr_elbo;
+  arma::vec ave_elbo;
   curr_elbo.zeros(itermax);
+  ave_elbo.zeros(itermax);
   // double elbo_gap = gap;
+  int cum_events = 0;
+  cum_events = alltimes.n_rows;
   
   
   for (int iter = 0; iter < itermax; iter++) {
@@ -410,6 +414,7 @@ Rcpp::List batch_estimator_hom_Poisson(
     //cout<<"update B"<<endl;
     arma::rowvec Pi_new = updatePi(tau_new,K);
     curr_elbo(iter) = computeELBO(alltimes,tau_new,B_new,Pi_new,A,m,K,T);
+    ave_elbo(iter) = curr_elbo(iter)/ cum_events;
     //curr_ll(n) = computeLL(alltimes,tau,B,Pi,A,m,K,t_curr);
     // need to check this
     // then compare gap...
@@ -434,7 +439,8 @@ Rcpp::List batch_estimator_hom_Poisson(
                             //Named("inter_B") = inter_B,
                             Named("B")=B,
                             Named("Pi")=Pi,
-                            Named("ELBO")=curr_elbo);
+                            Named("ELBO")=curr_elbo,
+                            Named("AveELBO")= ave_elbo);
 }
 
 
