@@ -4,7 +4,7 @@ library(here)
 
 source(here("Experiments/", "utils.R"))
 
-nsims <- 100
+nsims <- 200
 
 results <- list()
 
@@ -64,6 +64,7 @@ for(sim in 1:nsims) {
   results[[sim]] <- sim_pars
 }
 
+saveRDS(results, file = here("Experiments", "exp1.RDS"))
 
 
 # #### new simulation function ####
