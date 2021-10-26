@@ -1,3 +1,8 @@
+#### Experiments, Oct 26th
+#### To investigate the relationship between the 
+#### the initial B matrix and the clustering result
+
+
 .libPaths("/moto/stats/users/ogw2103/rpackages")
 
 library(here)
@@ -66,5 +71,3 @@ for(sim in 1:nsims) {
 }
 
 saveRDS(results, file = here("Experiments", "exp2.RDS"))
-
-
