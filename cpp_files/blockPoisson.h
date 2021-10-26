@@ -329,8 +329,8 @@ Rcpp::List estimate_Poisson(
     if (is_elbo) {
       curr_elbo(n) = computeELBO(elbo_dat, tau, B, Pi, A, m, K, dT);
       ave_elbo(n) = curr_elbo(n)/cum_events;
-      cout<<ave_elbo(n)<<endl;
-      cout<<n<<endl;
+      // cout<<ave_elbo(n)<<endl;
+      // cout<<n<<endl;
       curr_ll(n) = computeLL(elbo_dat, tau, B, Pi, A, m, K, t_curr);
       ave_ll(n) = curr_ll(n)/cum_events;
     }

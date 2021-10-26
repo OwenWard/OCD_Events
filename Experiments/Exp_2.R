@@ -31,7 +31,9 @@ results <- list()
 
 for(sim in 1:no_sims){
   results[[sim]] <- list()
+  cat("Sim:", sim, "\n")
   for(rep in 1:no_reps) {
+    cat("Rep:", rep, "\n")
     n <- 100
     Time <- 100
     intens1 <- c(1.2)
