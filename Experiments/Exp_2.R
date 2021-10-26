@@ -24,6 +24,7 @@ exp <- readRDS(here("Experiments/", "sim_pars.RDS"))
 B <- exp$init_B
 sim1 <- exp$sim
 n <- 100
+Time <- 100
 
 proc_sim <- format_sims(sim_data = sim1, n = n)
 
