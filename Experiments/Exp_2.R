@@ -13,7 +13,7 @@ source(here("Experiments/", "utils.R"))
 # jobid <- as.numeric(jobid)
 # sim_id <- jobid
 
-dT_vec <- seq(from = 0.1, to = 2, by = 0.1)
+dT_vec <- seq(from = 0.01, to = 2, by = 0.01)
 
 no_sims <- length(dT_vec)
 
