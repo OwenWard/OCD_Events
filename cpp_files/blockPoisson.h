@@ -20,6 +20,21 @@ arma::mat initB(int K){
 }
 
 // [[Rcpp::export]]
+arma::rowvec correct_tau(arma::rowvec tau){
+  arma::rowvec mod_tau = tau;
+  int m = tau.n_cols;
+  for(int j = 0; j < m; ++j) {
+    mod_tau[j] = max(tau[j], 1e-7);
+    mod_tau[j] = min(tau[j], 1-1e-7);
+  }
+  // mod_tau = max(tau, 1e-7);
+  // then normalise to sum to 1 again
+  mod_tau = mod_tau/sum(mod_tau);
+  return mod_tau;
+}
+
+
+// [[Rcpp::export]]
 arma::mat updateTau(arma::mat S, arma::rowvec Pi, int m, int K){
   arma::mat tau;
   tau.zeros(m,K);
@@ -27,7 +42,7 @@ arma::mat updateTau(arma::mat S, arma::rowvec Pi, int m, int K){
     arma::rowvec s = arma::log(Pi) + S.row(i);
     s = s - max(s);
     s = exp(s)/sum(exp(s));
-    tau.row(i) = s;
+    tau.row(i) = correct_tau(s);
   }
   return tau;
 }
@@ -407,11 +422,8 @@ Rcpp::List batch_estimator_hom_Poisson(
     // what happens to dT?
     S.fill(1.0/K);
     arma::mat S_new = updateS(alltimes,tau,B,A,S,K,m,T);
-    //cout<<"S works"<<endl;
     arma::mat tau_new = updateTau(S_new,Pi,m,K); 
-    //cout<<"update tau"<<endl;
     arma::mat B_new = updateB(alltimes,tau_new,B,K,A,m,T,eta);
-    //cout<<"update B"<<endl;
     arma::rowvec Pi_new = updatePi(tau_new,K);
     curr_elbo(iter) = computeELBO(alltimes,tau_new,B_new,Pi_new,A,m,K,T);
     ave_elbo(iter) = curr_elbo(iter)/ cum_events;
@@ -427,7 +439,7 @@ Rcpp::List batch_estimator_hom_Poisson(
     tau = tau_new, B = B_new, Pi = Pi_new, S = S_new;
     Rprintf("gap: %2.3f", gap);
     Rprintf("=============\n");
-    B.print();
+    //B.print();
     if (gap < stop_eps){
       break;
     }
