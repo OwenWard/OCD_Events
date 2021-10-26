@@ -17,7 +17,7 @@ dT_vec <- seq(from = 0.01, to = 2, by = 0.01)
 
 no_sims <- length(dT_vec)
 
-### then load in a dataset and an initial B? once which works 
+### then load in a dataset and an initial B? one which works 
 ### well for a known dT
 exp <- readRDS(here("Experiments/", "sim_pars.RDS"))
 
@@ -69,4 +69,6 @@ for(sim in 1:no_sims) {
 }
 
 
-saveRDS(results, file = here("Experiments", "exp_dt.RDS"))
+saveRDS(results, file = here("Experiments", 
+                             "exp_results",
+                             "exp_dt.RDS"))

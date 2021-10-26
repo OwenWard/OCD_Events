@@ -9,16 +9,16 @@ library(here)
 
 source(here("Experiments/", "utils.R"))
 
-nsims <- 200
+nsims <- 100
 
 results <- list()
 
 for(sim in 1:nsims) {
-  Time <- 100
+  Time <- 500
   n <- 100
   intens1 <- c(1.2)
   intens2 <- c(0.75)
-  true_B <- matrix(c(intens1, 0, 0.1, intens2), 
+  true_B <- matrix(c(intens1, 0.15, 0.3, intens2), 
                    nrow = 2, ncol = 2, byrow = T)
   
   intens <- matrix(c(intens1, 0, 0.1, intens2), 4, 1)
@@ -70,4 +70,6 @@ for(sim in 1:nsims) {
   results[[sim]] <- sim_pars
 }
 
-saveRDS(results, file = here("Experiments", "exp2.RDS"))
+saveRDS(results, file = here("Experiments",
+                             "exp_results",
+                             "exp1_long.RDS"))
