@@ -345,10 +345,10 @@ Rcpp::List estimate_Poisson(
     if(n % inter_T == 0 ){
       inter_tau.slice(ind) = tau;
       ind = ind + 1;
-      Rprintf("iter: %d; \n", n);
-      // these numbers make no sense...
-      Rprintf("Curr Ave ELBO: %f; \n", ave_elbo(n));
-      Rprintf("=============\n");
+      // Rprintf("iter: %d; \n", n);
+      // // these numbers make no sense...
+      // Rprintf("Curr Ave ELBO: %f; \n", ave_elbo(n));
+      // Rprintf("=============\n");
     }
     
   }

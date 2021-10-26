@@ -14,11 +14,12 @@ nsims <- 100
 results <- list()
 
 for(sim in 1:nsims) {
+  cat("Sim:", sim, "\n")
   Time <- 500
   n <- 100
-  intens1 <- c(1.2)
-  intens2 <- c(0.75)
-  true_B <- matrix(c(intens1, 0.15, 0.3, intens2), 
+  intens1 <- c(2.2)
+  intens2 <- c(1.75)
+  true_B <- matrix(c(intens1, 0.35, 0.5, intens2), 
                    nrow = 2, ncol = 2, byrow = T)
   
   intens <- matrix(c(intens1, 0, 0.1, intens2), 4, 1)
