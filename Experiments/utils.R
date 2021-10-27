@@ -6,6 +6,7 @@ library(Rcpp)
 library(RcppArmadillo)
 sourceCpp(here("cpp_files", "onlineblock.cpp"))
 library(ppsbm)
+theme_set(theme_bw())
 
 #### function to process output from ppsbm
 

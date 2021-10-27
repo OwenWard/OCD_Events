@@ -77,7 +77,7 @@ for(sim in 1:no_sims){
     z_est <- apply(results_online$tau, 1, which.max)
     clust_est <- aricode::ARI(z_true, z_est)
     
-    exp_res <- list(dT = dT, ari = clust_est)
+    exp_res <- list(dT = dT, ari = clust_est, tau = results_online$tau)
     results[[sim]][[rep]] <- exp_res
     
   }

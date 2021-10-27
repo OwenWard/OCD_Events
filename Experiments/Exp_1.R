@@ -15,7 +15,7 @@ results <- list()
 
 for(sim in 1:nsims) {
   cat("Sim:", sim, "\n")
-  Time <- 500
+  Time <- 100
   n <- 100
   intens1 <- c(2.2)
   intens2 <- c(1.75)
@@ -45,7 +45,7 @@ for(sim in 1:nsims) {
   inter_T <- 1
   
   # capture output to not print out
-  out <- capture.output(results_online <- estimate_Poisson(full_data = proc_sim$events,
+  results_online <- estimate_Poisson(full_data = proc_sim$events,
                                      A = proc_sim$edge,
                                      m,
                                      K,
@@ -56,7 +56,7 @@ for(sim in 1:nsims) {
                                      Pi,
                                      S,
                                      inter_T,
-                                     is_elbo = TRUE))
+                                     is_elbo = TRUE)
   
   # compute rand index
   z_true <- apply(sim1$z, 2, which.max)
@@ -65,7 +65,7 @@ for(sim in 1:nsims) {
   
   sim_pars <- list(
     B = B, 
-    est_eblo = results_online$AveELBO,
+    est_elbo = results_online$AveELBO,
     clust = clust_est
   )
   results[[sim]] <- sim_pars
