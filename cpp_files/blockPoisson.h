@@ -24,8 +24,8 @@ arma::rowvec correct_tau(arma::rowvec tau){
   arma::rowvec mod_tau = tau;
   int m = tau.n_cols;
   for(int j = 0; j < m; ++j) {
-    mod_tau[j] = max(tau[j], 1e-7);
     mod_tau[j] = min(tau[j], 1-1e-7);
+    mod_tau[j] = max(tau[j], 1e-7);
   }
   // mod_tau = max(tau, 1e-7);
   // then normalise to sum to 1 again
