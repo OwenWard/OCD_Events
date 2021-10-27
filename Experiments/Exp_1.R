@@ -78,4 +78,4 @@ for(sim in 1:nsims) {
 
 saveRDS(results, file = here("Experiments",
                              "exp_results",
-                             "exp1_long.RDS"))
+                             "exp1_scen_2.RDS"))
