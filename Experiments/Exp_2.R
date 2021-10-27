@@ -13,10 +13,10 @@ source(here("Experiments/", "utils.R"))
 # jobid <- as.numeric(jobid)
 # sim_id <- jobid
 
-dT_vec <- seq(from = 0.1, to = 5, by = 0.025)
+dT_vec <- seq(from = 0.1, to = 5, by = 0.05)
 
 no_sims <- length(dT_vec)
-no_reps <- 20
+no_reps <- 10
 
 
 ### then load in a dataset and an initial B? one which works 
