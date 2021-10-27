@@ -17,12 +17,17 @@ for(sim in 1:nsims) {
   cat("Sim:", sim, "\n")
   Time <- 100
   n <- 100
-  intens1 <- c(2.2)
-  intens2 <- c(1.75)
-  true_B <- matrix(c(intens1, 0.35, 0.5, intens2), 
+  # intens1 <- c(2.2)
+  # intens2 <- c(1.75)
+  # true_B <- matrix(c(intens1, 0.35, 0.5, intens2), 
+  #                  nrow = 2, ncol = 2, byrow = T)
+  # 
+  # intens <- matrix(c(intens1, 0, 0.1, intens2), 4, 1)
+  intens1 <- c(2)
+  intens2 <- c(1)
+  intens <- matrix(c(intens1, 0.05, 0.05, intens2), 4, 1)
+  true_B <- matrix(c(intens1, 0.05, 0.05, intens2), 
                    nrow = 2, ncol = 2, byrow = T)
-  
-  intens <- matrix(c(intens1, 0, 0.1, intens2), 4, 1)
   # this is essentially the K*K matrix stretched out as a single col
   
   system.time(sim1 <- generateDynppsbmConst(intens = intens,
