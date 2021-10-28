@@ -82,8 +82,7 @@ for(sim in 1:no_sims){
     exp_res <- list(dT = dT, ari = clust_est, tau = results_online$tau)
     results[[sim]][[rep]] <- exp_res
     init_set <- list(data = proc_sim,
-                     init_B = B, 
-                     )
+                     init_B = B)
     init[[sim]][[rep]] <- init_set
     
   }
