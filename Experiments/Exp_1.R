@@ -15,7 +15,7 @@ results <- list()
 
 for(sim in 1:nsims) {
   cat("Sim:", sim, "\n")
-  Time <- 100
+  Time <- 250
   n <- 100
   # intens1 <- c(2.2)
   # intens2 <- c(1.75)
@@ -78,4 +78,4 @@ for(sim in 1:nsims) {
 
 saveRDS(results, file = here("Experiments",
                              "exp_results",
-                             "exp1_scen_2.RDS"))
+                             "exp1_scen_2_long.RDS"))
