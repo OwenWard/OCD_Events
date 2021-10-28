@@ -13,10 +13,10 @@ source(here("Experiments/", "utils.R"))
 # jobid <- as.numeric(jobid)
 # sim_id <- jobid
 
-dT_vec <- seq(from = 0.1, to = 5, by = 0.05)
+dT_vec <- seq(from = 0.1, to = 5, by = 0.1)
 
 no_sims <- length(dT_vec)
-no_reps <- 10
+no_reps <- 20
 
 
 ### then load in a dataset and an initial B? one which works 
@@ -28,20 +28,22 @@ no_reps <- 10
 ### now random B and random dataset each time also
 
 results <- list()
+init <- list()
 
 for(sim in 1:no_sims){
   results[[sim]] <- list()
+  init[[sim]] <- list()
   cat("Sim:", sim, "\n")
   for(rep in 1:no_reps) {
     cat("Rep:", rep, "\n")
     n <- 100
     Time <- 100
-    intens1 <- c(1.2)
-    intens2 <- c(0.75)
-    true_B <- matrix(c(intens1, 0.15, 0.3, intens2), 
+    intens1 <- c(2)
+    intens2 <- c(1)
+    true_B <- matrix(c(intens1, 0.05, 0.05, intens2), 
                      nrow = 2, ncol = 2, byrow = T)
     
-    intens <- matrix(c(intens1, 0, 0.1, intens2), 4, 1)
+    intens <- matrix(c(intens1, 0.05, 0.05, intens2), 4, 1)
     sim1 <- generateDynppsbmConst(intens = intens,
                                               Time = Time,
                                               n = n, 
@@ -79,13 +81,23 @@ for(sim in 1:no_sims){
     
     exp_res <- list(dT = dT, ari = clust_est, tau = results_online$tau)
     results[[sim]][[rep]] <- exp_res
+    init_set <- list(data = full_data,
+                     init_B = B, 
+                     )
+    init[[sim]][[rep]] <- init_set
     
   }
+  all_results <- list(results, init)
+  saveRDS(all_results, file = here("Experiments",
+                                   "exp_results",
+                                   paste0(Sys.date,"exp_dt_rep.RDS")))
+  # to save it after each run also
 }
 
-saveRDS(results, file = here("Experiments",
-                             "exp_results",
-                             "exp_dt_rep.RDS"))
+# all_results <- list(results, init)
+# saveRDS(all_results, file = here("Experiments",
+#                              "exp_results",
+#                              paste0(Sys.date,"exp_dt_rep.RDS")))
 
 # 
 # #### old code for first run ####
