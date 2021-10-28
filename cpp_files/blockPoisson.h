@@ -326,9 +326,10 @@ Rcpp::List estimate_Poisson(
     inter_B.slice(n) = B;
     Pi = updatePi(tau,K);
     if (is_elbo) {
-      curr_elbo(n) = computeELBO(elbo_dat, tau, B, Pi, A, m, K, dT);
+      // changed these to just the current window data
+      curr_elbo(n) = computeELBO(sub_data, tau, B, Pi, A, m, K, dT);
       ave_elbo(n) = curr_elbo(n)/cum_events;
-      curr_ll(n) = computeLL(elbo_dat, tau, B, Pi, A, m, K, t_curr);
+      curr_ll(n) = computeLL(sub_data, tau, B, Pi, A, m, K, t_curr);
       ave_ll(n) = curr_ll(n)/cum_events;
     }
     if(n % inter_T == 0 ){
@@ -344,7 +345,9 @@ Rcpp::List estimate_Poisson(
                             Named("inter_B") = inter_B,
                             Named("B")=B,
                             Named("Pi")=Pi,
+                            Named("wind_elbo") = curr_elbo,
                             Named("AveELBO")=ave_elbo,
+                            Named("wind_ll") = curr_ll,
                             Named("logL") = ave_ll);
 }
 
@@ -375,16 +378,17 @@ Rcpp::List batch_estimator_hom_Poisson(
     }
   }
   //B.fill(0.5), Mu.fill(0.5); 
-  
+  S.fill(1.0/K);
+  tau.fill(1.0/K);
   //B = B_start, Mu = Mu_start;
-  for (int i = 0; i < m; i++) {
-    arma::rowvec tt(K);
-    for (int k = 0; k < K; k++) {
-      tt(k) = myrunif();
-    }
-    tt = tt / sum(tt);
-    tau.row(i) = tt;
-  }
+  // for (int i = 0; i < m; i++) {
+  //   arma::rowvec tt(K);
+  //   for (int k = 0; k < K; k++) {
+  //     tt(k) = myrunif();
+  //   }
+  //   tt = tt / sum(tt);
+  //   tau.row(i) = tt;
+  // }
   
   int nall = alltimes.n_rows;
   double gap = 2147483647;

@@ -10,6 +10,7 @@
 #include "link_predict.h"
 #include "ccrm.h"
 #include "new_predict.h"
+#include "test.h"
 
 // [[Rcpp::export]]
 arma::vec func(arma::vec X){
