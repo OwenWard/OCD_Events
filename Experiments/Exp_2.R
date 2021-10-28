@@ -89,7 +89,7 @@ for(sim in 1:no_sims){
   all_results <- list(results, init)
   saveRDS(all_results, file = here("Experiments",
                                    "exp_results",
-                                   paste0(Sys.date,"exp_dt_rep.RDS")))
+                                   paste0(Sys.Date(),"exp_dt_rep.RDS")))
   # to save it after each run also
 }
 
