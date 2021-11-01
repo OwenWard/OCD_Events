@@ -13,7 +13,7 @@ source(here("Experiments/", "utils.R"))
 # jobid <- as.numeric(jobid)
 # sim_id <- jobid
 
-dT_vec <- seq(from = 0.1, to = 5, by = 0.1)
+dT_vec <- seq(from = 0.1, to = 5, by = 0.2)
 
 no_sims <- length(dT_vec)
 no_reps <- 20
@@ -81,8 +81,7 @@ for(sim in 1:no_sims){
     
     exp_res <- list(dT = dT, ari = clust_est, tau = results_online$tau)
     results[[sim]][[rep]] <- exp_res
-    init_set <- list(data = proc_sim,
-                     init_B = B)
+    init_set <- list(init_B = B)
     init[[sim]][[rep]] <- init_set
     
   }
