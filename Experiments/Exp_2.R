@@ -32,7 +32,7 @@ curr_dT <- dT_vec[sim_id]
 results <- list()
 
 for(sim in 1:no_sims) {
-  cat("Sim:", rep, "\n")
+  cat("Sim:", sim, "\n")
   n <- 100
   Time <- 100
   intens1 <- c(2)
