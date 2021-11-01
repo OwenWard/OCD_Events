@@ -64,9 +64,9 @@ for(sim in 1:nsims) {
   best_loss <- -out$TrueLLH/card_A
   regret <- cumsum(est_loss) - cumsum(best_loss)
   # regret <- regret/1:Time
-  plot(regret, type = "l")
-  theor_rate <- sqrt(1:Time)*log(card_A*1:Time)^2/100
-  lines(1:Time, theor_rate, col = "red")
+  # plot(regret, type = "l")
+  # theor_rate <- sqrt(1:Time)*log(card_A*1:Time)^2/100
+  # lines(1:Time, theor_rate, col = "red")
   # plot(-cumsum(out$EstLLH) + cumsum(out$TrueLLH),
   #      type = "l") # to normalise this?
   # plot(-cumsum(out$Ave_est_LLH) + cumsum(out$Ave_true_LLH), type = 'l')
