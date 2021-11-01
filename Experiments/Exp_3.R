@@ -13,7 +13,7 @@ results <- list()
 for(sim in 1:nsims) {
   cat("Sim:", sim, "\n")
   Time <- 100
-  n <- 100
+  n <- 200
   intens1 <- c(2)
   intens2 <- c(1)
   intens <- matrix(c(intens1, 0.05, 0.05, intens2), 4, 1)

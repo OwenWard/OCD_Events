@@ -116,4 +116,24 @@ sims_df %>%
   arrange(-mean)
 
 
+#### EXP 3: Investigate theoretical regret rate ####
+exp_3_data <- readRDS(here("Experiments/exp_results/", "exp3.RDS"))
 
+exp3_tidy <- exp_3_data %>% tibble(
+  sim = 1:100,
+  ARI = map_dbl(., "clust"),
+  regret = map(., "regret"),
+  dT = list(1:100)
+) %>% 
+  unnest(cols = c(regret, dT)) %>% 
+  select(sim, ARI, regret, dT)
+
+exp3_tidy %>% 
+  mutate(ARI = ifelse(ARI == 1, "Recover Community", "Don't Recover")) %>% 
+  ggplot(aes(dT, regret)) +
+  geom_line(aes(group = sim), alpha = 0.25) +
+  stat_function(fun = function(x) sqrt(x) * log(x)^2, colour = "red") +
+  facet_wrap(~ARI) +
+  labs(y = "Regret Rate", x = "Windows",
+       title = "Comparison to theoretical rate",
+       subtitle = "Ignoring the constants") 
