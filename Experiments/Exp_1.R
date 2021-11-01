@@ -10,7 +10,7 @@ library(here)
 source(here("Experiments/", "utils.R"))
 
 nsims <- 100
-all_times <- c(50, 100, 250, 500)
+all_times <- c(50, 100, 250, 500, 1000, 2000)
 
 jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
 jobid <- as.numeric(jobid)
