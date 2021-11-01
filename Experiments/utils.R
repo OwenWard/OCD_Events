@@ -24,7 +24,7 @@ format_sims <- function(sim_data, n) {
   A_new <- list()
   for(i in 1:n){
     edge <- tidy_sim %>% 
-      filter(send == i) %>% 
+      filter(send == i - 1) %>% # to account for zero indexing here
       distinct(rec) %>% 
       arrange(rec) %>% 
       pull(rec)

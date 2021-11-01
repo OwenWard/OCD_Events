@@ -1,8 +1,8 @@
 #### Experiments, Oct 26th
 #### To investigate the relationship between the 
 #### the initial B matrix and the clustering result
-
-
+#### and confirm there is a scenario where performance is good
+#### for the majority of initial values, and see how it improves with time
 .libPaths("/moto/stats/users/ogw2103/rpackages")
 
 library(here)
@@ -10,12 +10,17 @@ library(here)
 source(here("Experiments/", "utils.R"))
 
 nsims <- 100
+all_times <- c(50, 100, 250, 500)
+
+jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
+jobid <- as.numeric(jobid)
+sim_id <- jobid
 
 results <- list()
+Time <- all_times[sim_id]
 
 for(sim in 1:nsims) {
   cat("Sim:", sim, "\n")
-  Time <- 250
   n <- 100
   # intens1 <- c(2.2)
   # intens2 <- c(1.75)
@@ -29,26 +34,17 @@ for(sim in 1:nsims) {
   true_B <- matrix(c(intens1, 0.05, 0.05, intens2), 
                    nrow = 2, ncol = 2, byrow = T)
   # this is essentially the K*K matrix stretched out as a single col
-  
   system.time(sim1 <- generateDynppsbmConst(intens = intens,
                                             Time = Time,
                                             n = n, 
                                             prop.groups = c(0.5, 0.5)))
   
   proc_sim <- format_sims(sim_data = sim1, n = n)
-  
   K <- 2
   m <- n
-  Pi <- rep(1/K, K)
   B <- matrix(runif(K * K), K, K)
-  # diag(B) <- rnorm(K, mean = 1, sd = 0.1)
-  tau <- matrix(1, nrow = m, ncol = K)
-  tau <- tau/rowSums(tau)
-  S <- matrix(1/K, nrow = m, ncol = K)
-  
   dT <- 1
   inter_T <- 1
-  
   # capture output to not print out
   results_online <- estimate_Poisson(full_data = proc_sim$events,
                                      A = proc_sim$edge,
@@ -57,12 +53,8 @@ for(sim in 1:nsims) {
                                      Time,
                                      dT,
                                      B,
-                                     tau,
-                                     Pi,
-                                     S,
                                      inter_T,
                                      is_elbo = TRUE)
-  
   # compute rand index
   z_true <- apply(sim1$z, 2, which.max)
   z_est <- apply(results_online$tau, 1, which.max)
@@ -71,11 +63,12 @@ for(sim in 1:nsims) {
   sim_pars <- list(
     B = B, 
     est_elbo = results_online$AveELBO,
-    clust = clust_est
+    clust = clust_est,
+    time = Time
   )
   results[[sim]] <- sim_pars
 }
 
 saveRDS(results, file = here("Experiments",
                              "exp_results",
-                             "exp1_scen_2_long.RDS"))
+                             paste0("exp1_time_", Time, ".RDS")))

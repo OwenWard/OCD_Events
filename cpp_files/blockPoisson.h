@@ -273,12 +273,9 @@ Rcpp::List estimate_Poisson(
     double T,
     double dT,
     arma::mat B,
-    arma::mat tau, 
-    arma::rowvec Pi,
-    arma::mat S,
     int inter_T,
     bool is_elbo = false
-  ){
+){
   // iterate this over the time windows...
   int N = int(T/dT);
   int slices = int(N/inter_T);
@@ -288,6 +285,12 @@ Rcpp::List estimate_Poisson(
   int end_pos = 0;
   int ind = 0;
   int nall = full_data.n_rows;
+  arma::rowvec Pi(K);
+  Pi.fill(1.0 / K);
+  arma::mat S(m,K);
+  arma::mat tau(m,K);
+  S.fill(1.0/K);
+  tau.fill(1.0/K);
   arma::cube inter_tau(m,K,slices+1);
   arma::cube inter_B(K,K,N);
   arma::vec curr_elbo, ave_elbo, ave_ll, curr_ll;
@@ -315,40 +318,23 @@ Rcpp::List estimate_Poisson(
     sub_data = full_data.rows(start_pos, end_pos);
     cum_events += sub_data.n_rows;
     elbo_dat = full_data.rows(0,end_pos); 
-    //cout<<size(sub_data)<<endl;
     start_pos = curr_pos;
     eta = 1/pow(1 + n, .5)/sub_data.n_rows*(K*K);
     S = updateS(sub_data, tau, B, A, S, K, m, dT);
-    //cout<<"S works"<<endl;
     tau = updateTau(S,Pi,m,K); 
-    //cout<<"update tau"<<endl;
     B = updateB(sub_data, tau, B, K, A, m, dT, eta);
     inter_B.slice(n) = B;
-    //cout<<"update B"<<endl;
     Pi = updatePi(tau,K);
     if (is_elbo) {
-      curr_elbo(n) = computeELBO(elbo_dat, tau, B, Pi, A, m, K, dT);
+      // changed these to just the current window data
+      curr_elbo(n) = computeELBO(sub_data, tau, B, Pi, A, m, K, dT);
       ave_elbo(n) = curr_elbo(n)/cum_events;
-      // cout<<ave_elbo(n)<<endl;
-      // cout<<n<<endl;
-      curr_ll(n) = computeLL(elbo_dat, tau, B, Pi, A, m, K, t_curr);
+      curr_ll(n) = computeLL(sub_data, tau, B, Pi, A, m, K, t_curr);
       ave_ll(n) = curr_ll(n)/cum_events;
     }
-    
-    //cout<<B<<endl;
-    //Rprintf("iter: %d; \n", n); 
-    //B.print();
-    //Pi.print();
-    //S.print();
-    //Rprintf("=============\n");
-    //Rcout << Pi << endl;
     if(n % inter_T == 0 ){
       inter_tau.slice(ind) = tau;
       ind = ind + 1;
-      // Rprintf("iter: %d; \n", n);
-      // // these numbers make no sense...
-      // Rprintf("Curr Ave ELBO: %f; \n", ave_elbo(n));
-      // Rprintf("=============\n");
     }
     
   }
@@ -359,9 +345,12 @@ Rcpp::List estimate_Poisson(
                             Named("inter_B") = inter_B,
                             Named("B")=B,
                             Named("Pi")=Pi,
+                            Named("wind_elbo") = curr_elbo,
                             Named("AveELBO")=ave_elbo,
+                            Named("wind_ll") = curr_ll,
                             Named("logL") = ave_ll);
 }
+
 
 
 
@@ -389,16 +378,17 @@ Rcpp::List batch_estimator_hom_Poisson(
     }
   }
   //B.fill(0.5), Mu.fill(0.5); 
-  
+  S.fill(1.0/K);
+  tau.fill(1.0/K);
   //B = B_start, Mu = Mu_start;
-  for (int i = 0; i < m; i++) {
-    arma::rowvec tt(K);
-    for (int k = 0; k < K; k++) {
-      tt(k) = myrunif();
-    }
-    tt = tt / sum(tt);
-    tau.row(i) = tt;
-  }
+  // for (int i = 0; i < m; i++) {
+  //   arma::rowvec tt(K);
+  //   for (int k = 0; k < K; k++) {
+  //     tt(k) = myrunif();
+  //   }
+  //   tt = tt / sum(tt);
+  //   tau.row(i) = tt;
+  // }
   
   int nall = alltimes.n_rows;
   double gap = 2147483647;
