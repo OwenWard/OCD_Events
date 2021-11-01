@@ -21,18 +21,10 @@ no_sims <- 20
 curr_dT <- dT_vec[sim_id]
 
 
-### then load in a dataset and an initial B? one which works 
-### well for a known dT
-# exp <- readRDS(here("Experiments/", "sim_pars.RDS"))
-# 
-# B <- exp$init_B
-# sim1 <- exp$sim
-### now random B and random dataset each time also
-
 results <- list()
 
 for(sim in 1:no_sims) {
-  cat("Sim:", rep, "\n")
+  cat("Sim:", sim, "\n")
   n <- 100
   Time <- 100
   intens1 <- c(2)
@@ -51,6 +43,7 @@ for(sim in 1:no_sims) {
   m <- n
   B <- matrix(runif(K * K), K, K)
   dT <- curr_dT #dT_vec[sim] # this should be current dT?
+  cat("dT:", curr_dT, "\n")
   inter_T <- 1
   
   results_online <- estimate_Poisson(full_data = proc_sim$events,
@@ -58,7 +51,7 @@ for(sim in 1:no_sims) {
                                      m,
                                      K,
                                      Time,
-                                     dT,
+                                     dT = curr_dT,
                                      B,
                                      inter_T,
                                      is_elbo = TRUE)
@@ -73,7 +66,7 @@ for(sim in 1:no_sims) {
     est_elbo = results_online$AveELBO,
     clust = clust_est,
     tau = results_online$tau,
-    dT = dT
+    dT = curr_dT
   )
   results[[sim]] <- sim_pars
 }
