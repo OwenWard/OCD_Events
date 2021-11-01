@@ -40,6 +40,7 @@ Rcpp::List compute_regret(
   }
   arma::rowvec Pi;
   Pi = sum(tau, 0)/m;
+  // Pi.print("Pi:");
   int N = int(T/dT);
   // double eta;
   int start_pos = 0;
@@ -87,6 +88,8 @@ Rcpp::List compute_regret(
     av_true_ll(n) = true_ll(n)/cum_events;
   }
   return Rcpp::List::create(Named("EstLLH") = curr_ll,
-                            Named("TrueLLH") = true_ll);
+                            Named("Ave_est_LLH") = ave_ll,
+                            Named("TrueLLH") = true_ll,
+                            Named("Ave_true_LLH") = av_true_ll);
 }
 
