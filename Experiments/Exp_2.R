@@ -50,7 +50,7 @@ for(sim in 1:no_sims) {
   K <- 2
   m <- n
   B <- matrix(runif(K * K), K, K)
-  dT <- dT_vec[sim]
+  dT <- curr_dT #dT_vec[sim] # this should be current dT?
   inter_T <- 1
   
   results_online <- estimate_Poisson(full_data = proc_sim$events,
