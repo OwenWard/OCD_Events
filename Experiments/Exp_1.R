@@ -62,6 +62,7 @@ for(sim in 1:nsims) {
   
   sim_pars <- list(
     B = B, 
+    est_B = results_online$B
     est_elbo = results_online$AveELBO,
     clust = clust_est,
     time = Time
@@ -71,4 +72,4 @@ for(sim in 1:nsims) {
 
 saveRDS(results, file = here("Experiments",
                              "exp_results",
-                             paste0("exp1_time_", Time, ".RDS")))
+                             paste0("exp1_store_B_time_", Time, ".RDS")))
