@@ -62,7 +62,7 @@ for(sim in 1:nsims) {
   
   sim_pars <- list(
     B = B, 
-    est_B = results_online$B
+    est_B = results_online$B,
     est_elbo = results_online$AveELBO,
     clust = clust_est,
     time = Time
