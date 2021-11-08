@@ -8,11 +8,17 @@ source(here("Experiments/", "utils.R"))
 
 nsims <- 100
 
+jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
+jobid <- as.numeric(jobid)
+sim_id <- jobid
+Times <- c(50, 100, 200, 500)
+Time <- Times[sim_id]
+
 results <- list()
 
 for(sim in 1:nsims) {
   cat("Sim:", sim, "\n")
-  Time <- 100
+  # Time <- 100
   n <- 200
   intens1 <- c(2)
   intens2 <- c(1)
@@ -60,6 +66,7 @@ for(sim in 1:nsims) {
     select(V1, V2) %>% 
     distinct() %>% 
     nrow()
+  ## is this regret function correct?
   est_loss <- -out$EstLLH/card_A
   best_loss <- -out$TrueLLH/card_A
   regret <- cumsum(est_loss) - cumsum(best_loss)
@@ -86,7 +93,7 @@ for(sim in 1:nsims) {
 
 saveRDS(results, file = here("Experiments",
                              "exp_results",
-                             "exp3.RDS"))
+                             paste0("exp3_", Time, ".RDS")))
   
   
 ### create some nicer plots for these regret functions
