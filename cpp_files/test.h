@@ -82,9 +82,10 @@ Rcpp::List compute_regret(
     // R.printf();
     // Rcpp::print(B_ests.slice(n));
     arma::mat curr_B = B_ests.slice(n);
-    curr_ll(n) = computeLL(sub_data, tau, curr_B, Pi, A, m, K, t_curr);
+    curr_ll(n) = computeLL(elbo_dat, tau, curr_B, Pi, A, m, K, t_curr);
     ave_ll(n) = curr_ll(n)/cum_events;
-    true_ll(n) = computeLL(sub_data, tau, true_B, Pi, A, m, K, t_curr);
+    true_ll(n) = computeLL(elbo_dat, tau, true_B, Pi, A, m, K, t_curr);
+    // was sub_data
     av_true_ll(n) = true_ll(n)/cum_events;
   }
   return Rcpp::List::create(Named("EstLLH") = curr_ll,

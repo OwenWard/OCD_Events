@@ -19,7 +19,7 @@ results <- list()
 for(sim in 1:nsims) {
   cat("Sim:", sim, "\n")
   # Time <- 100
-  n <- 200
+  n <- 100
   intens1 <- c(2)
   intens2 <- c(1)
   intens <- matrix(c(intens1, 0.05, 0.05, intens2), 4, 1)
@@ -70,6 +70,7 @@ for(sim in 1:nsims) {
   est_loss <- -out$EstLLH/card_A
   best_loss <- -out$TrueLLH/card_A
   regret <- cumsum(est_loss) - cumsum(best_loss)
+  # summary(regret)
   # regret <- regret/1:Time
   # plot(regret, type = "l")
   # theor_rate <- sqrt(1:Time)*log(card_A*1:Time)^2/100
