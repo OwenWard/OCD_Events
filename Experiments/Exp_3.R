@@ -59,6 +59,7 @@ for(sim in 1:nsims) {
                 dT,
                 true_z = z_true,
                 B_ests = B_ests,
+                tau_ests = results_online$early_tau[, , -101],
                 true_B = true_B)
   
   
