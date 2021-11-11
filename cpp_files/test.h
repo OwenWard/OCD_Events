@@ -122,6 +122,7 @@ Rcpp::List batch_loss(
     end_pos = curr_pos;
     arma::mat sub_data, elbo_dat;
     sub_data = full_data.rows(start_pos, end_pos);
+    start_pos = curr_pos;
     // then compute the loss here
     batch_loss(n) = curr_loss(sub_data,
               batch_B,

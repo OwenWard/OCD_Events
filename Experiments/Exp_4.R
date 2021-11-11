@@ -1,12 +1,13 @@
 #### Experiments, Nov 1st
-#### To explore the relationship between result and the regret rate
+#### To explore the relationship between result and the predicted loss
+#### in terms of expected events in the next time window
 .libPaths("/moto/stats/users/ogw2103/rpackages")
 
 library(here)
 
 source(here("Experiments/", "utils.R"))
 
-nsims <- 100
+nsims <- 10
 
 jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
 jobid <- as.numeric(jobid)
@@ -47,20 +48,20 @@ for(sim in 1:nsims) {
                                      B,
                                      inter_T,
                                      is_elbo = TRUE)
-
+  
   
   B_ests <- results_online$inter_B
   z_true <- apply(sim1$z, 2, which.max)
   out <- compute_regret(full_data = proc_sim$events,
-                A = proc_sim$edge, 
-                m,
-                K,
-                Time,
-                dT,
-                true_z = z_true,
-                B_ests = B_ests,
-                tau_ests = results_online$early_tau,
-                true_B = true_B)
+                        A = proc_sim$edge, 
+                        m,
+                        K,
+                        Time,
+                        dT,
+                        true_z = z_true,
+                        B_ests = B_ests,
+                        tau_ests = results_online$early_tau,
+                        true_B = true_B)
   
   
   card_A <- as_tibble(proc_sim$events) %>% 
@@ -71,15 +72,49 @@ for(sim in 1:nsims) {
   est_loss <- -out$EstLLH/card_A
   best_loss <- -out$TrueLLH/card_A
   regret <- cumsum(est_loss) - cumsum(best_loss)
-  # summary(regret)
-  # regret <- regret/1:Time
-  # plot(regret, type = "l")
-  # theor_rate <- sqrt(1:Time)*log(card_A*1:Time)^2/100
-  # lines(1:Time, theor_rate, col = "red")
-  # plot(-cumsum(out$EstLLH) + cumsum(out$TrueLLH),
-  #      type = "l") # to normalise this?
-  # plot(-cumsum(out$Ave_est_LLH) + cumsum(out$Ave_true_LLH), type = 'l')
-  # # compute rand index
+
+  ### compute batch estimates and online loss estimates here
+  onl_loss <- tibble(cumsum(out$Online_Loss_True)/(1:Time),
+              cumsum(out$Online_Loss_Est)/(1:Time),
+              dT = 1:Time) 
+  colnames(onl_loss) <- c("True_Z", "Est_Z", "dT")
+  
+  tidy_loss <- onl_loss %>% 
+    pivot_longer(cols = c(True_Z:Est_Z),
+                 values_to = "Loss",
+                 names_to = "Z") 
+  
+  
+  
+  Dmax <- 2^3
+  Nijk <- statistics(sim1$data,
+                     n,
+                     Dmax,
+                     directed=TRUE)
+  sol.kernel <- mainVEM(list(Nijk = Nijk, Time = Time),
+                        n = m,
+                        Qmin  = 2,
+                        Qmax = 2,
+                        directed = TRUE,
+                        method = 'hist',
+                        d_part = 0,
+                        n_perturb = 0)
+  
+  b <- exp(sol.kernel[[1]]$logintensities.ql[, 1])
+  # these largely match the true intensities
+  # sol.kernel[[1]]$tau
+  z_vem <- apply(sol.kernel[[1]]$tau, 2, which.max)
+  
+  batch_b <- matrix(b, nrow = 2, ncol = 2, byrow = 2)
+  
+  vem_loss <- batch_loss(full_data = proc_sim$events,
+                         A = proc_sim$edge, m,
+                         K,
+                         Time,
+                         dT, 
+                         batch_B = batch_b, true_z = z_vem)
+  batch_average <- mean(vem_loss$Batch_loss/1:Time)
+  #####
   z_est <- apply(results_online$tau, 1, which.max)
   clust_est <- aricode::ARI(z_true, z_est)
   
@@ -88,15 +123,24 @@ for(sim in 1:nsims) {
     est_elbo = results_online$AveELBO,
     clust = clust_est,
     regret = regret,
-    card_A = card_A
+    card_A = card_A,
+    batch_ave_loss = batch_average,
+    online_loss = tidy_loss
   )
   results[[sim]] <- sim_pars
 }
 
 saveRDS(results, file = here("Experiments",
                              "exp_results",
-                             paste0("exp3_", Time, ".RDS")))
-  
-  
+                             paste0("exp4_", Time, ".RDS")))
+
+
 ### create some nicer plots for these regret functions
 ### for a given dataset, draw new B and plot the loss each time.
+
+
+tidy_loss %>% 
+  ggplot(aes(dT, Loss, colour = Z)) +
+  geom_line() +
+  geom_hline(aes(yintercept = batch_average, linetype = "Batch Average")) +
+  labs(linetype = "", colour = "Labels Used")
