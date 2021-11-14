@@ -1,0 +1,263 @@
+---
+title: "Simulation Results"
+author: "Owen G. Ward"
+date: "11/8/2021"
+output: pdf_document
+---
+
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE)
+library(here)
+library(latex2exp)
+source(here("Experiments/utils.R"))
+```
+
+Included are some initial simulation results. For all experimental
+results shown below, a two class model was considered with a
+homogeneous Poisson process, with rate matrix given by
+
+$$
+B = 
+\begin{pmatrix}
+2 & 0.05 \\
+0.05 & 1
+\end{pmatrix}
+$$
+
+and equal group proportions $(0.5, 0.5)$.
+
+Here we discuss
+
+- Recovery of the rate matrix under random initialization
+- Convergence of the windowed ELBO
+- Simulation results investigating the agreement between theoretical results
+on the regret rate and observed regret.
+- Performance of our algorithm in terms of online loss of predicted events.
+
+
+# Recovery for random initialization
+
+Although our method, along with many variational optimization methods,
+relies 
+heavily on the initialization, for the simulation scenario 
+described above we see that good recoevy of $B$ can be achieved
+in many scenarios,
+
+
+```{r load-data}
+exp_1_files <- list.files(path = here("Experiments/exp_results/"),
+                          pattern = "exp1_time")
+
+elbo_dat <- exp_1_files %>% 
+  map(~readRDS(here("Experiments/exp_results/", .x))) %>%
+  map(~.x %>%  tibble(
+    clust = map_dbl(., "clust"),
+    elbo = map(., "est_elbo"),
+    time = map_dbl(., "time")
+  ) %>% 
+    mutate(sim = row_number()) %>% 
+    select(sim, clust, time, elbo) %>% 
+    unnest(cols = c(elbo)) %>% 
+    group_by(sim) %>% 
+    mutate(wind = 1:unique(time))) %>% 
+  bind_rows()
+
+```
+
+## Convergence of the Window ELBO
+
+The definition of the window ELBO here is given by
+
+$$
+ELBO(wind_m) = \frac{1}{events_{cum}}
+\left[
+\sum_{(i,j) \in A} \sum_{k,l} \tau_{ik} \tau_{jl} \bigg \{\int_{dT m}^{dT(m+1)} \log \lambda_{kl}(t) dN_{ij}(t) 
+  - \int_{dT m}^{dT(m+1)} \lambda_{kl} (t) dt \bigg \} \\
+  + \sum_{i=1}^{n} \sum_{k=1}^{K} \tau_{ik} \log{\pi_k / \tau_{ik}}
+  \right],
+$$
+
+with $events_{cum}$ the number of events observed up to $dT(m+1)$.
+Although this is slightly different to what we define as the
+window ELBO in the paper, this is what we have always used in all
+experiments previously, as opposed to $|A|$.
+
+```{r plot-elbo}
+elbo_dat %>% 
+  filter(time == 50) %>% 
+  mutate(correct = ifelse(clust == 1, "Recover", "Don't")) %>% 
+  ggplot(aes(wind, elbo, colour = correct)) + geom_line(aes(group = sim)) +
+  labs(x = "Windows", y = "Window ELBO", colour = "Recovery",
+       title = "Time = 50") +
+  geom_hline(yintercept = -0.2)
+
+elbo_dat %>% 
+  filter(time == 1000) %>% 
+  filter(wind < 50) %>% 
+  mutate(correct = ifelse(clust == 1, "Recover", "Don't")) %>% 
+  ggplot(aes(wind, elbo, colour = correct)) + geom_line(aes(group = sim)) +
+  geom_hline(yintercept = -0.05) +
+  labs(x = "Windows", y = "Window ELBO",  colour = "Recovery",
+       title = "Comparison in initial optimisation",
+       subtitle = "First 50 windows for T=500") +
+  facet_wrap(~correct)
+
+```
+
+
+## Parameter Recovery
+
+Here we are using 
+
+$$
+\frac{1}{K}|\sum B_{ij}-\sum\hat{B}_{ij}|
+$$
+
+as the metric for convergence. We see that when the community is
+recovered (blue) the matrix is recovered.
+
+```{r param-recovery}
+all_b_files <- list.files(path = here("Experiments/exp_results/"),
+                          pattern = "exp1_all")
+
+b_ests <- all_b_files %>% 
+  map(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  flatten() %>% 
+  imap(~update_list(., sim = .y))
+
+sum_b <- b_ests %>% map(~ apply(.x$est_B, 3, sum) )
+
+all_b_df <- b_ests %>% {
+  tibble(
+    map_dfr(., `[`, c("sim", "clust", "time")),
+    sum_B = sum_b
+  ) 
+} %>% 
+  unnest(sum_B) %>% 
+  mutate(diff = abs(sum_B - 3.1)/4) %>% 
+  group_by(sim) %>% 
+  mutate(window = row_number()) %>% 
+  ungroup()
+
+all_b_df %>% 
+  mutate(Cluster = ifelse(clust == 1, "Recover", "Don't"),
+         time = as.factor(time)) %>% 
+  # filter(time == 1000) %>% 
+  ggplot(aes(window, diff)) + 
+  geom_line(aes(group = sim, colour = Cluster)) +
+  facet_wrap(~time, scales = "free_x") +
+  labs(x = "Observation Period", y = "Difference in Rate",
+       subtitle = "78% of Random Initialisation Recover Communities Exactly",
+       title = "Recovery of Rate Matrix")
+
+```
+
+
+
+# Regret Rate
+
+These experiments make a bit less sense. I'm not sure what to think
+of these, maybe a bug here?
+
+Here the regret we are computing is defined as 
+
+$$
+Regret(T) = \frac{1}{|A|}
+\left(\sum_{m=1}^{M}\tilde{\ell}_{m}(\theta^{(m)}|z^{\ast}) -
+    \sum_{m=1}^{M}\tilde{\ell}_{m}(\theta^{\ast}|z^{\ast})\right),
+$$
+
+where $\tilde{\ell}$ is the negative log likelihood in a given window.
+The $|A|$ is a constant not included in the paper currently.
+
+
+```{r regret-plot}
+exp_3_data <- readRDS(here("Experiments/exp_results/", "exp3_200.RDS"))
+
+exp3_tidy <- exp_3_data %>% tibble(
+  sim = 1:100,
+  ARI = map_dbl(., "clust"),
+  regret = map(., "regret"),
+  dT = list(1:200)
+) %>% 
+  unnest(cols = c(regret, dT)) %>% 
+  select(sim, ARI, regret, dT)
+
+exp3_tidy %>% 
+  mutate(ARI = ifelse(ARI == 1, "Recover Community", "Don't Recover")) %>%
+  # filter(ARI )
+  filter(regret > 0) %>% 
+  ggplot(aes(dT, regret)) +
+  geom_line(aes(group = sim, colour = ARI), alpha = 0.4) +
+  stat_function(fun = function(x) 2*sqrt(x) * log(x*1000)^2,
+                colour = "black") +
+  facet_wrap(~ARI, scales = "free") +
+  labs(y = "Regret Rate", x = "Windows",
+       title = "Comparison to theoretical rate",
+       subtitle = 
+         TeX("Estimated as $2\\sqrt_{T}\\log(|A|T)^2$ with $|A|=1000$.")) +
+  guides(colour = guide_legend(override.aes = list(alpha = 1)))
+
+```
+
+
+# Online Predictive Loss
+
+We can also evaluate the loss for each subsequent window, given 
+the current estimates of $\tau$ and $B$. We compare this to
+the batch loss, which is computed by fitting the batch estimator 
+to the entire dataset and then averaging the predictions for each window from
+that model.
+
+We can also show the estimates when we use the true $Z$ vector 
+instead of the estimate of $\tau$.
+
+There are scenarios where the predictive loss indicates that
+the estimated $Z$ gives a better result than using the true $Z$, but
+this is due to label switching which is not incorporated into the
+estimates using the true model.
+
+
+```{r exp4}
+exp_4_files <- list.files(path = here("Experiments/exp_results/"), 
+                          pattern = "exp4_")
+
+exp4_sims <- exp_4_files %>% 
+  map(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  flatten() %>% 
+  imap(~update_list(., sim = .y)) %>% 
+  map_dfr(`[`, c("online_loss", "batch_ave_loss", "sim")) 
+
+
+exp_4_tidy <- exp4_sims %>% 
+  reduce(data.frame) %>% 
+  as_tibble() %>% 
+  rename(Batch_Loss = elt, Sim = elt.1) %>% 
+  group_by(Sim) %>% 
+  mutate(Time = max(dT))
+
+```
+
+
+```{r exp4-50}
+curr_time <- 50
+exp_4_tidy %>% 
+  filter(Time == curr_time) %>% 
+  ggplot(aes(dT, Loss, colour = Z)) +
+  geom_line() +
+  geom_hline(aes(yintercept = Batch_Loss), 
+             exp_4_tidy %>% filter(Time == curr_time)) +
+  facet_wrap(~Sim, scales = "free")
+
+```
+
+```{r exp4-500}
+curr_time <- 500
+exp_4_tidy %>% 
+  filter(Time == curr_time) %>% 
+  ggplot(aes(dT, Loss, colour = Z)) +
+  geom_line() +
+  geom_hline(aes(yintercept = Batch_Loss), 
+             exp_4_tidy %>% filter(Time == curr_time)) +
+  facet_wrap(~Sim, scales = "free")
+```

@@ -213,3 +213,65 @@ exp3_tidy %>%
   group_by(ARI, sim) %>% 
   tally() %>% 
   filter(ARI == 1 & n == 200)
+
+
+
+#### EXP 4 Online Loss ####
+
+exp_4_files <- list.files(path = here("Experiments/exp_results/"), 
+                          pattern = "exp4_")
+
+exp4_sims <- exp_4_files %>% 
+  map(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  flatten() %>% 
+  imap(~update_list(., sim = .y)) %>% 
+  map_dfr(`[`, c("online_loss", "batch_ave_loss", "sim", "clust")) 
+
+## need to store simulation id for each, then can do a group-by and
+## such
+
+# exp4_sims %>% dim()
+
+exp_4_tidy <- exp4_sims %>% 
+  reduce(data.frame) %>% 
+  as_tibble() %>% 
+  rename(Batch_Loss = elt, Sim = elt.1, ARI = elt.2) %>% 
+  group_by(Sim) %>% 
+  mutate(Time = max(dT))
+
+
+curr_time <- 200
+exp_4_tidy %>% 
+  filter(Time == curr_time) %>% 
+  ggplot(aes(dT, Loss, colour = Z)) +
+  geom_line() +
+  geom_hline(aes(yintercept = Batch_Loss), 
+             exp_4_tidy %>% filter(Time == curr_time)) +
+  facet_wrap(~Sim, scales = "free")
+
+## the true z not doing as well could just be an identifiability issue
+
+
+## trying to verify this...
+exp_4_tidy %>% 
+  filter(Sim == 17)
+
+
+bad_sim <- exp_4_files %>% 
+  map(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  flatten() %>% 
+  imap(~update_list(., sim = .y)) %>% 
+  map_dfr(`[`, c("z_true", "sim", "clust", "z_est")) %>% 
+  filter(sim == 17) %>% 
+  select(z_true, z_est)
+
+table(bad_sim$z_true, bad_sim$z_est)
+
+B_comp <- exp_4_files %>% 
+  map(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  flatten() %>% 
+  imap(~update_list(., sim = .y)) %>% 
+  map(`[`, c("B_ests", "sim")) 
+
+B_comp[[17]]
+# this indicates this is due to label switching alright
