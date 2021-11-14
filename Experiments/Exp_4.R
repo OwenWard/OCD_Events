@@ -120,12 +120,16 @@ for(sim in 1:nsims) {
   
   sim_pars <- list(
     B = B,
+    z_true = z_true,
+    z_est = z_est,
+    B_ests = B_ests,
     est_elbo = results_online$AveELBO,
     clust = clust_est,
     regret = regret,
     card_A = card_A,
     batch_ave_loss = batch_average,
-    online_loss = tidy_loss
+    online_loss = tidy_loss,
+    Time = Time
   )
   results[[sim]] <- sim_pars
 }
