@@ -209,6 +209,9 @@ the batch loss, which is computed by fitting the batch estimator
 to the entire dataset and then averaging the predictions for each window from
 that model.
 
+Here for the batch estimator we are using the package `ppsbm`, which is
+well optimised to fit this type of model.
+
 We can also show the estimates when we use the true $Z$ vector 
 instead of the estimate of $\tau$.
 
