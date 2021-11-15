@@ -62,7 +62,7 @@ for(sim in 1:no_sims) {
     est_elbo = results_online$AveELBO,
     clust = clust_est,
     tau = results_online$tau,
-    dT = curr_dT
+    curr_n = n
   )
   results[[sim]] <- sim_pars
 }
