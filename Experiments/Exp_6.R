@@ -83,4 +83,4 @@ for(sim in 1:no_sims) {
 
 saveRDS(results, file = here("Experiments",
                              "exp_results",
-                             paste0("expk_", curr_k, ".RDS")))
+                             paste0("exp6_", curr_k, ".RDS")))
