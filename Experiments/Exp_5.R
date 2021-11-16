@@ -11,7 +11,8 @@ jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
 jobid <- as.numeric(jobid)
 sim_id <- jobid
 
-node_vec <- c(50, 100, 200, 500, 1000)
+# node_vec <- c(50, 100, 200, 500, 1000)
+node_vec <- c(20, 150, 250, 300)
 
 no_sims <- 20
 curr_n <- node_vec[sim_id]
