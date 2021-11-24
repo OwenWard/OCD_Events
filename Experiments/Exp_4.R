@@ -105,7 +105,7 @@ for(sim in 1:nsims) {
   # sol.kernel[[1]]$tau
   z_vem <- apply(sol.kernel[[1]]$tau, 2, which.max)
   
-  batch_b <- matrix(b, nrow = 2, ncol = 2, byrow = 2)
+  batch_b <- matrix(b, nrow = 2, ncol = 2, byrow = TRUE)
   
   vem_loss <- batch_loss(full_data = proc_sim$events,
                          A = proc_sim$edge, m,

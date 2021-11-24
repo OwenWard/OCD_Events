@@ -116,6 +116,9 @@ Rcpp::List batch_loss(
   }
   arma::rowvec Pi;
   Pi = sum(tau, 0)/m;
+  // need to compute the length of the window each time here...
+  double t_prev, t_length;
+  t_prev = 0;
   for(int n = 0; n < N; ++n){
     double Tn = dT*(n+1);
     arma::rowvec event = full_data.row(start_pos);
@@ -142,11 +145,13 @@ Rcpp::List batch_loss(
               K, dT, m)["True_z"];
     if(n > 0) {
       // need to actually get the tau for this I guess
+      t_length = t_curr - t_prev;
       batch_pred_ll(n-1) = computeLL(sub_data, tau, batch_B, Pi, A,
-                    m, K, t_curr);
+                    m, K, t_length);
       batch_ave_pred_ll(n-1) = batch_pred_ll(n-1)/sub_data.n_rows;
       // cout<<sub_data.n_rows<<endl;
     }
+    t_prev = t_curr;
   }
   return Rcpp::List::create(Named("Batch_loss") = batch_loss,
                             Named("Batch_Pred_LL") = batch_pred_ll,
@@ -199,6 +204,8 @@ Rcpp::List compute_regret(
   pred_ll.zeros(N-1);
   ave_pred_ll.zeros(N-1);
   int cum_events = 0;
+  double t_prev, t_length;
+  t_prev = 0;
   for(int n = 0; n < N; ++n){
     double Tn = dT*(n+1);
     arma::rowvec event = full_data.row(start_pos);
@@ -221,9 +228,6 @@ Rcpp::List compute_regret(
     // this is the cumulative data, should it be just the events in that
     // window here?
     start_pos = curr_pos;
-    // cout<<"here"<<endl;
-    // R.printf();
-    // Rcpp::print(B_ests.slice(n));
     
     // compute predictive log likelihood here
     if(n > 0) {
@@ -231,13 +235,14 @@ Rcpp::List compute_regret(
       arma::mat prev_tau = tau_ests.slice(n-1);
       arma::rowvec prev_Pi;
       prev_Pi = sum(prev_tau, 0)/m;
+      t_length = t_curr-t_prev;
       pred_ll(n-1) = computeLL(sub_data, prev_tau, prev_B, prev_Pi,
-              A, m, K, t_curr);
+              A, m, K, t_length);
       ave_pred_ll(n-1) = pred_ll(n-1)/sub_data.n_rows;
       // compute same for batch estimator...
       
     }
-    
+    t_prev = t_curr;
     
     ///
     arma::mat curr_B = B_ests.slice(n);
