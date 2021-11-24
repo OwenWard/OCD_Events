@@ -118,6 +118,13 @@ for(sim in 1:nsims) {
   z_est <- apply(results_online$tau, 1, which.max)
   clust_est <- aricode::ARI(z_true, z_est)
   
+  ave_pred_ll <- tibble(online = as.vector(out$Ave_Pred_LL),
+                        batch = as.vector(vem_loss$Batch_Ave_Pred_LL)) %>% 
+    mutate(dT = row_number()) %>%
+    pivot_longer(cols = online:batch,
+                 names_to = "method",
+                 values_to = "loglik")
+  
   sim_pars <- list(
     B = B,
     z_true = z_true,
@@ -129,6 +136,7 @@ for(sim in 1:nsims) {
     card_A = card_A,
     batch_ave_loss = batch_average,
     online_loss = tidy_loss,
+    pred_llh = ave_pred_ll,
     Time = Time
   )
   results[[sim]] <- sim_pars
