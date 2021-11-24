@@ -10,6 +10,7 @@ source(here("Experiments/", "utils.R"))
 Time <- 100
 no_sims <- 20
 dT_vec <- seq(from = 0.1, to = 5, by = 0.1)
+inter_T <- 1
 K <- 2
 m_vec <- rep(c(100, 200, 400), 2)
 sparsity <- 0.8 # prop of edges which can have events
@@ -27,7 +28,7 @@ results <- list()
 m <- m_vec[sim_id]
 
 for(exp_num in seq_along(dT_vec)) {
-  dT <- dT_vec[exp]
+  dT <- dT_vec[exp_num]
   curr_dt_sims <- tibble()
   cat("Current dT:", dT, "\n")
   for(sim in 1:no_sims){
@@ -36,7 +37,7 @@ for(exp_num in seq_along(dT_vec)) {
     true_Mu <- matrix(c(1, 0.05, 0.05, 2), 
                       nrow = 2, ncol = 2, byrow = T)
     ## excitation, if used (for Hawkes)
-    true_B <- matrix(c(0.5, 0, 1, 0), nrow = K, ncol = K, byrow = TRUE)
+    true_B <- matrix(c(0.5, 0, 0, .5), nrow = K, ncol = K, byrow = TRUE)
     if(model == "Poisson") {
       true_B <- matrix(0, K, K)
     }
