@@ -34,7 +34,7 @@ for(exp_num in seq_along(dT_vec)) {
   for(sim in 1:no_sims){
     
     ## baseline rate of the process
-    true_Mu <- matrix(c(1, 0.05, 0.05, 2), 
+    true_Mu <- matrix(c(0.5, 0.05, 0.05, 1), 
                       nrow = 2, ncol = 2, byrow = T)
     ## excitation, if used (for Hawkes)
     true_B <- matrix(c(0.5, 0, 0, .5), nrow = K, ncol = K, byrow = TRUE)
