@@ -98,4 +98,7 @@ for(exp_num in seq_along(dT_vec)) {
 }
 
 
-
+### then save these somewhere
+saveRDS(results, file = here("Experiments",
+                             "exp_results",
+                             paste0("exp_7_", sim_id, ".RDS")))
