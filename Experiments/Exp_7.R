@@ -64,7 +64,7 @@ for(exp_num in seq_along(dT_vec)) {
                                          K,
                                          Time,
                                          dT = dT,
-                                         B,
+                                         B = Mu_est,
                                          inter_T,
                                          is_elbo = FALSE)
     }
