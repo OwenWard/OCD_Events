@@ -1716,9 +1716,7 @@ Rcpp::List online_estimator_eff_revised(
         ln_curr = end_pos;
         n_t = ln_curr - ln_prev;
         eta = 1.0/sqrt(1 + n/10.0)/n_t * (K * K);
-        Rprintf("Above lambda \n");
         // paralist = update_lam_eff(tau, Mu, B, Pi, S, datamap, t_start, Tn, m, K, A, lam, eta);
-        Rprintf("Update lambda \n");
         paralist = update_lam_eff_revised(tau, Mu, B, Pi, S, datamap, t_start, Tn, m, K, A, lam, eta);
 
         arma::mat tau_new = paralist["tau"], Mu_new = paralist["Mu"], B_new = paralist["B"], S_new = paralist["S"];
@@ -1741,7 +1739,6 @@ Rcpp::List online_estimator_eff_revised(
           inter_tau.slice(ind) = tau;
           ind = ind + 1;
         }
-        Rprintf("Down here \n");
 
         if (is_elbo) {
             prevdata = alltimes.rows(0, end_pos - 1); // head_rows()
