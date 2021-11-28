@@ -235,6 +235,7 @@ void transfer_dynamic(unordered_map<string, std::deque<double>> &datamap, arma::
 
     std::deque<double> timetemp;
     std::unordered_map<std::string, std::deque<double>>::iterator got;
+  cout<<"Here"<<endl;
 	for (int n = 0; n < N; n++) {
 		event = newtimes.row(n);
 		i = event[0], j = event[1], time = event[2];
