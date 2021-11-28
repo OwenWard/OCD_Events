@@ -258,7 +258,6 @@ void transfer_dynamic(unordered_map<string, std::deque<double>> &datamap, arma::
 	std::deque<double> timeque;
 	for (itr = datamap.begin(); itr != datamap.end(); itr++) 
     { 
-	      cout<<"In loop"<<endl;
         // type itr->first stores the key part  and 
         // itr->second stroes the value part 
         key = itr->first;
