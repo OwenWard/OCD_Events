@@ -235,7 +235,6 @@ void transfer_dynamic(unordered_map<string, std::deque<double>> &datamap, arma::
 
     std::deque<double> timetemp;
     std::unordered_map<std::string, std::deque<double>>::iterator got;
-  cout<<"Here"<<endl;
 	for (int n = 0; n < N; n++) {
 		event = newtimes.row(n);
 		i = event[0], j = event[1], time = event[2];
@@ -254,12 +253,12 @@ void transfer_dynamic(unordered_map<string, std::deque<double>> &datamap, arma::
 			datamap[key] = timetemp;			
 		}				
 	}
-	cout<<"After loop"<<endl;
 	// loop over datamap to check whether need to throw old pairs
 	unordered_map<string, std::deque<double>>:: iterator itr; 
 	std::deque<double> timeque;
 	for (itr = datamap.begin(); itr != datamap.end(); itr++) 
     { 
+	      cout<<"In loop"<<endl;
         // type itr->first stores the key part  and 
         // itr->second stroes the value part 
         key = itr->first;
