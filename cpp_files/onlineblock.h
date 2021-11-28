@@ -265,6 +265,7 @@ void transfer_dynamic(unordered_map<string, std::deque<double>> &datamap, arma::
         timeque = itr->second;
         if (timeque.back() < t_current - R) {
         	// remove 
+        	cout<<"In here?"<<endl;
         	datamap.erase(key);
         }
     }
