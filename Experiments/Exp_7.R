@@ -32,7 +32,7 @@ for(exp_num in seq_along(dT_vec)) {
   curr_dt_sims <- tibble()
   cat("Current dT:", dT, "\n")
   for(sim in 1:no_sims){
-    
+    cat("Sim:", sim, "======\n")
     ## baseline rate of the process
     true_Mu <- matrix(c(0.5, 0.05, 0.05, 1), 
                       nrow = 2, ncol = 2, byrow = T)
