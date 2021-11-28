@@ -1716,6 +1716,7 @@ Rcpp::List online_estimator_eff_revised(
         ln_curr = end_pos;
         n_t = ln_curr - ln_prev;
         eta = 1.0/sqrt(1 + n/10.0)/n_t * (K * K);
+        Rprintf("Above lambda \n");
         // paralist = update_lam_eff(tau, Mu, B, Pi, S, datamap, t_start, Tn, m, K, A, lam, eta);
         Rprintf("Update lambda \n");
         paralist = update_lam_eff_revised(tau, Mu, B, Pi, S, datamap, t_start, Tn, m, K, A, lam, eta);
