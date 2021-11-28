@@ -254,6 +254,7 @@ void transfer_dynamic(unordered_map<string, std::deque<double>> &datamap, arma::
 			datamap[key] = timetemp;			
 		}				
 	}
+	cout<<"After loop"<<endl;
 	// loop over datamap to check whether need to throw old pairs
 	unordered_map<string, std::deque<double>>:: iterator itr; 
 	std::deque<double> timeque;
