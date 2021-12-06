@@ -51,6 +51,7 @@ for(sim in 1:nsims) {
   
   B_ests <- results_online$inter_B
   z_true <- apply(sim1$z, 2, which.max)
+  z_est <- apply(results_online$tau, 1, which.max)
   clust_est <- aricode::ARI(z_true, z_est)
   
   sim_pars <- list(
