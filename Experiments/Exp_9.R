@@ -58,7 +58,8 @@ for(sim in 1:nsims) {
     B = B,
     est_elbo = results_online$AveELBO,
     clust = clust_est,
-    online_clust = results_online$early_tau
+    online_clust = results_online$early_tau,
+    z_true = z_true
   )
   results[[sim]] <- sim_pars
 }
@@ -67,13 +68,3 @@ saveRDS(results, file = here("Experiments",
                              "exp_results",
                              paste0("exp9_", Time, ".RDS")))
 
-
-### create some nicer plots for these regret functions
-### for a given dataset, draw new B and plot the loss each time.
-
-
-tidy_loss %>% 
-  ggplot(aes(dT, Loss, colour = Z)) +
-  geom_line() +
-  geom_hline(aes(yintercept = batch_average, linetype = "Batch Average")) +
-  labs(linetype = "", colour = "Labels Used")
