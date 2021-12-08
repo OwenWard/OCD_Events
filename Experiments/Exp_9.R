@@ -20,7 +20,7 @@ for(sim in 1:nsims) {
   cat("Sim:", sim, "\n")
   # Time <- 100
   n <- 100
-  intens1 <- c(3)
+  intens1 <- c(4)
   intens2 <- c(1)
   intens <- matrix(c(intens1, 0.05, 0.05, intens2), 4, 1)
   true_B <- matrix(c(intens1, 0.05, 0.05, intens2), 
