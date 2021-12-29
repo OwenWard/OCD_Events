@@ -1709,7 +1709,7 @@ Rcpp::List online_estimator_eff_revised(
 
         //datamap = transfer_eff2(datamap, truncdata, R);
         // transfer_eff(datamap, truncdata, R);
-        Rprintf("Datamap \n");
+        // Rprintf("Datamap \n");
         transfer_dynamic(datamap, truncdata, R, Tn);
 
         t_start = Tn - dT;
