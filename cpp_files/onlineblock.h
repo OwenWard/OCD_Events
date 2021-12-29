@@ -265,9 +265,9 @@ void transfer_dynamic(unordered_map<string, std::deque<double>> &datamap, arma::
         if (timeque.back() < t_current - R) {
         	// remove 
         	//cout<<"In here?"<<endl;
-        	cout<<key<<endl;
+        	//cout<<key<<endl;
         	//datamap.erase(key);
-        	cout<<"Completed"<<endl;
+        	// this is causing the error anyway
         }
     }
 }
