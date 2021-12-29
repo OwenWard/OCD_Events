@@ -267,6 +267,7 @@ void transfer_dynamic(unordered_map<string, std::deque<double>> &datamap, arma::
         	//cout<<"In here?"<<endl;
         	cout<<key<<endl;
         	datamap.erase(key);
+        	cout<<"Completed"<<endl;
         }
     }
 }
