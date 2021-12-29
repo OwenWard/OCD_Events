@@ -7,12 +7,12 @@ library(here)
 
 source(here("Experiments/", "utils.R"))
 
-Time <- 100
+Time <- 200
 no_sims <- 20
 dT_vec <- 1
 inter_T <- 1
 K_vec <- 2:6
-m_vec <- rep(c(100, 200, 400), 5)
+m_vec <- rep(c(100, 200, 400), 10)
 sparsity <- 0.8 # prop of edges which can have events
 
 jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
@@ -20,7 +20,7 @@ jobid <- as.numeric(jobid)
 sim_id <- jobid
 
 model <- "Hawkes"
-if(sim_id <= 5){
+if(sim_id <= 15){
   model = "Poisson"
 }
 
@@ -31,7 +31,9 @@ for(exp_num in seq_along(K_vec)) {
   K <- K_vec[exp_num]
   dT <- 1
   curr_dt_sims <- tibble()
-  cat("Current dT:", dT, "\n")
+  cat("Current K:", K, "\n")
+  cat("Current m:", m, "\n")
+  cat(model, "\n")
   for(sim in 1:no_sims){
     cat("Sim:", sim, "======\n")
     ## baseline rate of the process
