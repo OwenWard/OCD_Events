@@ -12,7 +12,7 @@ no_sims <- 20
 dT_vec <- 1
 inter_T <- 1
 K_vec <- 2:6
-m_vec <- rep(c(100, 200, 400), 10)
+m_vec <- rep(c(100, 200, 400), 2)
 sparsity <- 0.8 # prop of edges which can have events
 
 jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
@@ -20,7 +20,7 @@ jobid <- as.numeric(jobid)
 sim_id <- jobid
 
 model <- "Hawkes"
-if(sim_id <= 15){
+if(sim_id <= 3){
   model = "Poisson"
 }
 
