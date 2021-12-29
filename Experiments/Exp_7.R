@@ -29,6 +29,7 @@ m <- m_vec[sim_id]
 
 for(exp_num in seq_along(dT_vec)) {
   dT <- dT_vec[exp_num]
+  dT <- 1
   curr_dt_sims <- tibble()
   cat("Current dT:", dT, "\n")
   for(sim in 1:no_sims){
