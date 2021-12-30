@@ -96,7 +96,7 @@ for(exp_num in seq_along(K_vec)) {
     clust_est <- aricode::ARI(Z, z_est)
     ### then save dT, clust_est, m, model
     curr_sim <- tibble(ARI = clust_est,
-                       dT = dT, 
+                       K = K, 
                        nodes = m,
                        model = model)
     curr_dt_sims <- curr_dt_sims %>% 
