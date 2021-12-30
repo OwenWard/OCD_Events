@@ -102,7 +102,7 @@ m <- m_vec[sim_id]
     curr_dt_sims <- curr_dt_sims %>% 
       bind_rows(curr_sim)
   }
-  results[[exp_num]] <- curr_dt_sims 
+  results <- curr_dt_sims 
 # }
 
 
