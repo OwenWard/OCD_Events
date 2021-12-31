@@ -10,9 +10,10 @@ source(here("Experiments/", "utils.R"))
 Time <- 100
 no_sims <- 20
 dT_vec <- seq(from = 0.1, to = 5, by = 0.1)
+dT_vec <- rep(dT_vec, 2)
 inter_T <- 1
 K <- 2
-m_vec <- rep(c(100, 200, 400), 2)
+m_vec <- c(100, 200, 400)
 sparsity <- 0.8 # prop of edges which can have events
 
 jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
@@ -20,15 +21,19 @@ jobid <- as.numeric(jobid)
 sim_id <- jobid
 
 model <- "Hawkes"
-if(sim_id <= 3){
+if(sim_id <= 50){
   model = "Poisson"
 }
 
 results <- list()
-m <- m_vec[sim_id]
+# m <- m_vec[sim_id]
+dT <- dT_vec[sim_id]
 
-for(exp_num in seq_along(dT_vec)) {
-  dT <- dT_vec[exp_num]
+### should run the sims over the dT vec rather than the m here
+
+for(exp_num in seq_along(m_vec)) {
+  # dT <- dT_vec[exp_num]
+  m <- m_vec[exp_num]
   # dT <- 1
   curr_dt_sims <- tibble()
   cat("Current dT:", dT, "\n")
@@ -102,4 +107,5 @@ for(exp_num in seq_along(dT_vec)) {
 ### then save these somewhere
 saveRDS(results, file = here("Experiments",
                              "exp_results",
-                             paste0("exp_7_", sim_id, ".RDS")))
+                             paste0("exp_7_dT_", dT, "_model_",
+                                    model, ".RDS")))
