@@ -149,6 +149,19 @@ all_b_df %>%
   group_by(ARI, time) %>% 
   distinct(sim) %>% tally()
 
+all_b_df %>% 
+  mutate(Cluster = ifelse(clust == 1, "Recover", "Don't"),
+         time = as.factor(time)) %>% 
+  filter(time %in% c(50, 500)) %>%
+  filter(Cluster == "Recover") %>% 
+  mutate(time = paste0("Time = ", time)) %>% 
+  ggplot(aes(window, diff)) + 
+  geom_line(aes(group = sim), colour = "Red") +
+  facet_wrap(~time, scales = "free_x") +
+  labs(x = "Observation Period", y = "Difference in Rate")
+
+ggsave(filename = "exp1_rate_recov.png",
+       path = here("Job_Talk_Plots"), width = 7, height = 4.5)
 
 ### EXP 2:investigate relationship with dT ####
 
@@ -177,11 +190,18 @@ sims_df %>%
 
 sims_df %>% 
   group_by(dT) %>% 
-  summarise(mean = mean(clust), sd = sd(clust)) %>% 
-  arrange(-mean)
+  summarise(mean = mean(clust), sd = sd(clust),
+            lower = max(mean - sd,0), upper = min(mean + sd, 1)) %>% 
+  # mutate(lower = max(mean - sd,0), upper = min(mean + sd, 1)) %>% 
+  ggplot(aes(dT, mean)) + 
+  geom_point() +
+  geom_linerange(aes(ymin = lower, ymax = upper)) +
+  labs(y = "Proportion Recovered",
+       subtitle = "Plus or Minus Standard Deviation",
+       title = "100 Nodes, T = 100, 20 Simulations")
 
 
-#### EXP 3: Investigate theoretical regret rate ####
+### EXP 3: Investigate theoretical regret rate ####
 exp_3_data <- readRDS(here("Experiments/exp_results/", "exp3_200.RDS"))
 
 exp3_tidy <- exp_3_data %>% tibble(
@@ -216,7 +236,7 @@ exp3_tidy %>%
 
 
 
-#### EXP 4 Online Loss ####
+### EXP 4 Online Loss ####
 
 exp_4_files <- list.files(path = here("Experiments/exp_results/"), 
                           pattern = "exp4_")
@@ -275,3 +295,260 @@ B_comp <- exp_4_files %>%
 
 B_comp[[17]]
 # this indicates this is due to label switching alright
+
+## pred log likelihood ###
+
+exp4_sims_llh <- exp_4_files %>% 
+  map(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  flatten() %>% 
+  imap(~update_list(., sim = .y)) %>% 
+  map_dfr(`[`, c("sim", "pred_llh", "clust")) 
+
+llh_tidy <- exp4_sims_llh %>% 
+  reduce(data.frame) %>% 
+  rename(sim = out, clust = elt) %>% 
+  as_tibble()
+
+llh_tidy %>% 
+  mutate(neg_llh = - loglik) %>% 
+  group_by(sim, method) %>% 
+  mutate(cum_loss = cumsum(neg_llh)/dT) %>% 
+  group_by(sim) %>% 
+  mutate(Time = max(dT) + 1, clust = factor(clust)) %>% 
+  filter(Time %in% c(50,500)) %>%
+  filter(clust == 1) %>%
+  # filter(sim < 10) %>%
+  ggplot(aes(dT, cum_loss, colour = method)) +
+  geom_line(aes(group = interaction(sim, method),
+                linetype = as.factor(sim))) + 
+  guides(linetype = "none") +
+  # facet_wrap(vars(sim,clust), scales = "free") +
+  facet_wrap(~Time, scales = "free") +
+  # theme(legend.position = NULL) +
+  NULL
+
+### maybe plot the difference instead?
+
+
+llh_tidy %>% 
+  mutate(neg_llh = - loglik) %>% 
+  group_by(sim, method) %>% 
+  mutate(cum_loss = cumsum(neg_llh)/dT) %>% 
+  group_by(sim) %>% 
+  mutate(Time = max(dT) + 1, clust = factor(clust)) %>% 
+  filter(Time %in% c(50,500)) %>%
+  filter(clust == 1) %>%
+  pivot_wider(id_cols = c(sim:dT, Time, clust),
+              names_from = method,
+              values_from = cum_loss) %>% 
+  mutate(diff = online - batch) %>% 
+  mutate(Time = paste0("Time = ", Time)) %>% 
+  ggplot(aes(dT, diff)) +
+  geom_line(aes(group = sim, colour = clust), show.legend = FALSE) + 
+  # guides(linetype = "none") +
+  # facet_wrap(vars(sim,clust), scales = "free") +
+  facet_wrap(~Time, scales = "free") +
+  labs(x = "Observation Time", y = "Difference in Loss")
+ 
+ggsave(filename = "exp4_pred_loss_llh.png",
+       path = here("Job_Talk_Plots"), width = 7, height = 4.5)
+
+## facet these by ARI here to see
+
+# llh_tidy %>% 
+#   mutate(neg_llh = - loglik) %>% 
+#   group_by(sim, method) %>% 
+#   mutate(cum_loss = cumsum(neg_llh)/dT) %>% 
+#   group_by(dT, method) %>% 
+#   summarise(ave = mean(cum_loss), sd(cum_loss)) %>% 
+#   ggplot(aes(dT, ave, colour = method)) +
+#   geom_line()
+
+### EXP 5 Changing Number of Nodes ####
+
+exp_5_files <- list.files(path = here("Experiments/exp_results/"), 
+                          pattern = "exp5_")
+
+exp_5_data <- exp_5_files %>% 
+  map(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  flatten() %>% 
+  imap(~update_list(., sim = .y)) %>% 
+  map_dfr(`[`, c("curr_n", "clust", "sim"))
+
+
+exp_5_data %>% 
+  group_by(curr_n) %>% 
+  summarise(mean = mean(clust), sd = sd(clust))
+
+
+### EXP 6 Number of Clusters ####
+
+exp_6_files <- list.files(path = here("Experiments/exp_results/"), 
+                          pattern = "exp6_")
+
+exp_6_data <- exp_6_files %>% 
+  map(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  flatten() %>% 
+  imap(~update_list(., sim = .y)) %>% 
+  map_dfr(`[`, c("K", "clust", "sim"))
+
+exp_6_data %>% 
+  group_by(K) %>% 
+  summarise(mean = mean(clust), sd = sd(clust))
+
+
+#### EXP 7 ####
+exp_7_files <- list.files(path = here("Experiments/exp_results/"), 
+                          pattern = "exp_7")
+
+exp_7_data <- exp_7_files %>% 
+  map(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  flatten() %>% 
+  imap(~update_list(., sim = .y))%>% 
+  map_dfr(`[`, c("ARI", "dT", "sim", "nodes", "model"))
+
+
+exp_7_data %>% 
+  # group_by(nodes, model, dT) %>% 
+  # summarise(mean_ari = mean(ARI), sd = sd(ARI)) %>%
+  mutate(dT = as.factor(dT)) %>% 
+  # filter(model == "Hawkes") %>%
+  # filter(nodes == 100) %>% 
+  ggplot(aes(dT, ARI)) + 
+  # geom_point() +
+  geom_boxplot() +
+  facet_grid(cols = vars(nodes), rows = vars(model)) +
+  # theme(axis.text.x = element_text(size = 4))
+  scale_x_discrete(breaks = 1:5) +
+  labs(x = "Window Size")
+
+
+
+
+#### Online Cluster Recovery Plot ####
+
+# which dataset is best for this? exp3?
+
+
+#### Exp 9 ####
+
+exp_9_files <- list.files(path = here("Experiments/exp_results/"), 
+                          pattern = "exp9_")
+
+exp_9_data <- exp_9_files %>% 
+  map(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  flatten() %>% 
+  imap(~update_list(., sim = .y,
+                    est_clust = apply(.x$online_clust, c(1, 3), which.max)))%>% 
+  map(`[`, c("est_clust", "z_true", "sim", "clust"))
+
+
+
+ests <- exp_9_data %>% 
+  map("est_clust")
+
+true_clust <- exp_9_data %>% 
+  map("z_true")
+
+final_est <- exp_9_data %>% 
+  map("clust")
+
+ari_ests <- map2(ests, true_clust,
+                 ~ apply(.x, 2, function(x) aricode::ARI(x, .y)))
+# this is what I want, now just need to convert to a tibble I can use
+length(ari_ests)
+names(ari_ests) <- paste0("ARI_", 1:80)
+
+
+tidy_ari <- tibble(sim = 1:80, ests = ari_ests,
+                   final_ari = final_est) %>% 
+  rowwise() %>% 
+  mutate(Time = length(ests)) %>% 
+  unnest(ests) %>% 
+  unnest(final_ari) %>% 
+  group_by(sim) %>% 
+  mutate(dT = row_number()) %>% 
+  filter(Time != dT) %>% 
+  mutate(Time = Time - 1) 
+
+
+tidy_ari %>% 
+  filter(dT %% 10 == 0) %>% 
+  mutate(Time = as.factor(Time), dT = as.factor(dT)) %>% 
+  # filter(final_ari == 1) %>% 
+  ggplot(aes(dT, ests)) + 
+  geom_boxplot() +
+  facet_wrap(~Time, scales = "free")
+
+tidy_ari %>% 
+  mutate(Time = paste0("Time = ", Time)) %>% 
+  mutate(Time = factor(Time, 
+                       levels = paste0("Time = ",c(50, 100, 200, 500)))) %>% 
+  # filter(final_ari  == 1) %>%
+  ### this is cheating a bit too much
+  group_by(Time, dT) %>% 
+  summarise(mean_ari = mean(ests), sd = sd(ests),
+            min_bar = max(mean_ari - sd, 0),
+            max_bar = min(mean_ari + sd, 1)) %>% 
+  filter(Time %in% c("Time = 50", "Time = 500")) %>%
+  # filter(dT %% 1 == 0) %>%
+  ungroup() %>% 
+  ggplot(aes(dT, mean_ari)) + 
+  geom_ribbon(aes(ymin = min_bar, ymax = max_bar), 
+              fill = "grey70", alpha = 0.2) +
+  geom_line(colour = "red") +
+  facet_wrap(~Time, scales = "free") +
+  labs(x = "Observation Length", y = "Estimated ARI") + ylim(0,1)
+
+ggsave(filename = "exp1_clust_recov.png",
+       path = here("Job_Talk_Plots"), width = 7, height = 4.5)
+
+### just need to add some error bars and tidy this up a bit more
+
+
+tidy_ari %>% 
+  mutate(Time = paste0("Time = ", Time)) %>% 
+  mutate(Time = factor(Time, 
+                       levels = paste0("Time = ",
+                                       c(50, 100, 200, 500)))) %>% 
+  filter(dT < 25) %>% 
+  ggplot(aes(dT, ests, group = sim)) +
+  geom_line(colour = "red", alpha = 0.5) +
+  facet_wrap(~Time, scales = "free") +
+  labs(y = "ARI", x = "Observed Time") + 
+  ylim(0, 1)
+
+
+#### EXP 10 ####
+
+exp_10_files <- list.files(path = here("Experiments/exp_results/"), 
+                          pattern = "exp_10_")
+
+exp_10_data <- exp_10_files %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/", .x))) 
+
+exp_10_data %>% 
+  # group_by(K, model) %>% 
+  # summarise(mean(ARI)) %>% 
+  select(ARI:model) %>% 
+  drop_na() %>%
+  mutate(K = as.factor(K)) %>% 
+  ggplot(aes(K, ARI)) + geom_boxplot() +
+  facet_wrap(vars(model, nodes))
+
+#### EXP 11 ####
+exp_11_files <- list.files(path = here("Experiments/exp_results/"), 
+                          pattern = "exp_11")
+
+exp_11_data <- exp_11_files %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  mutate(sparsity = 0.25) # this is the same at the moment
+
+exp_11_data %>% 
+  group_by(nodes) %>% 
+  summarise(mean(ARI), sd(ARI))
+
+exp_11_data %>% 
+  mutate(nodes = as.factor(nodes)) %>% 
+  ggplot(aes(nodes, ARI)) +
+  geom_boxplot()

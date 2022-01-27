@@ -1,11 +1,16 @@
-##### Exp 10 #### 
-## Repeat experiments for Poisson and Hawkes 
-## investigating the change in the group size and the number of nodes
-.libPaths("/moto/stats/users/ogw2103/rpackages")
+#### Exp 12, Jan 26th 2022
+#### Investigate whether the initialization function 
+#### leads to an improved clustering performance
 
 library(here)
 
 source(here("Experiments/", "utils.R"))
+source(here("functions/init_fcn.R"))
+
+
+### simulate some data, see how the performance changes with the
+### init function
+
 
 Time <- 200
 no_sims <- 20
@@ -47,7 +52,7 @@ for(exp_num in seq_along(K_vec)) {
       true_B <- matrix(0, K, K)
     }
     Pi <- matrix(1/K, 1, K)
-
+    
     Z <- sample(0:(K-1), size = m, prob = Pi, replace = TRUE)
     # then generate A
     A <- list()
@@ -62,9 +67,19 @@ for(exp_num in seq_along(K_vec)) {
     
     ### then estimate the fits here in each case
     if(model == "Poisson") {
-      Mu_est <- matrix(runif(K*K), nrow = K, ncol = K)
       
-      results_online <- estimate_Poisson(full_data = alltimes,
+      ### run init algorithm
+      result <- dense_poisson(alltimes, K)
+      Mu_est <- result$est_B
+      ## need to pass the estimated clustering also
+      init_tau <- matrix(0, nrow = m, ncol = K)
+      for(i in seq_along(result$est_clust)){
+        init_tau[i, result$est_clust[i]] <- 1
+      }
+      
+      ### will need to modify to account for the decreased number
+      ### of events also...
+      results_online <- estimate_Poisson_init(full_data = result$rest_events,
                                          A,
                                          m,
                                          K,
@@ -72,6 +87,8 @@ for(exp_num in seq_along(K_vec)) {
                                          dT = dT,
                                          B = Mu_est,
                                          inter_T,
+                                         init_tau,
+                                         start = result$cut_off,
                                          is_elbo = FALSE)
     }
     if(model == "Hawkes"){
@@ -107,4 +124,4 @@ for(exp_num in seq_along(K_vec)) {
 ### then save these somewhere
 saveRDS(results, file = here("Experiments",
                              "exp_results",
-                             paste0("exp_10_", sim_id, ".RDS")))
+                             paste0("exp_12_", sim_id, ".RDS")))

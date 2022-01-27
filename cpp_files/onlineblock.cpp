@@ -10,6 +10,7 @@
 #include "ccrm.h"
 #include "new_predict.h"
 #include "test.h"
+#include "init_Poisson.h"
 
 // [[Rcpp::export]]
 arma::vec func(arma::vec X){

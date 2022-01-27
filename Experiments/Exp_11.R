@@ -1,5 +1,5 @@
 ##### Exp 11 #### 
-## Push number of nodes and adjust sparsity accordinglyr
+## Push number of nodes and adjust sparsity accordingly
 ## investigating the change in the group size and the number of nodes
 .libPaths("/moto/stats/users/ogw2103/rpackages")
 
