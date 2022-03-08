@@ -1,7 +1,7 @@
 #### Exp 12, March 26th 2022
 #### Investigate whether the initialization function 
 #### leads to an improved clustering performance
-
+.libPaths("/moto/stats/users/ogw2103/rpackages")
 library(here)
 
 source(here("Experiments/", "utils.R"))
