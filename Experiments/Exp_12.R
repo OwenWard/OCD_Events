@@ -14,7 +14,7 @@ source(here("functions/init_fcn.R"))
 
 Time <- 200
 no_sims <- 20
-# dT_vec <- 1
+dT <- 1
 inter_T <- 1
 K <- 2
 m_vec <- c(100, 200, 400)
