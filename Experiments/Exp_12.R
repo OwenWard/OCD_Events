@@ -13,12 +13,12 @@ source(here("functions/init_fcn.R"))
 
 
 Time <- 200
-no_sims <- 20
+no_sims <- 50
 dT <- 1
 inter_T <- 1
 K <- 2
 m_vec <- c(100, 200, 400)
-sparsity <- 0.5 # prop of edges which can have events
+sparsity <- 0.75 # prop of edges which can have events
 
 jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
 jobid <- as.numeric(jobid)
