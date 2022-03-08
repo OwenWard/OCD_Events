@@ -51,9 +51,9 @@ Rcpp::List estimate_Poisson_init(
   ave_ll.zeros(N);
   ave_elbo.zeros(N);
   int cum_events = 0;
-  cout<<"Gotten to here \n"<<endl;
+  // cout<<"Gotten to here \n"<<endl;
   for(int n = 0; n < N; ++n){
-    cout<<n<<endl;
+    // cout<<n<<endl;
     double Tn = dT*(n+1) + start; //account for init
     arma::rowvec event = full_data.row(start_pos);
     double t_curr = event(2);
