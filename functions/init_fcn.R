@@ -128,35 +128,81 @@ dense_poisson <- function(alltimes, K) {
 
 
 ### run through and apply
-
-K <- 2
-m <- 100
-Time <- 100
-sparsity <- 0.5
-true_Mu <- matrix(c(0.5, 0.05, 0.05, 1), 
-                  nrow = 2, ncol = 2, byrow = T)
-## excitation, if used (for Hawkes)
-true_B <- matrix(c(0.5, 0, 0, .5), nrow = K, ncol = K, byrow = TRUE)
-if(model == "Poisson") {
-  true_B <- matrix(0, K, K)
-}
-Pi <- matrix(c(0.5, 0.5), 1, 2)
-Z <- c(rep(0, m * Pi[1]), rep(1, m * Pi[2]))
-# then generate A
-A <- list()
-for(i in 1:m){
-  # could sample these here with SBM structure...
-  num_edge = m * sparsity
-  edge <- sample(m, num_edge) - 1
-  edge <- sort(edge)
-  A[[i]] <- edge
-}
-
-
-alltimes <- sampleBlockHak(Time, A, Z, Mu = true_Mu, B = true_B, lam = 1)
-
-
-result <- dense_poisson(alltimes, K = 2)
-
-aricode::ARI(result$est_clust, Z)
+# model
+# K <- 2
+# m <- 200
+# Time <- 100
+# sparsity <- 0.2
+# true_Mu <- matrix(c(0.5, 0.05, 0.05, 1),
+#                   nrow = 2, ncol = 2, byrow = T)
+# ## excitation, if used (for Hawkes)
+# true_B <- matrix(c(0.5, 0, 0, .5), nrow = K, ncol = K, byrow = TRUE)
+# if(model == "Poisson") {
+#   true_B <- matrix(0, K, K)
+# }
+# Pi <- matrix(c(0.5, 0.5), 1, 2)
+# Z <- c(rep(0, m * Pi[1]), rep(1, m * Pi[2]))
+# # then generate A
+# A <- list()
+# for(i in 1:m){
+#   # could sample these here with SBM structure...
+#   num_edge = m * sparsity
+#   edge <- sample(m, num_edge) - 1
+#   edge <- sort(edge)
+#   A[[i]] <- edge
+# }
+# 
+# #
+# alltimes <- sampleBlockHak(Time, A, Z, Mu = true_Mu, B = true_B, lam = 1)
+# 
+# 
+# result <- dense_poisson(alltimes, K = 2)
+# ### this is just the initial clustering, want to fit standard
+# ### model given this? right?
+# 
+# aricode::ARI(result$est_clust, Z)
+# 
+# ### then want to fit this and the random init version and see how the
+# ### performance compares
+# 
+# 
+# ### fit the model using this initial estimate to the rest
+# 
+# Mu_est <- result$est_B
+# ## need to pass the estimated clustering also
+# init_tau <- matrix(0, nrow = m, ncol = K)
+# for(i in seq_along(result$est_clust)){
+#   init_tau[i, result$est_clust[i]] <- 1
+# }
+# 
+# ### will need to modify to account for the decreased number
+# ### of events also...
+# results_init <- estimate_Poisson_init(full_data = result$rest_events,
+#                                         A,
+#                                         m,
+#                                         K,
+#                                         Time,
+#                                         dT = 1,
+#                                         B = Mu_est,
+#                                         inter_T = 1,
+#                                         init_tau,
+#                                         start = result$cut_off,
+#                                         is_elbo = FALSE)
+# 
+# est_clust <- apply(results_init$tau, 1, which.max)
+# aricode::ARI(est_clust, Z)
+# 
+# ### compare to naive fit
+# B <- matrix(runif(K * K), K, K)
+# norm_online <- estimate_Poisson(full_data = alltimes,
+#                                 A = A,
+#                                 m,
+#                                 K,
+#                                 Time,
+#                                 dT = 1,
+#                                 B,
+#                                 inter_T = 1,
+#                                 is_elbo = FALSE)
+# stan_est <- apply(norm_online$tau, 1, which.max)
+# aricode::ARI(stan_est, Z)
 
