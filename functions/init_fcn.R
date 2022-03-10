@@ -34,12 +34,14 @@ dense_poisson <- function(alltimes, K) {
     count() %>% 
     mutate(est_lam = n/Time) %>% 
     select(rec, est_lam)
+  ## check here if len(est_int) < K
   
   est <- kmeans(est_int$est_lam, centers = K)
   clust_ests <- tibble(node = est_int$rec, clust = est$cluster)
   
   neighbours <- init_events %>% 
     filter(send == max_degree) %>% 
+    ### check this giving a warning too
     distinct(rec) %>% 
     arrange(rec) %>% 
     pull(rec)
@@ -61,16 +63,23 @@ dense_poisson <- function(alltimes, K) {
   
   for(k1 in 1:K){
     for(k2 in 1:K){
-      init_B[k1, k2] <- neighbour_events %>% 
+      curr_est <- neighbour_events %>% 
         filter(send_clust == k1) %>% 
         filter(rec_clust == k2) %>% 
         ungroup() %>% 
         slice_sample(n = 1) %>% 
         mutate(rate = n/Time) %>% 
         pull(rate)
+      ### check if empty here
+      if(identical(curr_est, numeric(0))){
+        init_B[k1, k2] <- 0
+      }
+      else{
+        init_B[k1, k2] <- curr_est 
+      }
     }
   }
-
+  
   init_group <- rep(NA, m)
   
   for(i in (1:m)-1){
@@ -83,6 +92,7 @@ dense_poisson <- function(alltimes, K) {
       pull(rate)
     
     # then k means on these estimates
+    ## check number of neighbours here too
     curr_est <- kmeans(curr_neigh, centers = K)
     curr_center <- curr_est$centers
     
@@ -117,9 +127,23 @@ dense_poisson <- function(alltimes, K) {
         ### fitting a common Poisson to each of these pairs
         summarise(est_rate = sum(num_events)/ (n()*Time)) %>% 
         pull(est_rate)
-      updated_B[k1, k2] <- new_est
+      
+      if(identical(new_est, numeric(0))){
+        updated_B[k1, k2] <- 0
+      }
+      else{
+        update_B[k1, k2] <- new_est 
+      }
+      
+      # updated_B[k1, k2] <- new_est
+      # ### debug this
+      # if(is.na(new_est)) {
+      #   print("You should check the data")
+      #   return(alltimes)
+      # }
     }
   }
+  cat(updated_B, "\n------\n")
   return(list(est_clust = init_group,
               est_B = updated_B,
               rest_events = remaining_events,
@@ -205,4 +229,20 @@ dense_poisson <- function(alltimes, K) {
 #                                 is_elbo = FALSE)
 # stan_est <- apply(norm_online$tau, 1, which.max)
 # aricode::ARI(stan_est, Z)
+
+
+# a <- estimate_Poisson_init(full_data = 
+#                              result$rest_events,
+#                            A,
+#                            m,
+#                            K,
+#                            Time,
+#                            dT = dT,
+#                            B = Mu_est,
+#                            inter_T,
+#                            init_tau,
+#                            start = result$cut_off,
+#                            is_elbo = FALSE)
+# a$
+
 
