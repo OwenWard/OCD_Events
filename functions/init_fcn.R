@@ -132,7 +132,7 @@ dense_poisson <- function(alltimes, K) {
         updated_B[k1, k2] <- 0
       }
       else{
-        update_B[k1, k2] <- new_est 
+        updated_B[k1, k2] <- new_est 
       }
       
       # updated_B[k1, k2] <- new_est
