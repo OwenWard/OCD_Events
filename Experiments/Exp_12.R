@@ -69,6 +69,10 @@ for(sim in 1:no_sims){
     
     ### run init algorithm
     result <- dense_poisson(alltimes, K)
+    while(sum(is.nan(result$est_B)) > 0) {
+      result <- dense_poisson(alltimes, K)
+      ## just run again to avoid this issue
+    }
     Mu_est <- result$est_B
     ## need to pass the estimated clustering also
     init_tau <- matrix(0, nrow = m, ncol = K)
