@@ -6,13 +6,13 @@ sourceCpp("onlineblock.cpp")
 T <- 100
 K <- 2
 H <- 2
-MuA <- array(0,c(K,K,H))
-MuA[,,1] <- matrix(c(0.8,0.2,0.6,0.4),2,2)
-MuA[,,2] <- matrix(c(0.4,0.7,0.2,0.7),2,2)
-B <- matrix(c(0.8,0.2,0.4,0.6),K,K,byrow = TRUE)
+MuA <- array(0, c(K, K, H))
+MuA[,,1] <- matrix(c(0.8, 0.2, 0.6, 0.4), 2, 2)
+MuA[,,2] <- matrix(c(0.4, 0.7, 0.2, 0.7), 2, 2)
+B <- matrix(c(0.8, 0.2, 0.4, 0.6), K, K, byrow = TRUE)
 m <- 100
-Pi <- matrix(c(0.6,0.4),1,K)
-Z <- c(rep(0,m*Pi[1]),rep(1,m*Pi[2]))
+Pi <- matrix(c(0.6, 0.4), 1, K)
+Z <- c(rep(0, m * Pi[1]), rep(1, m * Pi[2]))
 window <- 0.25
 
 A <- list()
@@ -32,8 +32,19 @@ for (k in 1:K){
   tau[which(Z == (k-1)),k] <- 1
 }
 
-system.time(results.online <- nonhomoHak_estimator(alltimes,A,m,K,H,
-                                            window,T,dT,lam = 0.1, gravity = 0.0, B,MuA,tau))
+system.time(results.online <- nonhomoHak_estimator(alltimes,
+                                                   A,
+                                                   m,
+                                                   K,
+                                                   H,
+                                                   window,
+                                                   T,
+                                                   dT,
+                                                   lam = 0.1,
+                                                   gravity = 0.0,
+                                                   B,
+                                                   MuA,
+                                                   tau))
 
 system.time(results.eff <- nonhomoHak_estimator_eff(alltimes,A,m,K,H,
                                                    window,T,dT,lam = 0.1, gravity = 0.0, B,MuA,tau))

@@ -552,3 +552,15 @@ exp_11_data %>%
   mutate(nodes = as.factor(nodes)) %>% 
   ggplot(aes(nodes, ARI)) +
   geom_boxplot()
+
+
+#### Exp 12
+exp_12_files <- list.files(path = here("Experiments/exp_results/"), 
+                           pattern = "exp_12_")
+
+exp_12_files %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  group_by(init, nodes) %>% 
+  summarise(mean(ARI), sd(ARI), n())
+
+### init is definitely making the performance worse at the moment
