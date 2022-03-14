@@ -45,6 +45,7 @@ Rcpp::List estimate_Poisson_init(
   tau = update_init_Tau(tau, m, K);
   arma::cube inter_tau(m,K,slices+1);
   arma::cube inter_B(K,K,N);
+  arma::cube inter_S(m, K, N);
   arma::vec curr_elbo, ave_elbo, ave_ll, curr_ll;
   curr_elbo.zeros(N);
   curr_ll.zeros(N);
@@ -75,6 +76,21 @@ Rcpp::List estimate_Poisson_init(
     start_pos = curr_pos;
     eta = 1/pow(1 + n, .5)/sub_data.n_rows*(K*K);
     S = updateS(sub_data, tau, B, A, S, K, m, dT);
+    // need to check everything that is being output here to
+    // see what's going wrong...
+    if(n == 0){
+      // store everything in a list
+      return Rcpp::List::create(Named("sub_date") = sub_data,
+                                Named("tau") = tau,
+                                Named("B") = B,
+                                Named("A") = A,
+                                Named("S") = S,
+                                Named("K") = K,
+                                Named("m") = m,
+                                Named("dT") = dT);
+    }
+    // cout<<S<<endl;
+    inter_S.slice(n) = S;
     tau = updateTau(S,Pi,m,K); 
     B = updateB(sub_data, tau, B, K, A, m, dT, eta);
     inter_B.slice(n) = B;
@@ -93,7 +109,7 @@ Rcpp::List estimate_Poisson_init(
     
   }
   
-  return Rcpp::List::create(Named("S")= S,
+  return Rcpp::List::create(Named("S")= inter_S,
                             Named("tau")=tau,
                             Named("early_tau")= inter_tau,
                             Named("inter_B") = inter_B,

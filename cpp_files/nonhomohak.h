@@ -2622,6 +2622,7 @@ Rcpp::List nonhomoPois_estimator_update(
     Rprintf("iter: %d; number: %d \n", n, n_t); 
     //MuA.print();
     //S.print();
+    tau.print();
     
     if (is_elbo){
       prevdata = alltimes.rows(0, end_pos - 1); // head_rows()
