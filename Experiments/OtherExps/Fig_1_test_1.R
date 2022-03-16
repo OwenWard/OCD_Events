@@ -176,8 +176,8 @@ for(sim in 1:no_sims){
                                                              MuA, tau))
   
   
-  ari_in_pois <- aricode::ARI(apply(results_online_inpois$tau, 1, which.max),
-                              z_true)
+  (ari_in_pois <- aricode::ARI(apply(results_online_inpois$tau, 1, which.max),
+                              z_true))
   
   ## Fitting inhomogeneous Hawkes
   
@@ -205,16 +205,17 @@ for(sim in 1:no_sims){
                                                    tau = tau_start)
   
   
-  ari_in_haw <- aricode::ARI(z_true, apply(result_inHaw$tau, 1, which.max))
+  (ari_in_haw <- aricode::ARI(z_true, apply(result_inHaw$tau, 1, which.max)))
   
   ### then store all this
-  curr_sim_result$ARI <- c(sc_ari, pz_ari,
+  curr_sim_result <- tibble(ARI = c(sc_ari, pz_ari,
                            clust_est,
                            haw_clust_est,
                            ari_in_pois,
-                           ari_in_haw)
-  curr_sim_result$Method <- c("Count", "PZ", "Poisson",
-                              "Hawkes", "InPois", "InHawkes")
+                           ari_in_haw),
+                           Method = c("Count", "PZ", "Poisson",
+                                      "Hawkes", "InPois", "InHawkes"))
+
   all_results <- all_results %>% bind_rows(curr_sim_result)
 }
 
