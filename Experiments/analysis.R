@@ -564,3 +564,14 @@ exp_12_files %>%
   summarise(mean(ARI), sd(ARI), n())
 
 ### init is definitely making the performance worse at the moment
+
+
+### Check for figure 1
+fig_1_files <- list.files(path = here("Experiments/exp_results/"),
+                                      pattern = "fig_1_exp_2")
+
+fig_1_files %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  group_by(Method) %>% 
+  summarise(mean(ARI), sd(ARI), median(ARI))
+  
