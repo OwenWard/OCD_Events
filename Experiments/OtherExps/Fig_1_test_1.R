@@ -19,6 +19,7 @@ all_results <- tibble()
 
 
 for(sim in 1:no_sims){
+  cat(sim, "-----\n")
   curr_sim_result <- tibble()
   
   n <- 50
