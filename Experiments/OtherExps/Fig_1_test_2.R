@@ -29,11 +29,11 @@ for(sim in 1:no_sims){
   MuA[,,1] <- matrix(c(0.8, 0.2, 0.1, 0.5), 2, 2)
   MuA[,,2] <- matrix(c(0.4, 0.1, 0.2, 0.7), 2, 2)
   B <- matrix(0, K, K, byrow = TRUE)
-  m <- 100
+  m <- 1000
   Pi <- matrix(c(0.6, 0.4), 1, K)
   Z <- c(rep(0, m * Pi[1]), rep(1, m * Pi[2]))
   window <- 0.25
-  sparsity <- 0.15
+  sparsity <- 0.05
   
   ## add in some sparsity here
   
@@ -92,7 +92,7 @@ for(sim in 1:no_sims){
   A_pz <- pz_estimator_3(A = A_mats, time = Time,
                          l0 = l0, m0 = m0,
                          m = m_pz, r = (Time - 1))
-  A_pz
+  # A_pz
   est_labels <- specc(A_pz, centers = 2)
   (pz_ari <- aricode::ARI(z_true, est_labels@.Data))
   ## this also works
