@@ -10,8 +10,8 @@ theme_set(theme_bw())
 
 #### function to process output from ppsbm
 
-format_sims <- function(sim_data, n) {
-  all_pairs <- listNodePairs(n = n)
+format_sims <- function(sim_data, n, directed = TRUE) {
+  all_pairs <- listNodePairs(n = n, directed = directed)
   event_pairs <- all_pairs[sim_data$data$type.seq,]
   sim_trip <- cbind(event_pairs, sim_data$data$time.seq)
   sim_trip[, 1] <- sim_trip[, 1] - 1
