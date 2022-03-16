@@ -63,12 +63,7 @@ for(sim in 1:no_sims){
                           n = n,
                           prop.groups,
                           directed = TRUE)
-  # latent variables (true clustering of the individuals)
-  # obs$z
-  # length(unique(obs$data$type.seq)) ## if n*(n-1) then all nodes have events
   
-  ### then convert this to format we can use, also
-  ### construct aggregate adj matrices and use Pensky
   
   
   ### Fit SBM to count matrix
@@ -79,7 +74,7 @@ for(sim in 1:no_sims){
   A_test <- proc_sim$edge
   events <- proc_sim$events
   
-  ### Fit SBM to count matrix
+  ### Fit SBM to count matrix ###
   df <- as_tibble(proc_sim$events) %>% 
     rename(Send = V1,
            Rec = V2,
@@ -124,8 +119,8 @@ for(sim in 1:no_sims){
   dT <- 1
   inter_T <- 1
   # capture output to not print out
-  results_online <- estimate_Poisson(full_data = proc_sim$events,
-                                     A = proc_sim$edge,
+  results_online <- estimate_Poisson(full_data = events,
+                                     A = A_test,
                                      m,
                                      K,
                                      Time,
@@ -145,8 +140,8 @@ for(sim in 1:no_sims){
   Mu <- matrix(runif(K * K), K, K)
   B <- matrix(runif(K * K), K, K)
   tau <- matrix(1/K, nrow = m, ncol = K)
-  results_online_hawkes <- online_estimator_eff_revised(alltimes = proc_sim$events, 
-                                                        A = proc_sim$edge,
+  results_online_hawkes <- online_estimator_eff_revised(alltimes = events, 
+                                                        A = A_test,
                                                         m,
                                                         K,
                                                         Time,
@@ -165,7 +160,7 @@ for(sim in 1:no_sims){
   window <- 0.5
   tau <- matrix(1/K, nrow = m, ncol = K)
   system.time(results_online_inpois <- nonhomoPois_estimator(alltimes = events,
-                                                             A = proc_sim$edge,
+                                                             A = A_test,
                                                              m,
                                                              K,
                                                              H,
@@ -190,8 +185,8 @@ for(sim in 1:no_sims){
   tau_start <- matrix(1/K, m, K)
   B_start <- matrix(runif(K * K), nrow = K, ncol = K)
   
-  result_inHaw <- nonhomoHak_estimator_eff_revised(alltimes = proc_sim$events,
-                                                   A = proc_sim$edge,
+  result_inHaw <- nonhomoHak_estimator_eff_revised(alltimes = events,
+                                                   A = A_test,
                                                    m,
                                                    K,
                                                    H,
