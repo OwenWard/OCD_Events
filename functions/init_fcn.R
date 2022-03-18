@@ -68,7 +68,7 @@ dense_poisson <- function(alltimes, K, n0) {
         filter(rec_clust == k2) %>% 
         ungroup() %>% 
         slice_sample(n = 1) %>% 
-        mutate(rate = n/Time) %>% 
+        mutate(rate = n/n0) %>% 
         pull(rate)
       ### check if empty here
       if(identical(curr_est, numeric(0))){
@@ -88,7 +88,7 @@ dense_poisson <- function(alltimes, K, n0) {
       filter(send == i) %>% 
       group_by(send, rec) %>% 
       summarise(count = n()) %>% 
-      mutate(rate = count/Time) %>% 
+      mutate(rate = count/n0) %>% 
       pull(rate)
     
     # then k means on these estimates
@@ -125,7 +125,7 @@ dense_poisson <- function(alltimes, K, n0) {
         summarise(num_events = n()) %>% 
         ungroup() %>% 
         ### fitting a common Poisson to each of these pairs
-        summarise(est_rate = sum(num_events)/ (n()*Time)) %>% 
+        summarise(est_rate = sum(num_events)/ (n()*n0)) %>% 
         pull(est_rate)
       
       if(identical(new_est, numeric(0))){
