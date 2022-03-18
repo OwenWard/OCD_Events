@@ -2,7 +2,7 @@
 options(dplyr.summarise.inform = FALSE)
 ### hide the message from summarise
 
-dense_poisson <- function(alltimes, K) {
+dense_poisson <- function(alltimes, K, n0) {
   
   ### select n0
   ### find node with largest degree, and its neighbours
@@ -12,7 +12,7 @@ dense_poisson <- function(alltimes, K) {
     rename(send = V1, rec = V2, time = V3)
   N <- nrow(tidy_events)
   C <- 1
-  n0 <- C * log(N)
+  # n0 <- C * log(N)
   
   init_events <- tidy_events %>% 
     filter(time <= n0)
@@ -32,7 +32,7 @@ dense_poisson <- function(alltimes, K) {
     filter(send == max_degree) %>% 
     group_by(rec) %>% 
     count() %>% 
-    mutate(est_lam = n/Time) %>% 
+    mutate(est_lam = n/n0) %>% 
     select(rec, est_lam)
   ## check here if len(est_int) < K
   
