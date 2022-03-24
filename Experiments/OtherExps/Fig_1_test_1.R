@@ -22,53 +22,29 @@ for(sim in 1:no_sims){
   cat(sim, "-----\n")
   curr_sim_result <- tibble()
   
-  n <- 50
+  n <- 100
   prop.groups <- c(0.5, 0.5)
   
+  intens1 <- c(1, 3, 8)/4
+  intens2 <- c(2, 3, 6)/6
+  intens <- matrix(c(intens1,intens2,intens1,intens2), 4, 3)
+  Time <- 100
+  n <- 100
+  prop.groups <- c(0.5, 0.5)
+  dynppsbm <- generateDynppsbmConst(intens,
+                                    Time,
+                                    n,
+                                    prop.groups,
+                                    directed = TRUE)
   
-  intens <- list(NULL)
-  intens[[1]] <- list(intens = function(x) abs(2*sin(x/8) + 4),
-                      max = 4)
-  
-  # curve(2*((x-7)/2), from = 0, to = 100)
-  
-  
-  # (q,l) = (1,1)
-  intens[[2]] <- list(intens = function(x) (x<=50)*0.2*(x-7)/2 +
-                        (x>50)*(10*exp(-2*x/10) + 3),
-                      max = 5)
-  # curve( (x<=50)*0.2*(x-7)/2 +
-  #          (x>50)*(10*exp(-2*x/10) + 3),
-  #        from = 0, to = 100)
-  
-  # (q,l) = (1,2)
-  intens[[3]] <- list(intens = function(x) (x<60)*2 +
-                        (x>=60)*3*abs(cos(x/6) + 1),
-                      max = 6)
-  
-  # curve( (x<60)*2 +
-  #          (x>=60)*3*abs(cos(x/6) + 1), from = 0, to = 100)
-  # (q,l) = (2,2)
-  ## below only for directed
-  intens[[4]] <- list(intens = function(x) 1 + 
-                        (exp(-9*abs(x/12-1)) - .049 + 0.23*cos(x/2)),
-                      max = 8)
-  
-  # curve(1 + 
-  #         (exp(-9*abs(x/12-1)) - .049 + 0.23*cos(x/2)), from = 0, to = 100)
-  
-  # generate data :
-  obs <- generateDynppsbm(intens,
-                          Time = Time,
-                          n = n,
-                          prop.groups,
+  ###
+  hist(dynppsbm$data$time.seq)
+  proc_sim <- format_sims(sim_data = dynppsbm, n = n,
                           directed = TRUE)
   
   
   
   ### Fit SBM to count matrix
-  
-  proc_sim <- format_sims(sim_data = obs, n = n, directed = TRUE)
   ### this doesn't seem to be working correctly for undirected
   
   A_test <- proc_sim$edge
