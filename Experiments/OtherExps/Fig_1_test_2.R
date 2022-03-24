@@ -26,14 +26,14 @@ for(sim in 1:no_sims){
   K <- 2
   H <- 2
   MuA <- array(0, c(K, K, H))
-  MuA[,,1] <- matrix(c(0.8, 0.2, 0.1, 0.5), 2, 2)
-  MuA[,,2] <- matrix(c(0.4, 0.1, 0.2, 0.7), 2, 2)
+  MuA[,,1] <- matrix(c(0.8, 0.2, 0.6, 0.4), 2, 2)
+  MuA[,,2] <- matrix(c(0.4, 0.7, 0.2, 0.7), 2, 2)
   B <- matrix(0, K, K, byrow = TRUE)
-  m <- 1000
+  m <- 100
   Pi <- matrix(c(0.6, 0.4), 1, K)
   Z <- c(rep(0, m * Pi[1]), rep(1, m * Pi[2]))
   window <- 0.25
-  sparsity <- 0.05
+  sparsity <- 0.25
   
   ## add in some sparsity here
   
@@ -42,7 +42,8 @@ for(sim in 1:no_sims){
     # could sample these here with SBM structure...
     num_edge = m * sparsity
     edge <- sample(m, num_edge) - 1
-    edge <- sort(edge)
+    edge <- sort(edge[edge!= i-1])
+    # edge <- sort(edge)
     A[[i]] <- edge
   }
   
