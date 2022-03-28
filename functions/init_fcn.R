@@ -79,7 +79,8 @@ dense_poisson <- function(alltimes, K, n0) {
       }
     }
   }
-  
+  print(init_B)
+  sorted_B <- t(apply(init_B, 1, sort))
   init_group <- rep(NA, m)
   
   for(i in (1:m)-1){
@@ -94,11 +95,11 @@ dense_poisson <- function(alltimes, K, n0) {
     # then k means on these estimates
     ## check number of neighbours here too
     curr_est <- kmeans(curr_neigh, centers = K)
-    curr_center <- curr_est$centers
+    curr_center <- sort(as.vector(curr_est$centers))
     
     ## then see which row of init_B this is closest to
-    dists <- apply(init_B, 1, function(x) 
-      dist(rbind(x, as.vector(curr_center))))
+    dists <- apply(sorted_B, 1, function(x) 
+      dist(rbind(x, curr_center)))
     init_group[i + 1] <- which.min(dists)
     ## to deal with the zero indexing of the raw data
   }
@@ -143,7 +144,8 @@ dense_poisson <- function(alltimes, K, n0) {
       # }
     }
   }
-  cat(updated_B, "\n------\n")
+  # cat(updated_B, "\n------\n")
+  print(updated_B)
   return(list(est_clust = init_group,
               est_B = updated_B,
               rest_events = remaining_events,

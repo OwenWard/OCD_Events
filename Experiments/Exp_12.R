@@ -68,9 +68,9 @@ for(sim in 1:no_sims){
   if(model == "Poisson") {
     
     ### run init algorithm
-    result <- dense_poisson(alltimes, K)
+    result <- dense_poisson(alltimes, K, n0 = 30)
     while(sum(is.nan(result$est_B)) > 0) {
-      result <- dense_poisson(alltimes, K)
+      result <- dense_poisson(alltimes, K, n0 = 30)
       ## just run again to avoid this issue
     }
     Mu_est <- result$est_B
