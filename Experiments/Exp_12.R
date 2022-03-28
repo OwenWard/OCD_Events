@@ -32,6 +32,8 @@ if(sim_id <= 3){
 results <- list()
 m <- m_vec[sim_id]
 
+n0_vals <- seq(from = 5, to = 50, by = 5)
+
 # for(exp_num in seq_along(m_vec)) {
 #   dT <- 1
 curr_dt_sims <- tibble()
@@ -59,95 +61,75 @@ for(sim in 1:no_sims){
     # could sample these here with SBM structure...
     num_edge = m * sparsity
     edge <- sample(m, num_edge) - 1
-    edge <- sort(edge)
+    edge <- sort(edge[edge!= i-1]) ## remove self edges
     A[[i]] <- edge
   }
   alltimes <- sampleBlockHak(Time, A, Z, Mu = true_Mu, B = true_B, lam = 1)
-  
   ### then estimate the fits here in each case
   if(model == "Poisson") {
     
-    ### run init algorithm
-    result <- dense_poisson(alltimes, K, n0 = 30)
-    while(sum(is.nan(result$est_B)) > 0) {
-      result <- dense_poisson(alltimes, K, n0 = 30)
-      ## just run again to avoid this issue
+    for(curr_n0 in n0_vals){
+      ### run init algorithm
+      result <- dense_poisson(alltimes, K, n0 = curr_n0)
+      while(sum(is.nan(result$est_B)) > 0) {
+        result <- dense_poisson(alltimes, K, n0 = curr_n0)
+        ## just run again to avoid this issue
+      }
+      Mu_est <- result$est_B
+      ## need to pass the estimated clustering also
+      init_tau <- matrix(0, nrow = m, ncol = K)
+      for(i in seq_along(result$est_clust)){
+        init_tau[i, result$est_clust[i]] <- 1
+      }
+      
+      ### will need to modify to account for the decreased number
+      ### of events also...
+      results_online_init <- estimate_Poisson_init(full_data = 
+                                                     result$rest_events,
+                                                   A,
+                                                   m,
+                                                   K,
+                                                   Time,
+                                                   dT = dT,
+                                                   B = Mu_est,
+                                                   inter_T,
+                                                   init_tau,
+                                                   start = result$cut_off,
+                                                   is_elbo = FALSE)
+      ### compare to not using init function
+      B <- matrix(runif(K * K), K, K)
+      norm_online <- estimate_Poisson(full_data = alltimes,
+                                      A = A,
+                                      m,
+                                      K,
+                                      Time,
+                                      dT = 1,
+                                      B,
+                                      inter_T = 1,
+                                      is_elbo = FALSE)
+      stan_est <- apply(norm_online$tau, 1, which.max)
+      
+      z_est <- apply(results_online_init$tau, 1, which.max)
+      clust_est_init <- aricode::ARI(Z, z_est)
+      
+      clust_est_norm <- aricode::ARI(stan_est, Z)
+      
+      ### then save dT, clust_est, m, model
+      curr_sim <- tibble(ARI = c(clust_est_init, clust_est_norm),
+                         K = K, 
+                         nodes = m,
+                         model = model,
+                         init = c("Init", "No Init"),
+                         n0 = curr_n0)
+      curr_dt_sims <- curr_dt_sims %>% 
+        bind_rows(curr_sim)
     }
-    Mu_est <- result$est_B
-    ## need to pass the estimated clustering also
-    init_tau <- matrix(0, nrow = m, ncol = K)
-    for(i in seq_along(result$est_clust)){
-      init_tau[i, result$est_clust[i]] <- 1
-    }
-    
-    ### will need to modify to account for the decreased number
-    ### of events also...
-    results_online_init <- estimate_Poisson_init(full_data = 
-                                                   result$rest_events,
-                                       A,
-                                       m,
-                                       K,
-                                       Time,
-                                       dT = dT,
-                                       B = Mu_est,
-                                       inter_T,
-                                       init_tau,
-                                       start = result$cut_off,
-                                       is_elbo = FALSE)
-    
-    ### compare to not using init function
-    B <- matrix(runif(K * K), K, K)
-    norm_online <- estimate_Poisson(full_data = alltimes,
-                                    A = A,
-                                    m,
-                                    K,
-                                    Time,
-                                    dT = 1,
-                                    B,
-                                    inter_T = 1,
-                                    is_elbo = FALSE)
-    stan_est <- apply(norm_online$tau, 1, which.max)
-    
-    
   }
-  if(model == "Hawkes"){
-    ### skipped for now
-    # Mu <- matrix(runif(K * K), K, K)
-    # B <- matrix(runif(K * K), K, K)
-    # tau <- matrix(1/K, nrow = m, ncol = K)
-    # results_online <- online_estimator_eff_revised(alltimes, 
-    #                                                A,
-    #                                                m,
-    #                                                K,
-    #                                                Time,
-    #                                                dT = dT,
-    #                                                lam = 1,
-    #                                                B, Mu, tau,
-    #                                                inter_T, 
-    #                                                is_elbo = FALSE)
-  }
-  
-  z_est <- apply(results_online_init$tau, 1, which.max)
-  clust_est_init <- aricode::ARI(Z, z_est)
-  
-  clust_est_norm <- aricode::ARI(stan_est, Z)
-  
-  ### then save dT, clust_est, m, model
-  curr_sim <- tibble(ARI = c(clust_est_init, clust_est_norm),
-                     K = K, 
-                     nodes = m,
-                     model = model,
-                     init = c("Init", "No Init"))
-  curr_dt_sims <- curr_dt_sims %>% 
-    bind_rows(curr_sim)
 }
-  # results[[exp_num]] <- curr_dt_sims 
-# }
-
 
 results <- curr_dt_sims
   
 ### then save these somewhere
 saveRDS(results, file = here("Experiments",
                              "exp_results",
-                             paste0("exp_12_", sim_id, ".RDS")))
+                             paste0("exp_12_n0", sim_id, ".RDS")))
