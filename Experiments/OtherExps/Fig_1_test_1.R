@@ -23,14 +23,13 @@ for(sim in 1:no_sims){
   curr_sim_result <- tibble()
   
   n <- 100
-  prop.groups <- c(0.5, 0.5)
+  Time <- 100
+  prop.groups <- c(0.2, 0.3)
   
   intens1 <- c(1, 3, 8)/4
   intens2 <- c(2, 3, 6)/6
   intens <- matrix(c(intens1,intens2,intens1,intens2), 4, 3)
-  Time <- 100
-  n <- 100
-  prop.groups <- c(0.5, 0.5)
+  
   dynppsbm <- generateDynppsbmConst(intens,
                                     Time,
                                     n,
@@ -70,7 +69,7 @@ for(sim in 1:no_sims){
   
   ### fit Pensky Zhang to this data
   A_mats <- event_to_mat_seq(proc_sim$events,
-                             Total_time = Time, window_size = 1, n = n)
+                             Total_time = Time, window_size = 10, n = n)
   ## convert this to binary
   A_mats[A_mats > 0] <- 1
   
@@ -81,8 +80,11 @@ for(sim in 1:no_sims){
   
   A_pz <- pz_estimator_3(A = A_mats, time = Time,
                          l0 = l0, m0 = m0,
-                         m = m_pz, r = (Time - 1))
-  A_pz
+                         m = m_pz)
+  ### need to modify how this deals with changing the window
+  ### size here, maybe don't specify r at all?
+  
+  # A_pz
   est_labels <- specc(A_pz, centers = 2)
   (pz_ari <- aricode::ARI(z_true, est_labels@.Data))
   ## this also works
