@@ -64,7 +64,7 @@ for(sim in 1:no_sims){
   
   sc <- specc(A_mat, centers = 2)
   sc_est <- sc@.Data
-  z_true <- apply(obs$z, 2, which.max)
+  z_true <- apply(dynppsbm$z, 2, which.max)
   (sc_ari <- aricode::ARI(z_true, sc_est))
   ### this works
   
