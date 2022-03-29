@@ -38,7 +38,7 @@ for(sim in 1:no_sims){
                                     directed = TRUE)
   
   ###
-  hist(dynppsbm$data$time.seq)
+  # hist(dynppsbm$data$time.seq)
   proc_sim <- format_sims(sim_data = dynppsbm, n = n,
                           directed = TRUE)
   
