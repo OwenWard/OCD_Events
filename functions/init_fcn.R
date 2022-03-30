@@ -2,7 +2,7 @@
 options(dplyr.summarise.inform = FALSE)
 ### hide the message from summarise
 
-dense_poisson <- function(alltimes, K, n0) {
+dense_poisson <- function(alltimes, K, n0, m) {
   
   ### select n0
   ### find node with largest degree, and its neighbours
@@ -153,98 +153,143 @@ dense_poisson <- function(alltimes, K, n0) {
 }
 
 
-### run through and apply
-# model
-# K <- 2
-# m <- 200
-# Time <- 100
-# sparsity <- 0.2
-# true_Mu <- matrix(c(0.5, 0.05, 0.05, 1),
-#                   nrow = 2, ncol = 2, byrow = T)
-# ## excitation, if used (for Hawkes)
-# true_B <- matrix(c(0.5, 0, 0, .5), nrow = K, ncol = K, byrow = TRUE)
-# if(model == "Poisson") {
-#   true_B <- matrix(0, K, K)
-# }
-# Pi <- matrix(c(0.5, 0.5), 1, 2)
-# Z <- c(rep(0, m * Pi[1]), rep(1, m * Pi[2]))
-# # then generate A
-# A <- list()
-# for(i in 1:m){
-#   # could sample these here with SBM structure...
-#   num_edge = m * sparsity
-#   edge <- sample(m, num_edge) - 1
-#   edge <- sort(edge)
-#   A[[i]] <- edge
-# }
-# 
-# #
-# alltimes <- sampleBlockHak(Time, A, Z, Mu = true_Mu, B = true_B, lam = 1)
-# 
-# 
-# result <- dense_poisson(alltimes, K = 2)
-# ### this is just the initial clustering, want to fit standard
-# ### model given this? right?
-# 
-# aricode::ARI(result$est_clust, Z)
-# 
-# ### then want to fit this and the random init version and see how the
-# ### performance compares
-# 
-# 
-# ### fit the model using this initial estimate to the rest
-# 
-# Mu_est <- result$est_B
-# ## need to pass the estimated clustering also
-# init_tau <- matrix(0, nrow = m, ncol = K)
-# for(i in seq_along(result$est_clust)){
-#   init_tau[i, result$est_clust[i]] <- 1
-# }
-# 
-# ### will need to modify to account for the decreased number
-# ### of events also...
-# results_init <- estimate_Poisson_init(full_data = result$rest_events,
-#                                         A,
-#                                         m,
-#                                         K,
-#                                         Time,
-#                                         dT = 1,
-#                                         B = Mu_est,
-#                                         inter_T = 1,
-#                                         init_tau,
-#                                         start = result$cut_off,
-#                                         is_elbo = FALSE)
-# 
-# est_clust <- apply(results_init$tau, 1, which.max)
-# aricode::ARI(est_clust, Z)
-# 
-# ### compare to naive fit
-# B <- matrix(runif(K * K), K, K)
-# norm_online <- estimate_Poisson(full_data = alltimes,
-#                                 A = A,
-#                                 m,
-#                                 K,
-#                                 Time,
-#                                 dT = 1,
-#                                 B,
-#                                 inter_T = 1,
-#                                 is_elbo = FALSE)
-# stan_est <- apply(norm_online$tau, 1, which.max)
-# aricode::ARI(stan_est, Z)
-
-
-# a <- estimate_Poisson_init(full_data = 
-#                              result$rest_events,
-#                            A,
-#                            m,
-#                            K,
-#                            Time,
-#                            dT = dT,
-#                            B = Mu_est,
-#                            inter_T,
-#                            init_tau,
-#                            start = result$cut_off,
-#                            is_elbo = FALSE)
-# a$
+sparse_poisson <- function(alltimes, K, n0, m, m0){
+  ###
+  ###
+  ### specify m0
+  ###
+  ### first get the event data to be used
+  ###
+  
+  tidy_events <- as_tibble(alltimes) %>% 
+    rename(send = V1, rec = V2, time = V3)
+  N <- nrow(tidy_events)
+  C <- 1
+  # n0 <- C * log(N)
+  init_events <- tidy_events %>% 
+    filter(time <= n0)
+  remaining_events <- alltimes[alltimes[,3]> n0, ]
+  
+  out_events <- init_events %>%
+    group_by(send) %>%
+    count() %>%
+    ungroup() %>%
+    rename(out = n)
+  
+  top_nodes <- out_events %>%
+    slice_max(out, n = m0) %>%
+    pull(send)
+  
+  center_matrix <- matrix(NA, nrow = m0, ncol = K)
+  ### iterate along m0 nodes
+  for(i in seq_along(top_nodes)){
+    neighs <- init_events %>%
+      filter(send == top_nodes[i]) %>%
+      group_by(rec) %>%
+      count() %>%
+      mutate(est_rate = n/n0)
+    lam_neigh <- neighs %>%
+      pull(est_rate)
+    curr_est <- kmeans(lam_neigh, centers = K)
+    ### will there be permutation issues here also?
+    center_matrix[i, ] <- as.vector(curr_est$centers)
+  }
+  ### then k means on center matrix
+  init_clust <- kmeans(center_matrix, centers = K)$cluster
+  
+  first_clust <- tibble(node = top_nodes,
+                        clust = init_clust)
+  
+  ### then get the events these nodes are involved in
+  ### should do this the same as previous method
+  init_clust_events <- init_events %>% 
+    filter(send %in% top_nodes) %>% 
+    filter(rec %in% top_nodes) %>% 
+    group_by(send, rec) %>% 
+    count() %>% 
+    left_join(first_clust, by = c("send" = "node")) %>% 
+    rename(send_clust = clust) %>% 
+    left_join(first_clust, by = c("rec" = "node")) %>% 
+    rename(rec_clust = clust)
+  
+  init_B <- matrix(NA, nrow = K, ncol = K)
+  
+  for(k1 in 1:K){
+    for(k2 in 1:K){
+      curr_est <- init_clust_events %>% 
+        filter(send_clust == k1) %>% 
+        filter(rec_clust == k2) %>% 
+        ungroup() %>% 
+        slice_sample(n = 1) %>% 
+        mutate(rate = n/n0) %>% 
+        pull(rate)
+      
+      init_B[k1, k2] <- curr_est
+    }
+  }
+  ### take all nodes not in top_nodes
+  rem_nodes <- tibble(
+    node = 0:(m-1),
+  ) %>% 
+    left_join(first_clust) %>% 
+    filter(is.na(clust)) %>% 
+    pull(node)
+  
+  sorted_B <- t(apply(init_B, 1, sort))
+  rem_group <- rep(NA, length(rem_nodes))
+  
+  for(i in seq_along(rem_nodes)) {
+    curr_neigh <- init_events %>% 
+      filter(send == rem_nodes[i]) %>% 
+      group_by(send, rec) %>% 
+      summarise(count = n()) %>% 
+      mutate(rate = count/n0) %>% 
+      pull(rate)
+    
+    curr_est <- kmeans(curr_neigh, centers = K)
+    curr_center <- sort(as.vector(curr_est$centers))
+    dists <- apply(sorted_B, 1, function(x) 
+      dist(rbind(x, curr_center)))
+    rem_group[i] <- which.min(dists)
+  }
+  ### then update estimate of B
+  ### using full clusters
+  rem_clust <- tibble(node = rem_nodes,
+                      clust = rem_group)
+  all_clust <- bind_rows(first_clust, rem_clust)
+  
+  init_group <- all_clust %>% 
+    arrange(node) %>% 
+    pull(clust)
+  
+  ### the update the estimate of B
+  clust_events <- init_events %>% 
+    left_join(all_clust, by = c("send" = "node")) %>% 
+    rename(send_clust = clust) %>% 
+    left_join(all_clust, by = c("rec" = "node")) %>% 
+    rename(rec_clust = clust) 
+  
+  updated_B <- init_B
+  for(k1 in 1:K){
+    for(k2 in 1:K){
+      new_est <- clust_events %>% 
+        filter(clust_send == k1) %>% 
+        filter(clust_rec == k2) %>% 
+        group_by(send, rec) %>% 
+        summarise(num_events = n()) %>% 
+        ungroup() %>% 
+        ### fitting a common Poisson to each of these pairs
+        summarise(est_rate = sum(num_events)/ (n()*n0)) %>% 
+        pull(est_rate)
+    }
+  }
+  print(updated_B)
+  
+  ### then return all this stuff in a list
+  return(list(est_clust = init_group,
+              est_B = updated_B,
+              rest_events = remaining_events,
+              cut_off = n0))
+}
 
 
