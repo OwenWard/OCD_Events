@@ -226,7 +226,12 @@ sparse_poisson <- function(alltimes, K, n0, m, m0){
         mutate(rate = n/n0) %>% 
         pull(rate)
       
-      init_B[k1, k2] <- curr_est
+      if(length(curr_est) > 0) {
+        init_B[k1, k2] <- curr_est
+      }
+      else{
+        init_B[k1, k2] <- 0
+      }
     }
   }
   ### take all nodes not in top_nodes
