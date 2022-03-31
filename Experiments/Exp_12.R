@@ -71,7 +71,7 @@ for(sim in 1:no_sims){
     for(curr_n0 in n0_vals){
       ### run init algorithm
       # result <- dense_poisson(alltimes, K, n0 = curr_n0, m)
-      result <- sparse_poisson(alltimes, K, n0 = curr_n0, m, m0 = 50)
+      result <- sparse_poisson(alltimes, K, n0 = curr_n0, m, m0 = m/2)
       # while(sum(is.nan(result$est_B)) > 0) {
       #   result <- dense_poisson(alltimes, K, n0 = curr_n0)
       #   ## just run again to avoid this issue
