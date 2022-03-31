@@ -72,16 +72,18 @@ for(sim in 1:no_sims){
       ### run init algorithm
       # result <- dense_poisson(alltimes, K, n0 = curr_n0, m)
       result <- sparse_poisson(alltimes, K, n0 = curr_n0, m, m0 = 50)
-      while(sum(is.nan(result$est_B)) > 0) {
-        result <- dense_poisson(alltimes, K, n0 = curr_n0)
-        ## just run again to avoid this issue
-      }
+      # while(sum(is.nan(result$est_B)) > 0) {
+      #   result <- dense_poisson(alltimes, K, n0 = curr_n0)
+      #   ## just run again to avoid this issue
+      # }
       Mu_est <- result$est_B
       ## need to pass the estimated clustering also
       init_tau <- matrix(0, nrow = m, ncol = K)
       for(i in seq_along(result$est_clust)){
         init_tau[i, result$est_clust[i]] <- 1
       }
+      ### check the initial ARI
+      # aricode::ARI(result$est_clust, Z)
       
       ### will need to modify to account for the decreased number
       ### of events also...
