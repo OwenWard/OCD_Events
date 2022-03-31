@@ -177,11 +177,12 @@ sparse_poisson <- function(alltimes, K, n0, m, m0){
     rename(out = n)
   
   top_nodes <- out_events %>%
-    slice_max(out, n = m0) %>%
+    slice_max(out, n = m0, with_ties = FALSE) %>%
     pull(send)
   
   center_matrix <- matrix(NA, nrow = m0, ncol = K)
   ### iterate along m0 nodes
+  # print("Getting this far")
   for(i in seq_along(top_nodes)){
     neighs <- init_events %>%
       filter(send == top_nodes[i]) %>%
@@ -194,6 +195,7 @@ sparse_poisson <- function(alltimes, K, n0, m, m0){
     ### will there be permutation issues here also?
     center_matrix[i, ] <- as.vector(curr_est$centers)
   }
+  # print("Here")
   ### then k means on center matrix
   init_clust <- kmeans(center_matrix, centers = K)$cluster
   
