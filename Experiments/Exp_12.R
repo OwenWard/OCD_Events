@@ -18,7 +18,7 @@ dT <- 1
 inter_T <- 1
 K <- 2
 m_vec <- c(100, 200, 400)
-sparsity <- 0.75 # prop of edges which can have events
+sparsity <- 0.15 # prop of edges which can have events
 
 jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
 jobid <- as.numeric(jobid)
@@ -70,7 +70,8 @@ for(sim in 1:no_sims){
     
     for(curr_n0 in n0_vals){
       ### run init algorithm
-      result <- dense_poisson(alltimes, K, n0 = curr_n0)
+      # result <- dense_poisson(alltimes, K, n0 = curr_n0, m)
+      result <- sparse_poisson(alltimes, K, n0 = curr_n0, m, m0 = 50)
       while(sum(is.nan(result$est_B)) > 0) {
         result <- dense_poisson(alltimes, K, n0 = curr_n0)
         ## just run again to avoid this issue
@@ -132,4 +133,4 @@ results <- curr_dt_sims
 ### then save these somewhere
 saveRDS(results, file = here("Experiments",
                              "exp_results",
-                             paste0("exp_12_n0", sim_id, ".RDS")))
+                             paste0("exp_12_n0_sparse", sim_id, ".RDS")))

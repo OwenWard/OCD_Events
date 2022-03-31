@@ -231,7 +231,7 @@ sparse_poisson <- function(alltimes, K, n0, m, m0){
   rem_nodes <- tibble(
     node = 0:(m-1),
   ) %>% 
-    left_join(first_clust) %>% 
+    left_join(first_clust, by = "node") %>% 
     filter(is.na(clust)) %>% 
     pull(node)
   
@@ -246,11 +246,25 @@ sparse_poisson <- function(alltimes, K, n0, m, m0){
       mutate(rate = count/n0) %>% 
       pull(rate)
     
-    curr_est <- kmeans(curr_neigh, centers = K)
-    curr_center <- sort(as.vector(curr_est$centers))
-    dists <- apply(sorted_B, 1, function(x) 
-      dist(rbind(x, curr_center)))
-    rem_group[i] <- which.min(dists)
+    if(length(unique(curr_neigh)) < K){
+      ### randomly assign to a cluster, if number distinct values < K
+      rem_group[i] <- sample(1:K, size = 1)
+    }
+    else if(length(unique(curr_neigh)) == K){
+      ## use a different algorithm in this case
+      curr_est <- kmeans(curr_neigh, centers = K, algorithm = "Lloyd")
+      curr_center <- sort(as.vector(curr_est$centers))
+      dists <- apply(sorted_B, 1, function(x) 
+        dist(rbind(x, curr_center)))
+      rem_group[i] <- which.min(dists)
+    }
+    else{
+      curr_est <- kmeans(curr_neigh, centers = K)
+      curr_center <- sort(as.vector(curr_est$centers))
+      dists <- apply(sorted_B, 1, function(x) 
+        dist(rbind(x, curr_center)))
+      rem_group[i] <- which.min(dists)
+    }
   }
   ### then update estimate of B
   ### using full clusters
@@ -273,17 +287,18 @@ sparse_poisson <- function(alltimes, K, n0, m, m0){
   for(k1 in 1:K){
     for(k2 in 1:K){
       new_est <- clust_events %>% 
-        filter(clust_send == k1) %>% 
-        filter(clust_rec == k2) %>% 
+        filter(send_clust == k1) %>% 
+        filter(rec_clust == k2) %>% 
         group_by(send, rec) %>% 
         summarise(num_events = n()) %>% 
         ungroup() %>% 
         ### fitting a common Poisson to each of these pairs
         summarise(est_rate = sum(num_events)/ (n()*n0)) %>% 
         pull(est_rate)
+      updated_B[k1, k2] <- new_est
     }
   }
-  print(updated_B)
+  # print(updated_B)
   
   ### then return all this stuff in a list
   return(list(est_clust = init_group,
