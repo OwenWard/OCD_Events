@@ -193,7 +193,7 @@ sparse_poisson <- function(alltimes, K, n0, m, m0){
       pull(est_rate)
     curr_est <- kmeans(lam_neigh, centers = K)
     ### will there be permutation issues here also?
-    center_matrix[i, ] <- as.vector(curr_est$centers)
+    center_matrix[i, ] <- sort(as.vector(curr_est$centers))
   }
   # print("Here")
   ### then k means on center matrix
