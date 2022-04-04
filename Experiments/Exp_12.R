@@ -18,7 +18,7 @@ dT <- 1
 inter_T <- 1
 K <- 2
 m_vec <- c(100, 200, 400)
-sparsity <- 0.15 # prop of edges which can have events
+sparsity <- 0.75 # prop of edges which can have events
 
 jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
 jobid <- as.numeric(jobid)
@@ -45,7 +45,7 @@ for(sim in 1:no_sims){
   ## baseline rate of the process
   true_Mu <- matrix(0.05, 
                     nrow = K, ncol = K, byrow = T)
-  diag(true_Mu) <- c(rep(0.5, K-1), 1)
+  diag(true_Mu) <- 0.5:K
   ## excitation, if used (for Hawkes)
   true_B <- matrix(0, nrow = K, ncol = K, byrow = TRUE)
   diag(true_B) <- 0.5
@@ -71,7 +71,7 @@ for(sim in 1:no_sims){
     for(curr_n0 in n0_vals){
       ### run init algorithm
       # result <- dense_poisson(alltimes, K, n0 = curr_n0, m)
-      result <- sparse_poisson(alltimes, K, n0 = curr_n0, m, m0 = m/2)
+      result <- sparse_poisson(alltimes, K, n0 = curr_n0, m, m0 = m)
       # while(sum(is.nan(result$est_B)) > 0) {
       #   result <- dense_poisson(alltimes, K, n0 = curr_n0)
       #   ## just run again to avoid this issue
@@ -83,7 +83,7 @@ for(sim in 1:no_sims){
         init_tau[i, result$est_clust[i]] <- 1
       }
       ### check the initial ARI
-      # aricode::ARI(result$est_clust, Z)
+      aricode::ARI(result$est_clust, Z)
       
       ### will need to modify to account for the decreased number
       ### of events also...
