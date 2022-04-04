@@ -17,8 +17,8 @@ no_sims <- 50
 dT <- 1
 inter_T <- 1
 K <- 2
-m_vec <- c(100, 200, 400)
-sparsity <- 0.75 # prop of edges which can have events
+m_vec <- c(rep(100, 5), rep(200, 5), rep(400, 5))
+sparsity <- 0.5 # prop of edges which can have events
 
 jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
 jobid <- as.numeric(jobid)
@@ -31,6 +31,10 @@ if(sim_id <= 3){
 
 results <- list()
 m <- m_vec[sim_id]
+m0_vec <- c( 100*c(1/10, 1/5, 1/4, 1/2, 1),
+             200*c(1/10, 1/5, 1/4, 1/2, 1),
+             400*c(1/10, 1/5, 1/4, 1/2, 1))
+m0_curr <- m0_vec[sim_id]
 
 n0_vals <- seq(from = 5, to = 50, by = 5)
 
@@ -71,7 +75,8 @@ for(sim in 1:no_sims){
     for(curr_n0 in n0_vals){
       ### run init algorithm
       # result <- dense_poisson(alltimes, K, n0 = curr_n0, m)
-      result <- sparse_poisson(alltimes, K, n0 = curr_n0, m, m0 = m)
+      # m0_curr <- m
+      result <- sparse_poisson(alltimes, K, n0 = curr_n0, m, m0 = m0_curr)
       # while(sum(is.nan(result$est_B)) > 0) {
       #   result <- dense_poisson(alltimes, K, n0 = curr_n0)
       #   ## just run again to avoid this issue
@@ -123,7 +128,9 @@ for(sim in 1:no_sims){
                          nodes = m,
                          model = model,
                          init = c("Init", "No Init"),
-                         n0 = curr_n0)
+                         n0 = curr_n0,
+                         m0 = m0_curr,
+                         sparsity = sparsity)
       curr_dt_sims <- curr_dt_sims %>% 
         bind_rows(curr_sim)
     }
@@ -135,4 +142,4 @@ results <- curr_dt_sims
 ### then save these somewhere
 saveRDS(results, file = here("Experiments",
                              "exp_results",
-                             paste0("exp_12_n0_sparse", sim_id, ".RDS")))
+                             paste0("exp_12_m0_sim", sim_id, ".RDS")))
