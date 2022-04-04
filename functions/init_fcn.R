@@ -191,9 +191,21 @@ sparse_poisson <- function(alltimes, K, n0, m, m0){
       mutate(est_rate = n/n0)
     lam_neigh <- neighs %>%
       pull(est_rate)
-    curr_est <- kmeans(lam_neigh, centers = K)
-    ### will there be permutation issues here also?
-    center_matrix[i, ] <- sort(as.vector(curr_est$centers))
+    ### dealing with cases where length(lam_neigh) < K
+    if(length(unique(lam_neigh)) < K){
+      # print("Need to consider this case")
+      curr_est <- c(rep(0, K-length(unique(lam_neigh))), 
+                    unique(lam_neigh))
+      center_matrix[i, ] <- sort(curr_est)
+      ### pad with zeros to have length K and then sort?
+    } else if(length(unique(lam_neigh)) == K){
+      curr_est <- kmeans(lam_neigh, centers = K, algorithm = "Lloyd")
+      center_matrix[i, ] <- sort(as.vector(curr_est$centers))
+    } else{
+      curr_est <- kmeans(lam_neigh, centers = K)
+      center_matrix[i, ] <- sort(as.vector(curr_est$centers))
+    }
+    
   }
   # print("Here")
   ### then k means on center matrix
