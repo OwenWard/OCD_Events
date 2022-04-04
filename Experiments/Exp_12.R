@@ -24,10 +24,10 @@ jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
 jobid <- as.numeric(jobid)
 sim_id <- jobid
 
-model <- "Hawkes"
-if(sim_id <= 3){
-  model = "Poisson"
-}
+model <- "Poisson"
+# if(sim_id <= 3){
+#   model = "Poisson"
+# }
 
 results <- list()
 m <- m_vec[sim_id]
