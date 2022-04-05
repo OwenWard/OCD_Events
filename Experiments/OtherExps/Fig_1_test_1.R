@@ -26,10 +26,15 @@ for(sim in 1:no_sims){
   Time <- 100
   prop.groups <- c(0.2, 0.3)
   
-  intens1 <- c(1, 3, 8)/4
-  intens2 <- c(2, 3, 6)/6
-  intens <- matrix(c(intens1,intens2,intens1,intens2), 4, 3)
+  # intens1 <- c(1, 3, 8)/4
+  # intens2 <- c(2, 3, 6)/6
+  # intens <- matrix(c(intens1,intens2,intens1,intens2), 4, 3)
+  intens <- matrix(c(0.25, 0.5, 1, 0.75, 1, 1, 0.50, 0.25, 1,
+                     1, 0.75, 1), nrow = 4, byrow = TRUE)
   
+  # intens[2, 3] <- 0.5
+  # intens[3, 2] <- 1
+
   dynppsbm <- generateDynppsbmConst(intens,
                                     Time,
                                     n,
@@ -73,7 +78,9 @@ for(sim in 1:no_sims){
     print("-----")
     ### fit Pensky Zhang to this data
     A_mats <- event_to_mat_seq(proc_sim$events,
-                               Total_time = Time, window_size = wind, n = n)
+                               Total_time = Time,
+                               window_size = wind,
+                               n = n)
     ## convert this to binary
     A_mats[A_mats > 0] <- 1
     
