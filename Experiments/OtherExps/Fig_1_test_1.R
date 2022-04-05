@@ -16,6 +16,7 @@ print(here("Experiments", "exp_results", "fig_1_exp_1.RDS"))
 no_sims <- 50
 Time <- 100
 all_results <- tibble()
+K <- 2
 
 
 for(sim in 1:no_sims){
