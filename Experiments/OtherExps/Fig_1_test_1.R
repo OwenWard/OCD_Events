@@ -66,7 +66,7 @@ for(sim in 1:no_sims){
   
   ### then do specc on this
   
-  sc <- specc(A_mat, centers = 2)
+  sc <- specc(A_mat, centers = K)
   sc_est <- sc@.Data
   z_true <- apply(dynppsbm$z, 2, which.max)
   (sc_ari <- aricode::ARI(z_true, sc_est))
@@ -96,8 +96,25 @@ for(sim in 1:no_sims){
     ### size here, maybe don't specify r at all?
     
     # A_pz
-    est_labels <- specc(A_pz, centers = 2)
-    (pz_ari <- aricode::ARI(z_true, est_labels@.Data))
+    ## this seems to struggle some times
+    ## put a try here?
+    a <- "Error"
+    attempt <- 0
+    while(a == "Error" & attempt < 10){
+      ## the warning here is when specc actually works
+      a <- tryCatch(error = function(cnd) "Error",
+                    specc(A_pz, centers = K)
+      )
+      attempt <- attempt + 1
+    }
+    if(attempt == 10){
+      pz_ari <- NA
+    } else{
+      est_labels <- a ##specc(A_pz, centers = K)
+      ## so don't have to run it again
+      (pz_ari <- aricode::ARI(z_true, est_labels@.Data))
+    }
+    
     
     #### then our methods, for a given window size
     #### Fit our method to this data
@@ -128,7 +145,7 @@ for(sim in 1:no_sims){
     Mu <- matrix(runif(K * K), K, K)
     B <- matrix(runif(K * K), K, K)
     tau <- matrix(1/K, nrow = m, ncol = K)
-    results_online_hawkes <- online_estimator_eff_revised(alltimes = events, 
+    invisible(results_online_hawkes <- online_estimator_eff_revised(alltimes = events, 
                                                           A = A_test,
                                                           m,
                                                           K,
@@ -137,7 +154,7 @@ for(sim in 1:no_sims){
                                                           lam = 1,
                                                           B, Mu, tau,
                                                           inter_T, 
-                                                          is_elbo = FALSE)
+                                                          is_elbo = FALSE))
     
     z_est_haw <- apply(results_online_hawkes$tau, 1, which.max)
     (haw_clust_est <- aricode::ARI(z_true, z_est_haw))
@@ -147,7 +164,7 @@ for(sim in 1:no_sims){
     MuA <- array(runif(K * K * H), c(K, K, H))
     window <- 0.5
     tau <- matrix(1/K, nrow = m, ncol = K)
-    system.time(results_online_inpois <- nonhomoPois_estimator(alltimes = events,
+    invisible(results_online_inpois <- nonhomoPois_estimator(alltimes = events,
                                                                A = A_test,
                                                                m,
                                                                K,
@@ -173,7 +190,7 @@ for(sim in 1:no_sims){
     tau_start <- matrix(1/K, m, K)
     B_start <- matrix(runif(K * K), nrow = K, ncol = K)
     
-    result_inHaw <- nonhomoHak_estimator_eff_revised(alltimes = events,
+    invisible(result_inHaw <- nonhomoHak_estimator_eff_revised(alltimes = events,
                                                      A = A_test,
                                                      m,
                                                      K,
@@ -185,7 +202,7 @@ for(sim in 1:no_sims){
                                                      gravity = 0.0,
                                                      B_start = B_start,
                                                      MuA = MuA_start,
-                                                     tau = tau_start)
+                                                     tau = tau_start))
     
     
     (ari_in_haw <- aricode::ARI(z_true, apply(result_inHaw$tau, 1, which.max)))
