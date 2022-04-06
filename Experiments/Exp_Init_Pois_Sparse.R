@@ -1,4 +1,4 @@
-#### Exp 12, March 26th 2022
+#### Exp 12, April 6th 2022
 #### Investigate whether the initialization function 
 #### leads to an improved clustering performance
 .libPaths("/moto/stats/users/ogw2103/rpackages")
@@ -56,7 +56,7 @@ for(sim in 1:no_sims){
   if(model == "Poisson") {
     true_B <- matrix(0, K, K)
   }
-  Pi <- matrix(1/K, 1, K)
+  Pi <- c(0.2, 0.3)
   
   Z <- sample(0:(K-1), size = m, prob = Pi, replace = TRUE)
   # then generate A
@@ -142,5 +142,5 @@ results <- curr_dt_sims
 ### then save these somewhere
 saveRDS(results, file = here("Experiments",
                              "exp_results",
-                             paste0("exp_12_m0_rho_",
+                             paste0("exp_12_uneven_rho_",
                              100*sparsity, "_sim", sim_id, ".RDS")))
