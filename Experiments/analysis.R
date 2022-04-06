@@ -556,20 +556,27 @@ exp_11_data %>%
 
 #### Exp 12 ####
 exp_12_files <- list.files(path = here("Experiments/exp_results/"), 
-                           pattern = "exp_12_")
+                           pattern = "exp_12_n0_dense")
 
-exp_12_files[1:3] %>% 
+exp_12_files %>% 
   ## to not care about n0 for now
   map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>% 
   group_by(init, nodes) %>% 
   summarise(mean(ARI), sd(ARI), median(ARI), n())
+
+exp_12_files %>% 
+  ## to not care about n0 for now
+  map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  group_by(init, nodes, n0) %>% 
+  summarise(mean_ari = mean(ARI)) %>% 
+  ggplot(aes(n0, mean_ari, colour = init)) + 
+  geom_point()
 
 ### init is definitely making the performance better, recover 
 ### very well as the number of nodes increases also
 
 ## varying n0
 exp_12_files[7:9] %>% 
-  ## to not care about n0 for now
   map_dfr(~readRDS(here("Experiments/exp_results/", .x))) |> 
   group_by(init, nodes, n0) |> 
   summarise(mean_ari = mean(ARI)) |>
@@ -582,13 +589,25 @@ exp_12_files[7:9] %>%
   
 ## sparse version
 exp_12_sparse <- list.files(path = here("Experiments/exp_results/"), 
-                           pattern = "exp_12_n0_sparse")
+                           pattern = "exp_12_m0_rho")
 
-## to not care about n0 for now
+
 exp_12_sparse %>% 
   map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>% 
-  group_by(init, nodes) %>% 
-  summarise(mean(ARI), sd(ARI), median(ARI), n())
+  group_by(init, nodes, n0, m0, sparsity) %>% 
+  summarise(mean_ARI = mean(ARI), sd(ARI), median(ARI), n()) %>% 
+  filter(nodes == 400) %>% 
+  mutate(n0 = n0/2) %>% 
+  ggplot(aes(n0, mean_ARI, colour = init)) +
+  geom_point(aes()) +
+  facet_wrap(vars(m0, sparsity)) +
+  labs(x = "% time used for Initialization",
+       y = "Mean ARI",
+       colour = "Scheme",
+       title = "Total Nodes = 400",
+       subtitle = "Top Number is number of nodes used in Init,
+       bottom is Sparsity Parameter")
+
 
 exp_12_sparse %>% 
   map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>% 
