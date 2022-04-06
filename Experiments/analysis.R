@@ -554,24 +554,97 @@ exp_11_data %>%
   geom_boxplot()
 
 
-#### Exp 12
+#### Exp 12 ####
 exp_12_files <- list.files(path = here("Experiments/exp_results/"), 
                            pattern = "exp_12_")
 
-exp_12_files %>% 
+exp_12_files[1:3] %>% 
+  ## to not care about n0 for now
   map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>% 
   group_by(init, nodes) %>% 
-  summarise(mean(ARI), sd(ARI), n())
+  summarise(mean(ARI), sd(ARI), median(ARI), n())
 
-### init is definitely making the performance worse at the moment
+### init is definitely making the performance better, recover 
+### very well as the number of nodes increases also
 
+## varying n0
+exp_12_files[7:9] %>% 
+  ## to not care about n0 for now
+  map_dfr(~readRDS(here("Experiments/exp_results/", .x))) |> 
+  group_by(init, nodes, n0) |> 
+  summarise(mean_ari = mean(ARI)) |>
+  mutate(n0 = n0/2) |> 
+  ggplot(aes(n0, mean_ari, colour = as.factor(init))) + 
+  geom_point() + facet_wrap(~nodes) +
+  labs(x = "% time used for Initialization",
+       y = "Mean ARI",
+       colour = "Scheme")
+  
+## sparse version
+exp_12_sparse <- list.files(path = here("Experiments/exp_results/"), 
+                           pattern = "exp_12_n0_sparse")
 
-### Check for figure 1
+## to not care about n0 for now
+exp_12_sparse %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  group_by(init, nodes) %>% 
+  summarise(mean(ARI), sd(ARI), median(ARI), n())
+
+exp_12_sparse %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  group_by(init, nodes, n0) %>% 
+  # summarise(mean_ari = mean(ARI)) %>% 
+  ggplot(aes(n0, ARI, colour = as.factor(init))) +
+  geom_point() +
+  facet_wrap(vars(nodes,init)) +
+  labs(colour = "Scheme")
+
+exp_12_m0 <- list.files(path = here("Experiments/exp_results/"),
+                        pattern = "exp_12_m0_rho")
+
+exp_12_m0 %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>%
+  # filter(m0 >= nodes) %>% 
+  ggplot(aes(ARI)) + geom_histogram() +
+  facet_wrap(vars(init, nodes))
+
+exp_12_m0 %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>%
+  # filter(m0 >= nodes/2) %>% 
+  group_by(init, nodes, sparsity) %>% 
+  summarise(mean(ARI), median(ARI))
+
+## compare to
+exp_12_m0 %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>%
+  filter(n0 > 10) %>%
+  filter(m0 > nodes/4) %>% 
+  group_by(init, nodes, sparsity) %>% 
+  summarise(mean(ARI), median(ARI), min(ARI))
+## this leads to a big big improvement, but still not
+## as good as random init??!?!
+
+### Check for figure 1 ####
 fig_1_files <- list.files(path = here("Experiments/exp_results/"),
-                                      pattern = "fig_1_exp_2")
+                                      pattern = "fig_1_exp_1")
 
 fig_1_files %>% 
   map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  drop_na(ARI) %>% 
   group_by(Method) %>% 
   summarise(mean(ARI), sd(ARI), median(ARI))
-  
+
+## ok, so InPoisson works ok but no init here, which would
+## hopefully help?
+
+fig_1_files %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  drop_na(ARI) %>% 
+  group_by(Method, window_size) |>
+  mutate(Method = as.factor(Method),
+         window_size = as.factor(window_size)) |> 
+  ggplot(aes(window_size, ARI)) +
+  geom_boxplot() +
+  facet_wrap(~Method, scales = "free")
+
+
