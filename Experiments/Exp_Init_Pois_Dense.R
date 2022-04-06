@@ -73,7 +73,7 @@ for(sim in 1:no_sims){
       result <- dense_poisson(alltimes, K, n0 = curr_n0, m)
       # result <- sparse_poisson(alltimes, K, n0 = curr_n0, m, m0 = 50)
       while(sum(is.nan(result$est_B)) > 0) {
-        result <- dense_poisson(alltimes, K, n0 = curr_n0)
+        result <- dense_poisson(alltimes, K, n0 = curr_n0, m)
         ## just run again to avoid this issue
       }
       Mu_est <- result$est_B
