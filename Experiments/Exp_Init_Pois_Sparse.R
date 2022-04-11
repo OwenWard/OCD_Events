@@ -88,7 +88,7 @@ for(sim in 1:no_sims){
         init_tau[i, result$est_clust[i]] <- 1
       }
       ### check the initial ARI
-      aricode::ARI(result$est_clust, Z)
+      # aricode::ARI(result$est_clust, Z)
       
       ### will need to modify to account for the decreased number
       ### of events also...
@@ -104,6 +104,8 @@ for(sim in 1:no_sims){
                                                    init_tau,
                                                    start = result$cut_off,
                                                    is_elbo = FALSE)
+      z_est <- apply(results_online_init$tau, 1, which.max)
+      clust_est_init <- aricode::ARI(Z, z_est)
       ### compare to not using init function
       B <- matrix(runif(K * K), K, K)
       norm_online <- estimate_Poisson(full_data = alltimes,
@@ -116,18 +118,15 @@ for(sim in 1:no_sims){
                                       inter_T = 1,
                                       is_elbo = FALSE)
       stan_est <- apply(norm_online$tau, 1, which.max)
-      
-      z_est <- apply(results_online_init$tau, 1, which.max)
-      clust_est_init <- aricode::ARI(Z, z_est)
-      
       clust_est_norm <- aricode::ARI(stan_est, Z)
       
+      
       ### then save dT, clust_est, m, model
-      curr_sim <- tibble(ARI = c(clust_est_init, clust_est_norm),
+      curr_sim <- tibble(ARI = clust_est_init,
                          K = K, 
                          nodes = m,
                          model = model,
-                         init = c("Init", "No Init"),
+                         init = "Init",
                          n0 = curr_n0,
                          m0 = m0_curr,
                          sparsity = sparsity)
@@ -135,6 +134,30 @@ for(sim in 1:no_sims){
         bind_rows(curr_sim)
     }
   }
+  ### then do random init down here, bind it to curr_dt_sims
+  B <- matrix(runif(K * K), K, K)
+  norm_online <- estimate_Poisson(full_data = alltimes,
+                                  A = A,
+                                  m,
+                                  K,
+                                  Time,
+                                  dT = 1,
+                                  B,
+                                  inter_T = 1,
+                                  is_elbo = FALSE)
+  stan_est <- apply(norm_online$tau, 1, which.max)
+  clust_est_norm <- aricode::ARI(stan_est, Z)
+  curr_sim_rand <- tibble(ARI = clust_est_norm,
+                     K = K, 
+                     nodes = m,
+                     model = model,
+                     init = "No Init",
+                     n0 = NA,
+                     m0 = NA,
+                     sparsity = sparsity)
+  curr_dt_sims <- curr_dt_sims %>% 
+    bind_rows(curr_sim_rand)
+  
 }
 
 results <- curr_dt_sims
