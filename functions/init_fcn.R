@@ -303,6 +303,7 @@ sparse_poisson <- function(alltimes, K, n0, m, m0){
     rename(rec_clust = clust) 
   
   updated_B <- init_B
+  # print(updated_B)
   for(k1 in 1:K){
     for(k2 in 1:K){
       new_est <- clust_events %>% 
@@ -314,7 +315,12 @@ sparse_poisson <- function(alltimes, K, n0, m, m0){
         ### fitting a common Poisson to each of these pairs
         summarise(est_rate = sum(num_events)/ (n()*n0)) %>% 
         pull(est_rate)
-      updated_B[k1, k2] <- new_est
+      if(is.nan(new_est)){
+        updated_B[k1, k2] <- runif(1)
+        ## random init if doesn't work
+      }else{
+        updated_B[k1, k2] <- new_est 
+      }
     }
   }
   # print(updated_B)
