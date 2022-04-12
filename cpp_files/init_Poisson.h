@@ -82,9 +82,9 @@ Rcpp::List estimate_Poisson_init(
     B = updateB(sub_data, tau, B, K, A, m, dT, eta);
     inter_B.slice(n) = B;
     Pi = updatePi(tau,K);
-    if(n == 0){
-      cout << S << endl;
-    }
+    // if(n == 0){
+    //   cout << S << endl;
+    // }
     if (is_elbo) {
       // changed these to just the current window data
       curr_elbo(n) = computeELBO(sub_data, tau, B, Pi, A, m, K, dT);
