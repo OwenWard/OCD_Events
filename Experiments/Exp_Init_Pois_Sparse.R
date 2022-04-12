@@ -18,11 +18,8 @@ dT <- 1
 inter_T <- 1
 K <- 2
 m_vec <- c(rep(100, 5), rep(200, 5), rep(400, 5))
-<<<<<<< HEAD
-sparsity <- 0.5 # prop of edges which can have events
-=======
+
 sparsity <- 0.05 # prop of edges which can have events
->>>>>>> 465e342d173896e85e6687438e721b9aa444dc04
 
 jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
 jobid <- as.numeric(jobid)
