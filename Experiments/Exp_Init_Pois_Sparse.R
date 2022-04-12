@@ -110,7 +110,7 @@ for(sim in 1:no_sims){
                                                    is_elbo = FALSE)
       z_est <- apply(results_online_init$tau, 1, which.max)
       clust_est_init <- aricode::ARI(Z, z_est)
-      
+      print("Init Worked")
       ### then save dT, clust_est, m, model
       curr_sim <- tibble(ARI = clust_est_init,
                          K = K, 
@@ -137,6 +137,7 @@ for(sim in 1:no_sims){
                                   is_elbo = FALSE)
   stan_est <- apply(norm_online$tau, 1, which.max)
   (clust_est_norm <- aricode::ARI(stan_est, Z))
+  print("Random Worked")
   curr_sim_rand <- tibble(ARI = clust_est_norm,
                      K = K, 
                      nodes = m,
