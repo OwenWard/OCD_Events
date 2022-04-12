@@ -145,7 +145,7 @@ dense_poisson <- function(alltimes, K, n0, m) {
     }
   }
   # cat(updated_B, "\n------\n")
-  print(updated_B)
+  # print(updated_B)
   return(list(est_clust = init_group,
               est_B = updated_B,
               rest_events = remaining_events,
