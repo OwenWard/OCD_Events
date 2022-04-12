@@ -70,16 +70,21 @@ Rcpp::List estimate_Poisson_init(
     end_pos = curr_pos;
     arma::mat sub_data, elbo_dat;
     sub_data = full_data.rows(start_pos, end_pos);
+    // cout << sub_data.n_rows << endl;
     cum_events += sub_data.n_rows;
     elbo_dat = full_data.rows(0,end_pos); 
     start_pos = curr_pos;
     eta = 1/pow(1 + n, .5)/sub_data.n_rows*(K*K);
     S = updateS(sub_data, tau, B, A, S, K, m, dT);
+    // cout << S << endl;
     inter_S.slice(n) = S;
     tau = updateTau(S,Pi,m,K); 
     B = updateB(sub_data, tau, B, K, A, m, dT, eta);
     inter_B.slice(n) = B;
     Pi = updatePi(tau,K);
+    if(n == 0){
+      cout << S << endl;
+    }
     if (is_elbo) {
       // changed these to just the current window data
       curr_elbo(n) = computeELBO(sub_data, tau, B, Pi, A, m, K, dT);
