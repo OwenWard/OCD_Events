@@ -180,7 +180,7 @@ sparse_poisson <- function(alltimes, K, n0, m, m0){
     slice_max(out, n = m0, with_ties = FALSE) %>%
     pull(send)
   
-  center_matrix <- matrix(NA, nrow = m0, ncol = K)
+  center_matrix <- matrix(NA, nrow = length(top_nodes), ncol = K)
   ### iterate along m0 nodes
   # print("Getting this far")
   for(i in seq_along(top_nodes)){
