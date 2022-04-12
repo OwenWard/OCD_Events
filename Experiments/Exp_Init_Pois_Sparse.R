@@ -18,7 +18,7 @@ dT <- 1
 inter_T <- 1
 K <- 2
 m_vec <- c(rep(100, 5), rep(200, 5), rep(400, 5))
-sparsity <- 0.1 # prop of edges which can have events
+sparsity <- 0.05 # prop of edges which can have events
 
 jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
 jobid <- as.numeric(jobid)
@@ -47,15 +47,18 @@ cat(model, "\n")
 for(sim in 1:no_sims){
   cat("Sim:", sim, "======\n")
   ## baseline rate of the process
-  true_Mu <- matrix(0.05, 
+  true_Mu <- matrix(c(2, 0.05, 0.4, 1.5), 
                     nrow = K, ncol = K, byrow = T)
-  diag(true_Mu) <- 0.5:K
+  # diag(true_Mu) <- c(2, 4)
+  # true_Mu[1, 2] <- 0.25
+  # true_Mu[2, 2] <- 0.75
   ## excitation, if used (for Hawkes)
   true_B <- matrix(0, nrow = K, ncol = K, byrow = TRUE)
   diag(true_B) <- 0.5
   if(model == "Poisson") {
     true_B <- matrix(0, K, K)
   }
+  # Pi <- c(0.2, 0.3, 0.3, 0.2)
   Pi <- c(0.2, 0.3)
   
   Z <- sample(0:(K-1), size = m, prob = Pi, replace = TRUE)
@@ -106,20 +109,6 @@ for(sim in 1:no_sims){
                                                    is_elbo = FALSE)
       z_est <- apply(results_online_init$tau, 1, which.max)
       clust_est_init <- aricode::ARI(Z, z_est)
-      ### compare to not using init function
-      B <- matrix(runif(K * K), K, K)
-      norm_online <- estimate_Poisson(full_data = alltimes,
-                                      A = A,
-                                      m,
-                                      K,
-                                      Time,
-                                      dT = 1,
-                                      B,
-                                      inter_T = 1,
-                                      is_elbo = FALSE)
-      stan_est <- apply(norm_online$tau, 1, which.max)
-      clust_est_norm <- aricode::ARI(stan_est, Z)
-      
       
       ### then save dT, clust_est, m, model
       curr_sim <- tibble(ARI = clust_est_init,
@@ -146,7 +135,7 @@ for(sim in 1:no_sims){
                                   inter_T = 1,
                                   is_elbo = FALSE)
   stan_est <- apply(norm_online$tau, 1, which.max)
-  clust_est_norm <- aricode::ARI(stan_est, Z)
+  (clust_est_norm <- aricode::ARI(stan_est, Z))
   curr_sim_rand <- tibble(ARI = clust_est_norm,
                      K = K, 
                      nodes = m,
@@ -165,5 +154,5 @@ results <- curr_dt_sims
 ### then save these somewhere
 saveRDS(results, file = here("Experiments",
                              "exp_results",
-                             paste0("exp_12_uneven_rho_",
+                             paste0("exp_12_april_12_rho_",
                              100*sparsity, "_sim", sim_id, ".RDS")))
