@@ -16,7 +16,7 @@ Time <- 200
 no_sims <- 50
 dT <- 1
 inter_T <- 1
-K <- 2
+K <- 3
 m_vec <- c(100, 200, 400)
 sparsity <- 0.75 # prop of edges which can have events
 
@@ -45,7 +45,7 @@ for(sim in 1:no_sims){
   ## baseline rate of the process
   true_Mu <- matrix(0.05, 
                     nrow = K, ncol = K, byrow = T)
-  diag(true_Mu) <- c(rep(0.5, K-1), 1)
+  diag(true_Mu) <- 0.5:K + 1.2
   ## excitation, if used (for Hawkes)
   true_B <- matrix(0, nrow = K, ncol = K, byrow = TRUE)
   diag(true_B) <- 0.5
@@ -141,4 +141,4 @@ results <- curr_dt_sims
 ### then save these somewhere
 saveRDS(results, file = here("Experiments",
                              "exp_results",
-                             paste0("exp_12_n0_dense", sim_id, ".RDS")))
+                             paste0("exp_12_n0_dense_apr_13_", sim_id, ".RDS")))
