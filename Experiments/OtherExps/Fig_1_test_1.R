@@ -24,6 +24,7 @@ for(sim in 1:no_sims){
   curr_sim_result <- tibble()
   
   n <- 100
+  m <- n
   Time <- 100
   prop.groups <- c(0.2, 0.3)
   
