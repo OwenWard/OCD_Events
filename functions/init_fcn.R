@@ -34,14 +34,23 @@ dense_poisson <- function(alltimes, K, n0, m) {
     count() %>% 
     mutate(est_lam = n/n0) %>% 
     select(rec, est_lam)
-  ## check here if len(est_int) < K
   
-  est <- kmeans(est_int$est_lam, centers = K)
+  ## check here if len(est_int$est_lam) < K
+  lam_vec <- est_int$est_lam
+  if(length(lam_vec) < K){
+    ### give random estimates
+    est <- sample(1:K, size = length(lam_vec), replace = TRUE)
+  }
+  else if(length(lam_vec) == K){
+    est <- kmeans(lam_vec, centers = K, algorithm = "Lloyd")
+  }
+  else{
+    est <- kmeans(lam_vec, centers = K) 
+  }
   clust_ests <- tibble(node = est_int$rec, clust = est$cluster)
   
   neighbours <- init_events %>% 
     filter(send == max_degree) %>% 
-    ### check this giving a warning too
     distinct(rec) %>% 
     arrange(rec) %>% 
     pull(rec)
@@ -79,7 +88,7 @@ dense_poisson <- function(alltimes, K, n0, m) {
       }
     }
   }
-  print(init_B)
+  # print(init_B)
   sorted_B <- t(apply(init_B, 1, sort))
   init_group <- rep(NA, m)
   
@@ -92,10 +101,20 @@ dense_poisson <- function(alltimes, K, n0, m) {
       mutate(rate = count/n0) %>% 
       pull(rate)
     
-    # then k means on these estimates
-    ## check number of neighbours here too
-    curr_est <- kmeans(curr_neigh, centers = K)
-    curr_center <- sort(as.vector(curr_est$centers))
+    ## deal with length(curr_neigh) <= K
+    if(length(unique(curr_neigh)) < K){
+      # print("Need to consider this case")
+      curr_est <- c(rep(0, K-length(unique(curr_neigh))), 
+                    unique(curr_neigh))
+      curr_center <- sort(curr_est)
+      ### pad with zeros to have length K and then sort?
+    } else if(length(unique(curr_neigh)) == K){
+      curr_est <- kmeans(curr_neigh, centers = K, algorithm = "Lloyd")
+      curr_center <- sort(as.vector(curr_est$centers))
+    } else{
+      curr_est <- kmeans(curr_neigh, centers = K)
+      curr_center <- sort(as.vector(curr_est$centers))
+    }
     
     ## then see which row of init_B this is closest to
     dists <- apply(sorted_B, 1, function(x) 
@@ -131,6 +150,9 @@ dense_poisson <- function(alltimes, K, n0, m) {
       
       if(identical(new_est, numeric(0))){
         updated_B[k1, k2] <- 0
+      }
+      else if(is.nan(new_est)){
+        updated_B[k1, k2] <- runif(1)
       }
       else{
         updated_B[k1, k2] <- new_est 
