@@ -17,6 +17,7 @@ no_sims <- 50
 Time <- 100
 all_results <- tibble()
 K <- 2
+dT <- 1
 
 
 for(sim in 1:no_sims){
