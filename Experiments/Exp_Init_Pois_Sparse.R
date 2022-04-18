@@ -17,9 +17,9 @@ no_sims <- 50
 dT <- 1
 inter_T <- 1
 K <- 2
-m_vec <- c(rep(100, 5), rep(200, 5), rep(400, 5))
+m_vec <- c(rep(1000, 5), rep(2000, 5), rep(10000, 5))
 
-sparsity <- 0.1 # prop of edges which can have events
+sparsity <- 0.05 # prop of edges which can have events
 
 jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
 jobid <- as.numeric(jobid)
@@ -32,9 +32,9 @@ model <- "Poisson"
 
 results <- list()
 m <- m_vec[sim_id]
-m0_vec <- c( 100*c(1/10, 1/5, 1/4, 1/2, 1),
-             200*c(1/10, 1/5, 1/4, 1/2, 1),
-             400*c(1/10, 1/5, 1/4, 1/2, 1))
+m0_vec <- c( 1000*c(1/10, 1/5, 1/4, 1/2, 1),
+             2000*c(1/10, 1/5, 1/4, 1/2, 1),
+             10000*c(1/10, 1/5, 1/4, 1/2, 1))
 m0_curr <- m0_vec[sim_id]
 
 n0_vals <- seq(from = 5, to = 50, by = 5)
@@ -156,5 +156,5 @@ results <- curr_dt_sims
 ### then save these somewhere
 saveRDS(results, file = here("Experiments",
                              "exp_results",
-                             paste0("exp_12_april_12_rho_",
-                             100*sparsity, "_sim", sim_id, ".RDS")))
+                             paste0("exp_12_april_18_rho_",
+                             100*sparsity, "_large_sim", sim_id, ".RDS")))
