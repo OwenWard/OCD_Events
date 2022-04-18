@@ -37,14 +37,13 @@ dense_poisson <- function(alltimes, K, n0, m) {
   
   ## check here if len(est_int$est_lam) < K
   lam_vec <- est_int$est_lam
-  if(length(lam_vec) < K){
+  # print(lam_vec)
+  if(length(unique(lam_vec)) < K){
     ### give random estimates
     est <- sample(1:K, size = length(lam_vec), replace = TRUE)
-  }
-  else if(length(lam_vec) == K){
+  }else if(length(unique(lam_vec)) == K){
     est <- kmeans(lam_vec, centers = K, algorithm = "Lloyd")
-  }
-  else{
+  }else{
     est <- kmeans(lam_vec, centers = K) 
   }
   clust_ests <- tibble(node = est_int$rec, clust = est$cluster)
