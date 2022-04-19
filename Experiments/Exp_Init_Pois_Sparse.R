@@ -37,7 +37,7 @@ m0_vec <- c( 1000*c(1/10, 1/5, 1/4, 1/2, 1),
              10000*c(1/10, 1/5, 1/4, 1/2, 1))
 m0_curr <- m0_vec[sim_id]
 
-n0_vals <- seq(from = 5, to = 50, by = 5)
+n0_vals <- c(10, 25, 50)
 
 # for(exp_num in seq_along(m_vec)) {
 #   dT <- 1
