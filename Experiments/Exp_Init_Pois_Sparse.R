@@ -17,7 +17,7 @@ no_sims <- 50
 dT <- 1
 inter_T <- 1
 K <- 2
-m_vec <- c(rep(1000, 5), rep(2000, 5), rep(10000, 5))
+m_vec <- c(rep(1000, 5), rep(2000, 5), rep(5000, 5))
 
 sparsity <- 0.05 # prop of edges which can have events
 
@@ -34,7 +34,7 @@ results <- list()
 m <- m_vec[sim_id]
 m0_vec <- c( 1000*c(1/10, 1/5, 1/4, 1/2, 1),
              2000*c(1/10, 1/5, 1/4, 1/2, 1),
-             10000*c(1/10, 1/5, 1/4, 1/2, 1))
+             5000*c(1/10, 1/5, 1/4, 1/2, 1))
 m0_curr <- m0_vec[sim_id]
 
 n0_vals <- seq(from = 5, to = 50, by = 5)
