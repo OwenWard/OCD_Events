@@ -73,6 +73,7 @@ for(sim in 1:no_sims){
     A[[i]] <- edge
   }
   alltimes <- sampleBlockHak(Time, A, Z, Mu = true_Mu, B = true_B, lam = 1)
+  print("Simulated Data")
   ### then estimate the fits here in each case
   if(model == "Poisson") {
     
