@@ -34,11 +34,11 @@ model <- "Poisson"
 
 results <- list()
 m <- m_vec[sim_id]
-m0_vec <- c(rep(50, 4), rep(125, 4), rep(250, 4)) ##1/4 of data
+m0_vec <- c(rep(100, 4), rep(250, 4), rep(500, 4)) ##1/4 of data
 m0_curr <- m0_vec[sim_id]
 K <- K_vec[sim_id]
 
-n0_vals <- 25
+n0_vals <- 50
 
 # for(exp_num in seq_along(m_vec)) {
 #   dT <- 1
