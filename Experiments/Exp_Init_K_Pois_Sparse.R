@@ -52,10 +52,12 @@ for(sim in 1:no_sims){
   ##
   true_Mu <- matrix(0.05, 
                     nrow = K, ncol = K, byrow = T)
-  diag(true_Mu) <- 1.25 * c(1:K)
+  diag(true_Mu) <- 1.5 * c(1:K)
   true_Mu[K, K-1] <- 0.75
   true_Mu[1, K] <- 0.25
   true_Mu[2, K-1] <- 0.5
+  true_Mu[K-1, 1] <- 1.2
+  true_Mu[K, 1] <- 0.40
   ### this setting maybe hard for recovery, but lets see
   ## excitation, if used (for Hawkes)
   true_B <- matrix(0, nrow = K, ncol = K, byrow = TRUE)
