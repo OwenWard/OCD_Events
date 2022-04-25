@@ -1,4 +1,4 @@
-#### Exp 12, April 6th 2022
+#### Exp varying the number of Nodes, April 25th 2022
 #### Investigate whether the initialization function 
 #### leads to an improved clustering performance
 .libPaths("/moto/stats/users/ogw2103/rpackages")
