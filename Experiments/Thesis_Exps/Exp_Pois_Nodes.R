@@ -38,7 +38,9 @@ m0_vec <- c( 100*c(1/10, 1/4, 1/2),
              1000*c(1/10, 1/4, 1/2))
 m0_curr <- m0_vec[sim_id]
 
-n0_vals <- c(10, 25, 50)
+
+m0_curr <- m/10
+n0_vals <- 10
 
 # for(exp_num in seq_along(m_vec)) {
 #   dT <- 1
@@ -49,7 +51,7 @@ cat(model, "\n")
 for(sim in 1:no_sims){
   cat("Sim:", sim, "======\n")
   ## baseline rate of the process
-  true_Mu <- matrix(c(2, 0.05, 0.15, 1.5), 
+  true_Mu <- matrix(c(2, 0.25, 0.15, 1.5), 
                     nrow = K, ncol = K, byrow = T)
   # diag(true_Mu) <- c(2, 4)
   # true_Mu[1, 2] <- 0.25
@@ -147,7 +149,8 @@ for(sim in 1:no_sims){
                           init = "No Init",
                           n0 = NA,
                           m0 = NA,
-                          sparsity = sparsity)
+                          sparsity = sparsity,
+                          sim = sim_id)
   curr_dt_sims <- curr_dt_sims %>% 
     bind_rows(curr_sim_rand)
   
@@ -158,5 +161,7 @@ results <- curr_dt_sims
 ### then save these somewhere
 saveRDS(results, file = here("Experiments",
                              "thesis_output",
-                             paste0("exp_pois_nodes_april_25_rho_",
+                             paste0("exp_pois_nodes_fixed_april_26_rho_",
                                     100*sparsity, sim_id, ".RDS")))
+
+## fixed here meaning fixed n0, m0
