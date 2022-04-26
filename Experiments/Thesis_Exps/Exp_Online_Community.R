@@ -29,10 +29,10 @@ model <- "Poisson"
 
 results <- list()
 m <- m_vec[sim_id]
-m0_vec <- c(500*c(1/10, 1/4, 1/2))
+m0_vec <- c(500 * c(1/10, 1/4, 1/2))
 m0_curr <- m0_vec[sim_id]
 
-n0_vals <- c(10, 25, 50)
+n0_vals <- 20
 
 # for(exp_num in seq_along(m_vec)) {
 #   dT <- 1
@@ -43,7 +43,7 @@ cat(model, "\n")
 for(sim in 1:no_sims){
   cat("Sim:", sim, "======\n")
   ## baseline rate of the process
-  true_Mu <- matrix(c(2, 0.05, 0.15, 1.5), 
+  true_Mu <- matrix(c(2, 0.05, 0.1, 1.5), 
                     nrow = K, ncol = K, byrow = T)
 
   true_B <- matrix(0, nrow = K, ncol = K, byrow = TRUE)
@@ -98,27 +98,41 @@ for(sim in 1:no_sims){
       
       ### compute the online community assignments here
       init_ari <- aricode::ARI(result$est_clust, Z)
-      inter_tau <- results_online_init$early_tau
+      inter_tau <- results_online_init$early_tau[, , 1:9]
       inter_z <- apply(inter_tau, c(1, 3), which.max)
       inter_ari <- apply(inter_z, 2, function(x) aricode::ARI(x, Z))
-      
+      z_est <- apply(results_online_init$tau, 1, which.max)
+      ari_final <- aricode::ARI(Z, z_est)
       ###
       ### then save dT, clust_est, m, model
-      curr_sim <- tibble(ARI = c(init_ari, inter_ari),
+      curr_sim <- tibble(ARI = c(init_ari, inter_ari, ari_final),
                          K = K, 
                          nodes = m,
                          model = model,
                          init = "Init",
                          n0 = curr_n0,
                          m0 = m0_curr,
-                         time = c("Init", seq(from = inter_T,
-                                              to = Time, by = inter_T)),
+                         time = c(curr_n0, seq(from = inter_T + curr_n0,
+                                              to = Time, by = inter_T),
+                                  Time),
                          sparsity = sparsity)
       curr_dt_sims <- curr_dt_sims %>% 
         bind_rows(curr_sim)
     }
   }
 }
+
+# curr_dt_sims %>%
+#   # mutate(time = case_when(
+#   #   time == "Init" ~ 0,
+#   #   TRUE ~ as.numeric(time)
+#   # )) %>%
+#   group_by(time) %>%
+#   summarise(avg = mean(ARI)) %>%
+#   ggplot(aes(time, avg)) +
+#   geom_point() +
+#   geom_line() +
+#   ylim(c(0, 1))
 
 results <- curr_dt_sims
 
