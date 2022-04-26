@@ -17,7 +17,7 @@ no_sims <- 50
 dT <- 1
 inter_T <- 20
 K <- 2
-m_vec <- rep(500, 3)
+m_vec <- c(rep(500, 3), rep(200, 3), rep(1000, 3))
 
 sparsity <- 0.1 # prop of edges which can have events
 
@@ -29,7 +29,9 @@ model <- "Poisson"
 
 results <- list()
 m <- m_vec[sim_id]
-m0_vec <- c(500 * c(1/10, 1/4, 1/2))
+m0_vec <- c(500 * c(1/10, 1/4, 1/2),
+            200 * c(1/10, 1/4, 1/2),
+            1000 * c(1/10, 1/4, 1/2))
 m0_curr <- m0_vec[sim_id]
 
 n0_vals <- 20
