@@ -43,7 +43,7 @@ Rcpp::List estimate_Poisson_init(
   S.fill(1.0/K);
   // tau.fill(1.0/K);
   tau = update_init_Tau(tau, m, K);
-  arma::cube inter_tau(m,K,slices+1);
+  arma::cube inter_tau(m,K,slices);
   arma::cube inter_B(K,K,N);
   arma::cube inter_S(m, K, N);
   arma::vec curr_elbo, ave_elbo, ave_ll, curr_ll;
