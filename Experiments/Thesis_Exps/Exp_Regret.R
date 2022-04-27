@@ -101,7 +101,7 @@ for(sim in 1:nsims) {
   est_loss <- -out$EstLLH/card_A
   best_loss <- -out$TrueLLH/card_A
   regret <- cumsum(est_loss) - cumsum(best_loss)
-  z_est <- apply(results_online$tau, 1, which.max)
+  z_est <- apply(results_online_init$tau, 1, which.max)
   clust_est <- aricode::ARI(z_true, z_est)
   
   sim_pars <- list(
