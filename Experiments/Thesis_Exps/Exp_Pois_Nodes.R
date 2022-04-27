@@ -40,7 +40,7 @@ m0_curr <- m0_vec[sim_id]
 
 
 m0_curr <- m/10
-n0_vals <- 10
+n0_vals <- 20
 
 # for(exp_num in seq_along(m_vec)) {
 #   dT <- 1
