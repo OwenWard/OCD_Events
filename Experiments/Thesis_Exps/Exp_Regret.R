@@ -106,7 +106,7 @@ for(sim in 1:nsims) {
   
   sim_pars <- list(
     B = B,
-    est_elbo = results_online$AveELBO,
+    est_elbo = results_online_init$AveELBO,
     clust = clust_est,
     regret = regret,
     card_A = card_A
