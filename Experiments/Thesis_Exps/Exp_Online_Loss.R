@@ -8,7 +8,7 @@ library(ppsbm)
 source(here("Experiments/", "utils.R"))
 source(here("functions/init_fcn.R"))
 
-nsims <- 25
+nsims <- 100
 
 jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
 jobid <- as.numeric(jobid)
@@ -18,26 +18,64 @@ Time <- Times[sim_id]
 
 results <- list()
 
+### modify to just use a single simulated dataset 
+### and so common "batch optimum"
+n <- 100
+intens1 <- c(2)
+intens2 <- c(1)
+intens <- matrix(c(intens1, 0.05, 0.05, intens2), 4, 1)
+true_B <- matrix(c(intens1, 0.05, 0.05, intens2), 
+                 nrow = 2, ncol = 2, byrow = T)
+# this is essentially the K*K matrix stretched out as a single col
+system.time(sim1 <- generateDynppsbmConst(intens = intens,
+                                          Time = Time,
+                                          n = n, 
+                                          prop.groups = c(0.5, 0.5)))
+
+proc_sim <- format_sims(sim_data = sim1, n = n)
+
+Dmax <- 2^3
+Nijk <- statistics(sim1$data,
+                   n,
+                   Dmax,
+                   directed=TRUE)
+
+m <- n
+K <- 2
+dT <- 1
+
+sol.kernel <- mainVEM(list(Nijk = Nijk, Time = Time),
+                      n = m,
+                      Qmin  = 2,
+                      Qmax = 2,
+                      directed = TRUE,
+                      method = 'hist',
+                      d_part = 0,
+                      n_perturb = 0)
+
+b <- exp(sol.kernel[[1]]$logintensities.ql[, 1])
+# these largely match the true intensities
+# sol.kernel[[1]]$tau
+z_vem <- apply(sol.kernel[[1]]$tau, 2, which.max)
+
+batch_b <- matrix(b, nrow = 2, ncol = 2, byrow = TRUE)
+
+vem_loss <- batch_loss(full_data = proc_sim$events,
+                       A = proc_sim$edge, m,
+                       K,
+                       Time,
+                       dT, 
+                       batch_B = batch_b, true_z = z_vem)
+batch_average <- mean(vem_loss$Batch_loss/1:Time)
+
+
 for(sim in 1:nsims) {
   cat("Sim:", sim, "\n")
   # Time <- 100
-  n <- 100
-  intens1 <- c(2)
-  intens2 <- c(1)
-  intens <- matrix(c(intens1, 0.05, 0.05, intens2), 4, 1)
-  true_B <- matrix(c(intens1, 0.05, 0.05, intens2), 
-                   nrow = 2, ncol = 2, byrow = T)
-  # this is essentially the K*K matrix stretched out as a single col
-  system.time(sim1 <- generateDynppsbmConst(intens = intens,
-                                            Time = Time,
-                                            n = n, 
-                                            prop.groups = c(0.5, 0.5)))
-  
-  proc_sim <- format_sims(sim_data = sim1, n = n)
-  K <- 2
-  m <- n
-  # B <- matrix(runif(K * K), K, K)
-  dT <- 1
+  # K <- 2
+  # m <- n
+  # # B <- matrix(runif(K * K), K, K)
+  # dT <- 1
   inter_T <- 1
   # capture output to not print out
   ### use initialization scheme here first also
@@ -111,36 +149,6 @@ for(sim in 1:nsims) {
                  values_to = "Loss",
                  names_to = "Z") 
   
-  
-  
-  Dmax <- 2^3
-  Nijk <- statistics(sim1$data,
-                     n,
-                     Dmax,
-                     directed=TRUE)
-  sol.kernel <- mainVEM(list(Nijk = Nijk, Time = Time),
-                        n = m,
-                        Qmin  = 2,
-                        Qmax = 2,
-                        directed = TRUE,
-                        method = 'hist',
-                        d_part = 0,
-                        n_perturb = 0)
-  
-  b <- exp(sol.kernel[[1]]$logintensities.ql[, 1])
-  # these largely match the true intensities
-  # sol.kernel[[1]]$tau
-  z_vem <- apply(sol.kernel[[1]]$tau, 2, which.max)
-  
-  batch_b <- matrix(b, nrow = 2, ncol = 2, byrow = TRUE)
-  
-  vem_loss <- batch_loss(full_data = proc_sim$events,
-                         A = proc_sim$edge, m,
-                         K,
-                         Time,
-                         dT, 
-                         batch_B = batch_b, true_z = z_vem)
-  batch_average <- mean(vem_loss$Batch_loss/1:Time)
   #####
   z_est <- apply(results_online_init$tau, 1, which.max)
   clust_est <- aricode::ARI(z_true, z_est)
@@ -176,7 +184,7 @@ for(sim in 1:nsims) {
 
 saveRDS(results, file = here("Experiments",
                              "thesis_output",
-                             paste0("exp_pois_online_loss_april_28_",
+                             paste0("exp_pois_online_loss_april_29_",
                                     Time, ".RDS")))
 
 
