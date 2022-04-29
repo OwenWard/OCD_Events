@@ -121,7 +121,7 @@ for(sim in 1:nsims) {
 
 saveRDS(results, file = here("Experiments",
                              "thesis_output",
-                             paste0("exp_pois_regret_fix_april_29_",
+                             paste0("exp_pois_regret_april_29_",
                                     Time, ".RDS")))
 
 
