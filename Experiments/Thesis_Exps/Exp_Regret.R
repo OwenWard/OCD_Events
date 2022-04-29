@@ -104,7 +104,7 @@ for(sim in 1:nsims) {
   ## am I computing this correctly?
   regret <- cumsum(est_loss) - cumsum(best_loss)
   ## cumsum(regret)
-  regret <- cumsum(regret)
+  # regret <- cumsum(regret)
   z_est <- apply(results_online_init$tau, 1, which.max)
   clust_est <- aricode::ARI(z_true, z_est)
   
