@@ -250,9 +250,9 @@ Rcpp::List compute_regret(
     arma::rowvec curr_Pi;
     curr_Pi = sum(curr_tau, 0)/m;
     // likelihood using known tau
-    curr_ll(n) = computeLL(sub_dat, tau, curr_B, curr_Pi, A, m, K, t_curr);
+    curr_ll(n) = computeLL(sub_data, tau, curr_B, curr_Pi, A, m, K, t_curr);
     ave_ll(n) = curr_ll(n)/cum_events;
-    true_ll(n) = computeLL(sub_dat, tau, true_B, curr_Pi, A, m, K, t_curr);
+    true_ll(n) = computeLL(sub_data, tau, true_B, curr_Pi, A, m, K, t_curr);
     // was sub_data
     av_true_ll(n) = true_ll(n)/cum_events;
     //

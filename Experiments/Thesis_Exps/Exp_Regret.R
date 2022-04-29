@@ -38,6 +38,7 @@ for(sim in 1:nsims) {
   B <- matrix(runif(K * K), K, K)
   dT <- 1
   inter_T <- 1
+  
   # capture output to not print out
   
   ## run the init scheme here
@@ -100,7 +101,10 @@ for(sim in 1:nsims) {
   ## is this regret function correct?
   est_loss <- -out$EstLLH/card_A
   best_loss <- -out$TrueLLH/card_A
+  ## am I computing this correctly?
   regret <- cumsum(est_loss) - cumsum(best_loss)
+  ## cumsum(regret)
+  regret <- cumsum(regret)
   z_est <- apply(results_online_init$tau, 1, which.max)
   clust_est <- aricode::ARI(z_true, z_est)
   
@@ -116,7 +120,8 @@ for(sim in 1:nsims) {
 
 saveRDS(results, file = here("Experiments",
                              "thesis_output",
-                             paste0("exp_pois_regret_april_27_", Time, ".RDS")))
+                             paste0("exp_pois_regret_fix_april_29_",
+                                    Time, ".RDS")))
 
 
 ### create some nicer plots for these regret functions
