@@ -228,14 +228,14 @@ Rcpp::List compute_regret(
     // this is the cumulative data, should it be just the events in that
     // window here?
     start_pos = curr_pos;
-    
+    t_length = t_curr-t_prev;
     // compute predictive log likelihood here
     if(n > 0) {
       arma::mat prev_B = B_ests.slice(n-1);
       arma::mat prev_tau = tau_ests.slice(n-1);
       arma::rowvec prev_Pi;
       prev_Pi = sum(prev_tau, 0)/m;
-      t_length = t_curr-t_prev;
+      
       pred_ll(n-1) = computeLL(sub_data, prev_tau, prev_B, prev_Pi,
               A, m, K, t_length);
       ave_pred_ll(n-1) = pred_ll(n-1)/sub_data.n_rows;
@@ -243,16 +243,17 @@ Rcpp::List compute_regret(
       
     }
     t_prev = t_curr;
-    
-    ///
+    cout<<t_curr<<endl;
+    /// just need to change
     arma::mat curr_B = B_ests.slice(n);
     arma::mat curr_tau = tau_ests.slice(n);
     arma::rowvec curr_Pi;
     curr_Pi = sum(curr_tau, 0)/m;
     // likelihood using known tau
-    curr_ll(n) = computeLL(sub_data, tau, curr_B, curr_Pi, A, m, K, t_curr);
+    // cout<<sub_data.n_rows<<endl;
+    curr_ll(n) = computeLL(sub_data, tau, curr_B, curr_Pi, A, m, K, t_length);
     ave_ll(n) = curr_ll(n)/cum_events;
-    true_ll(n) = computeLL(sub_data, tau, true_B, curr_Pi, A, m, K, t_curr);
+    true_ll(n) = computeLL(sub_data, tau, true_B, curr_Pi, A, m, K, t_length);
     // was sub_data
     av_true_ll(n) = true_ll(n)/cum_events;
     //
