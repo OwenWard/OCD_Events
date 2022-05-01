@@ -17,7 +17,9 @@ no_sims <- 50
 dT <- 1
 inter_T <- 1
 K <- 2
-m_vec <- c(rep(100, 3), rep(200, 3), rep(500, 3), rep(1000, 3))
+# m_vec <- c(rep(100, 3), rep(200, 3), rep(500, 3), rep(1000, 3),
+#            rep(5000, 3))
+m_vec <- c(100, 200, 500, 1000, 5000)
 
 sparsity <- 0.05 # prop of edges which can have events
 
@@ -39,7 +41,7 @@ m0_vec <- c( 100*c(1/10, 1/4, 1/2),
 m0_curr <- m0_vec[sim_id]
 
 
-m0_curr <- m/10
+m0_curr <- m/4
 n0_vals <- 20
 
 # for(exp_num in seq_along(m_vec)) {
@@ -161,7 +163,7 @@ results <- curr_dt_sims
 ### then save these somewhere
 saveRDS(results, file = here("Experiments",
                              "thesis_output",
-                             paste0("exp_pois_nodes_fixed_april_26_rho_",
+                             paste0("exp_pois_nodes_fixed_april_30_rho_",
                                     100*sparsity, sim_id, ".RDS")))
 
 ## fixed here meaning fixed n0, m0
