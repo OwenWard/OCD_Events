@@ -243,8 +243,6 @@ Rcpp::List compute_regret(
       
     }
     t_prev = t_curr;
-    cout<<t_curr<<endl;
-    /// just need to change
     arma::mat curr_B = B_ests.slice(n);
     arma::mat curr_tau = tau_ests.slice(n);
     arma::rowvec curr_Pi;
