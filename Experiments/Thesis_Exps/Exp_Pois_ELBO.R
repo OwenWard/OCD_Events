@@ -39,7 +39,7 @@ Time <- Times[sim_id]
 
 
 m0_curr <- m/4
-n0_vals <- 20
+n0_vals <- 5
 
 # for(exp_num in seq_along(m_vec)) {
 #   dT <- 1
