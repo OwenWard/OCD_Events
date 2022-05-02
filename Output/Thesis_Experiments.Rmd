@@ -89,20 +89,22 @@ and $m0$, the number of nodes used for the initialization.
 ```{r recov-nodes}
 ## recovery as the number of nodes changes
 node_sims <- list.files(path = here("Experiments", "thesis_output"),
-                   pattern = "exp_pois_nodes_fixed_april_30_rho_1")
+                   pattern = "exp_pois_nodes_fixed_april_26_rho_5")
+## to be consistent in the sparsity across all the plots,
+## rerunning now
 
 node_data <- node_sims %>% 
   map_dfr(~readRDS(here("Experiments/thesis_output/", .x)))
   
 
 node_data %>% 
-  # filter(init == "Init") %>% 
+  filter(init == "Init") %>%
   group_by(nodes, n0, m0) %>% 
   summarise(mean(ARI), sd(ARI))
 
 node_data %>% 
   # group_by(sim, nodes, m0) %>% top_n(1) %>% 
-  # filter(init == "Init") %>%
+  filter(init == "Init") %>%
   # filter(n0 == 10, m0 == nodes/10) %>%
   ggplot(aes(as.factor(nodes), ARI)) +
   geom_boxplot() +
@@ -134,10 +136,12 @@ K_data %>%
   ggplot(aes(as.factor(K), ARI)) +
   geom_boxplot() +
   ylim(c(0, 1)) +
-  facet_wrap(~nodes) +
+  # facet_wrap(~nodes) +
   labs(x = "Number of Communities") +
   theme(axis.text = element_text(size = axis_text_size),
         axis.title = element_text(size = axis_title))
+
+## across multiple community sizes actually looks good too
 
 ```
 
@@ -219,7 +223,7 @@ elbo_sims %>%
 
 ```{r monitor-conv-sparse}
 elbo_files <- list.files(path = here("Experiments/thesis_output/"), 
-                          pattern = "elbo")
+                          pattern = "exp_pois_elbo_april")
 
 elbo_sims <- elbo_files %>% 
   map(~read_rds(here("Experiments",
@@ -232,21 +236,64 @@ elbo_sims <- elbo_files %>%
   group_by(sim) %>% mutate(ind = row_number() + 5)
 
 elbo_sims %>% 
+  mutate(nodes = paste0("n = ", nodes)) %>% 
+  mutate(nodes = factor(nodes, 
+                        levels = c("n = 50",
+                                   "n = 100",
+                                   "n = 200",
+                                   "n = 500"))) %>% 
   ggplot(aes(ind, est_elbo)) +
   geom_line(aes(group = sim), alpha = 0.2) +
-  facet_wrap(~nodes, scales = "free") +
+  # scale_y_continuous(breaks = scales::pretty_breaks(n = 3)) +
+  facet_wrap(~nodes) +
   labs(x = "Time", y = "ELBO") +
   theme(axis.text = element_text(size = axis_text_size),
         axis.title = element_text(size = axis_title),
         strip.text.x = element_text(size = axis_title))
 
 ## sanity check, this looks the same as the community plot
-elbo_sims %>% 
-  group_by(nodes, sim) %>%
-  summarise(ari = mean(ARI)) %>%
-  ungroup() %>% 
-  ggplot(aes(as.factor(nodes), ari)) +
-  geom_boxplot()
+# elbo_sims %>% 
+#   group_by(nodes, sim) %>%
+#   summarise(ari = mean(ARI)) %>%
+#   ungroup() %>% 
+#   ggplot(aes(as.factor(nodes), ari)) +
+#   geom_boxplot()
+
+### repeat for fixed number of nodes, varying the length of time 
+### observed for 
+
+
+```
+
+
+```{r elbo-sparse-time}
+elbo_time_files <- list.files(path = here("Experiments/thesis_output/"), 
+                          pattern = "exp_pois_elbo_time")
+
+elbo_time_sims <- elbo_time_files %>% 
+  map(~read_rds(here("Experiments",
+                     "thesis_output",
+                     .x))) %>% 
+  flatten() %>% 
+  imap(~update_list(., sim = .y)) %>% 
+  map_dfr(`[`, c("elbo", "sim", "nodes", "ARI", "Time")) %>% 
+  mutate(est_elbo = as.vector(elbo)) %>% 
+  group_by(sim) %>% 
+  mutate(ind = row_number() + 5)
+
+elbo_time_sims %>% 
+  mutate(Time = paste0("Time = ", Time)) %>% 
+  mutate(Time = factor(Time, levels = c("Time = 50",
+                                        "Time = 100",
+                                        "Time = 200",
+                                        "Time = 500"))) %>% 
+  ggplot(aes(ind, est_elbo)) +
+  geom_line(aes(group = sim), alpha = 0.2) +
+  facet_wrap(~Time, scales = "free") +
+  labs(x = "Time", y = "ELBO") +
+  theme(axis.text = element_text(size = axis_text_size),
+        axis.title = element_text(size = axis_title),
+        strip.text.x = element_text(size = axis_title))
 
 ```
 
@@ -254,7 +301,36 @@ elbo_sims %>%
 ## Parameter Recovery
 
 
-To be added.
+```{r param_recov}
+param_data <- loss_files %>% 
+     map(~read_rds(here("Experiments",
+                         "thesis_output",
+                         .x))) %>% 
+  flatten() %>% 
+  imap(~update_list(., sim = .y)) %>% 
+  map(`[`, c("sim", "Time", "B_ests", "clust")) %>% 
+  imap(~update_list(., sum_B = apply(.x$B, 3, sum))) %>% 
+  map_dfr(`[`, c("sum_B","sim", "Time", "clust")) %>% 
+  group_by(sim, Time) %>% 
+  mutate(index = row_number() + 5)
+
+param_data %>% 
+  ### add time here!
+  mutate(Time = paste0("Time = ", Time)) %>% 
+  mutate(Time = factor(Time, 
+                       levels = c("Time = 50",
+                                  "Time = 100",
+                                  "Time = 200",
+                                  "Time = 500"))) %>% 
+  # filter(clust == 1) %>% 
+  mutate(diff = abs(sum_B - 3.1)/4) %>% 
+  ggplot(aes(index, diff)) +
+  geom_line(aes(group = sim), alpha = 0.2) +
+  facet_wrap(~Time, scales = "free_x") +
+  labs(x = "Time", y = "Difference")
+
+```
+
 
 ## Empirical Regret 
 
@@ -337,12 +413,13 @@ regret_sims <- bind_rows(sim_50,
 regret_sims %>% 
   filter(ARI == 1) %>%
   group_by(Time, dT) %>% 
-  # summarise(q_95 = quantile(regret, 0.95)) %>% 
+  # summarise(q_95 = quantile(regret, 0.95)) %>%
   mutate(Time = paste0("Time = ", Time)) %>% 
   mutate(Time = factor(Time, 
                        levels = c("Time = 50", "Time = 100", "Time = 200",
                                   "Time = 500"))) %>% 
-  ggplot(aes(dT, regret)) +
+  ggplot(aes(dT, regret, colour = Time)) +
+  # geom_line(alpha = 0.5) +
   geom_smooth(colour = "black", se = FALSE) +
   facet_wrap(~Time, scales = "free_x") +
   # stat_function(fun = function(x) 0.02 * sqrt(x) * log(x*10000)^2,
@@ -352,6 +429,7 @@ regret_sims %>%
         axis.title = element_text(size = axis_title),
         strip.text.x = element_text(size = axis_title))
 
+### maybe without a facet wrap might look better
 
 ```
 
