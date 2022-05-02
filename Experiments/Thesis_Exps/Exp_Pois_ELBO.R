@@ -122,6 +122,7 @@ for(sim in 1:no_sims){
                          n0 = curr_n0,
                          m0 = m0_curr,
                          sparsity = sparsity,
+                       Time = Time,
                        elbo = results_online_init$AveELBO)
       results[[sim]] <- curr_sim
     }
