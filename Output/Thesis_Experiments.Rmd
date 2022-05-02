@@ -89,20 +89,20 @@ and $m0$, the number of nodes used for the initialization.
 ```{r recov-nodes}
 ## recovery as the number of nodes changes
 node_sims <- list.files(path = here("Experiments", "thesis_output"),
-                   pattern = "exp_pois_nodes_fixed_april_26")
+                   pattern = "exp_pois_nodes_fixed_april_30_rho_1")
 
 node_data <- node_sims %>% 
   map_dfr(~readRDS(here("Experiments/thesis_output/", .x)))
   
 
 node_data %>% 
-  filter(init == "Init") %>% 
+  # filter(init == "Init") %>% 
   group_by(nodes, n0, m0) %>% 
   summarise(mean(ARI), sd(ARI))
 
 node_data %>% 
   # group_by(sim, nodes, m0) %>% top_n(1) %>% 
-  filter(init == "Init") %>%
+  # filter(init == "Init") %>%
   # filter(n0 == 10, m0 == nodes/10) %>%
   ggplot(aes(as.factor(nodes), ARI)) +
   geom_boxplot() +
@@ -123,7 +123,7 @@ node_data %>%
 ## scheme
 
 K_sims <- list.files(path = here("Experiments", "thesis_output"),
-                   pattern = "exp_pois_K_april_30")
+                   pattern = "exp_pois_K_april_25_rho_5")
 
 K_data <- K_sims %>% 
   map_dfr(~readRDS(here("Experiments/thesis_output/", .x)))

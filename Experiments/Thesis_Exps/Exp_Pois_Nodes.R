@@ -21,7 +21,7 @@ K <- 2
 #            rep(5000, 3))
 m_vec <- c(100, 200, 500, 1000, 5000)
 
-sparsity <- 0.01 # prop of edges which can have events
+sparsity <- 0.05 # prop of edges which can have events
 
 jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
 jobid <- as.numeric(jobid)
@@ -163,7 +163,7 @@ results <- curr_dt_sims
 ### then save these somewhere
 saveRDS(results, file = here("Experiments",
                              "thesis_output",
-                             paste0("exp_pois_nodes_fixed_april_30_rho_",
-                                    100*sparsity, sim_id, ".RDS")))
+                             paste0("exp_pois_nodes_fixed_may_2_rho_",
+                                    100*sparsity, "_", sim_id, ".RDS")))
 
 ## fixed here meaning fixed n0, m0
