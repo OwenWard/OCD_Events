@@ -15,6 +15,9 @@ knitr::opts_chunk$set(echo = TRUE,
 library(here)
 library(tidyverse)
 source(here("Experiments/utils.R"))
+
+axis_title <- 16
+axis_text_size <- 12
 ```
 
 # Figures for the Introduction
@@ -38,18 +41,24 @@ fig_1_data %>%
 #   geom_boxplot() +
 #   facet_wrap(~Method, scales = "free_x")
 
+method_names <- c("Count", "PZ (window size)", "Point Process")
+
 ### want to stratify by window size in PZ also
 fig_1 <- fig_1_data %>% 
   mutate(new_x = ifelse(is.na(window_size), " ", window_size)) %>% 
   mutate(new_x = factor(new_x, levels = c(1:10, " "))) %>%
-  mutate(Method = factor(Method, levels = c("Count", "PZ", "Point Process"))) %>% 
+  mutate(Method = if_else(Method == "PZ", "PZ (Window Size)", Method)) %>% 
+  mutate(Method = factor(Method,
+                         levels = c("Count", "PZ (Window Size)",
+                                    "Point Process"))) %>% 
   ggplot(aes(new_x, ARI, fill = Method)) +
   geom_boxplot(alpha = 0.5) +
   facet_wrap(~Method, scales = "free_x") +
   labs(x = element_blank()) +
   theme(legend.position = "none",
-        axis.title.y = element_text(size = 18),
-        strip.text.x = element_text(size = 18))
+        axis.title.y = element_text(size = axis_title),
+        strip.text.x = element_text(size = axis_title),
+        axis.text = element_text(size = axis_text_size))
 
 fig_1
   
@@ -77,10 +86,10 @@ $n0$, the proportion of
 time used for the initialization, 
 and $m0$, the number of nodes used for the initialization.
 
-```{r label, options}
+```{r recov-nodes}
 ## recovery as the number of nodes changes
 node_sims <- list.files(path = here("Experiments", "thesis_output"),
-                   pattern = "exp_pois_nodes_fixed")
+                   pattern = "exp_pois_nodes_fixed_april_26")
 
 node_data <- node_sims %>% 
   map_dfr(~readRDS(here("Experiments/thesis_output/", .x)))
@@ -97,7 +106,9 @@ node_data %>%
   # filter(n0 == 10, m0 == nodes/10) %>%
   ggplot(aes(as.factor(nodes), ARI)) +
   geom_boxplot() +
-  labs(x = "Number of Nodes")
+  labs(x = "Number of Nodes") +
+  theme(axis.text = element_text(size = axis_text_size),
+        axis.title = element_text(size = axis_title))
 
 ## this looks ok now I guess
 ```
@@ -106,23 +117,27 @@ node_data %>%
 ### Increasing the number of communities
 
 
-```{r pois_k, options}
+```{r pois_k}
 
 ## now just one setting for all, in terms of the sparse initialization 
 ## scheme
 
 K_sims <- list.files(path = here("Experiments", "thesis_output"),
-                   pattern = "exp_pois_K")
+                   pattern = "exp_pois_K_april_30")
 
 K_data <- K_sims %>% 
   map_dfr(~readRDS(here("Experiments/thesis_output/", .x)))
 
 K_data %>% 
   filter(init == "Init") %>%
+  # filter(nodes == 1000) %>% 
   ggplot(aes(as.factor(K), ARI)) +
   geom_boxplot() +
   ylim(c(0, 1)) +
-  labs(x = "Number of Communities")
+  facet_wrap(~nodes) +
+  labs(x = "Number of Communities") +
+  theme(axis.text = element_text(size = axis_text_size),
+        axis.title = element_text(size = axis_title))
 
 ```
 
@@ -131,7 +146,7 @@ K_data %>%
 
 ```{r online_ari}
 on_sims <- list.files(path = here("Experiments", "thesis_output"),
-                   pattern = "exp_pois_online")
+                   pattern = "exp_pois_online_april_26")
 
 
 online_dat <- on_sims %>% 
@@ -149,6 +164,10 @@ online_dat %>%
   ylim(c(0, 1)) +
   labs(colour = "Number of Nodes", y = "ARI", x = "Time", width = 0.2) +
   # facet_wrap(~nodes) +
+  theme(axis.text = element_text(size = axis_text_size),
+        axis.title = element_text(size = axis_title),
+        legend.text = element_text(size = axis_text_size),
+        legend.title = element_text(size = axis_title))
   NULL
 
 ## need this to be a bit tidier here, but fine
@@ -163,7 +182,7 @@ Variational inference typically looks at the ELBO for this.
 We can also look at some sort of online version of the ELBO here, 
 to evaluate convergence of our online estimation procedure.
 
-```{r monitor_conv}
+```{r monitor_conv_dense}
 
 ### look at a single sim here first
 ### use a loss sim here which stores the ELBO
@@ -187,12 +206,50 @@ elbo_sims <- loss_files %>%
   group_by(sim) %>% mutate(ind = row_number() + 5)
 
 elbo_sims %>% 
+  mutate(Time = paste0("Time = ", Time)) %>% 
   ggplot(aes(ind, est_elbo)) +
   geom_line(aes(group = sim), alpha = 0.2) +
   facet_wrap(~Time, scales = "free") +
-  labs(x = "Time", y = "ELBO")
+  labs(x = "Time", y = "ELBO") +
+  theme(axis.text = element_text(size = axis_text_size),
+        axis.title = element_text(size = axis_title),
+        strip.text.x = element_text(size = axis_title))
 
 ```
+
+```{r monitor-conv-sparse}
+elbo_files <- list.files(path = here("Experiments/thesis_output/"), 
+                          pattern = "elbo")
+
+elbo_sims <- elbo_files %>% 
+  map(~read_rds(here("Experiments",
+                     "thesis_output",
+                     .x))) %>% 
+  flatten() %>% 
+  imap(~update_list(., sim = .y)) %>% 
+  map_dfr(`[`, c("elbo", "sim", "nodes", "ARI")) %>% 
+  mutate(est_elbo = as.vector(elbo)) %>% 
+  group_by(sim) %>% mutate(ind = row_number() + 5)
+
+elbo_sims %>% 
+  ggplot(aes(ind, est_elbo)) +
+  geom_line(aes(group = sim), alpha = 0.2) +
+  facet_wrap(~nodes, scales = "free") +
+  labs(x = "Time", y = "ELBO") +
+  theme(axis.text = element_text(size = axis_text_size),
+        axis.title = element_text(size = axis_title),
+        strip.text.x = element_text(size = axis_title))
+
+## sanity check, this looks the same as the community plot
+elbo_sims %>% 
+  group_by(nodes, sim) %>%
+  summarise(ari = mean(ARI)) %>%
+  ungroup() %>% 
+  ggplot(aes(as.factor(nodes), ari)) +
+  geom_boxplot()
+
+```
+
 
 ## Parameter Recovery
 
@@ -203,13 +260,12 @@ To be added.
 
 ```{r exp_regret}
 regret_files <- list.files(path = here("Experiments/thesis_output/"),
-                          pattern = "exp_pois_regret_")
+                          pattern = "exp_pois_regret_april_30")
 
 # regret_data <- regret_sims %>% 
 #   map_dfr(~readRDS(here("Experiments/thesis_output/", .x)))
 
 ## look at individual sim
-
 
 
 sim_50 <- read_rds(here("Experiments",
@@ -252,14 +308,14 @@ sim_200 <- read_rds(here("Experiments",
 
 sim_500 <- read_rds(here("Experiments",
                              "thesis_output",
-                             regret_files[4])) %>% 
+                             regret_files[4])) %>%
   tibble(
   sim = 1:100,
   ARI = map_dbl(., "clust"),
   regret = map(., "regret"),
-  dT = list(6:500)) %>% 
-  unnest(cols = c(regret, dT)) %>% 
-  select(sim, ARI, regret, dT) %>% 
+  dT = list(6:500)) %>%
+  unnest(cols = c(regret, dT)) %>%
+  select(sim, ARI, regret, dT) %>%
   mutate(Time = 500)
 
 regret_sims <- bind_rows(sim_50,
@@ -267,17 +323,35 @@ regret_sims <- bind_rows(sim_50,
                          sim_200,
                          sim_500)
 
+# regret_sims %>% 
+#   filter(ARI == 1) %>%
+#   ggplot(aes(dT, regret)) +
+#   geom_line(aes(group = sim), alpha = 0.2) +
+#   facet_wrap(~Time, scales = "free") +
+#   stat_function(fun = function(x) 0.025 * sqrt(x) * log(x*10000)^2,
+#                 colour = "red") +
+#   labs(y = "Empirical Regret", x = "Time")
+
+
+### get smoothed regret
 regret_sims %>% 
   filter(ARI == 1) %>%
+  group_by(Time, dT) %>% 
+  # summarise(q_95 = quantile(regret, 0.95)) %>% 
+  mutate(Time = paste0("Time = ", Time)) %>% 
+  mutate(Time = factor(Time, 
+                       levels = c("Time = 50", "Time = 100", "Time = 200",
+                                  "Time = 500"))) %>% 
   ggplot(aes(dT, regret)) +
-  geom_line(aes(group = sim), alpha = 0.2) +
-  facet_wrap(~Time, scales = "free") +
-  stat_function(fun = function(x) 2 * sqrt(x) * log(x*10000)^2,
-                colour = "red") +
-  labs(y = "Empirical Regret", x = "Time")
+  geom_smooth(colour = "black", se = FALSE) +
+  facet_wrap(~Time, scales = "free_x") +
+  # stat_function(fun = function(x) 0.02 * sqrt(x) * log(x*10000)^2,
+  #               colour = "red") +
+  labs(y = "Empirical Regret", x = "Time") +
+  theme(axis.text = element_text(size = axis_text_size),
+        axis.title = element_text(size = axis_title),
+        strip.text.x = element_text(size = axis_title))
 
-## over 90% converge, but not sure about this,
-## am I scaling these correctly?
 
 ```
 
@@ -302,18 +376,33 @@ loss_data <- loss_files %>%
 batch_loss <- 
   loss_data %>% 
   group_by(Time) %>% 
-  summarise(batch = unique(Batch_Loss))
+  summarise(batch = unique(Batch_Loss)) %>% 
+  mutate(Time = paste0("Time = ", Time)) %>% 
+  mutate(Time = factor(Time, levels = c("Time = 50",
+                                  "Time = 100",
+                                  "Time = 200",
+                                  "Time = 500")))
 
 
 loss_data %>% 
   # filter(Sim == 1) %>% 
   filter(Z == "Est_Z") %>% 
   # filter(Time == 200) %>% 
+  mutate(Time = paste0("Time = ", Time)) %>% 
+  mutate(Time = factor(Time, 
+                       levels = c("Time = 50",
+                                  "Time = 100",
+                                  "Time = 200",
+                                  "Time = 500"))) %>% 
   ggplot(aes(dT, Loss)) +
   geom_line(aes(group = interaction(Sim, Z)), alpha = 0.2) +
   geom_hline(data = batch_loss, aes(yintercept =  batch), colour = "red") +
   facet_wrap(~Time, scales = "free_x") +
-  theme(legend.position = "null")
+  labs(x = "Time") +
+  theme(legend.position = "null",
+        axis.text = element_text(size = axis_text_size),
+        axis.title = element_text(size = axis_title),
+        strip.text.x = element_text(size = axis_title))
 
 # single_sim <- loss_data %>% 
 #   reduce(data.frame) %>% 
