@@ -12,7 +12,6 @@ source(here("functions/init_fcn.R"))
 ### init function
 
 
-Time <- 200
 no_sims <- 50
 dT <- 1
 inter_T <- 1
@@ -34,15 +33,12 @@ model <- "Poisson"
 # }
 
 results <- list()
-m <- m_vec[sim_id]
-m0_vec <- c( 100*c(1/10, 1/4, 1/2),
-             200*c(1/10, 1/4, 1/2),
-             500*c(1/10, 1/4, 1/2),
-             1000*c(1/10, 1/4, 1/2))
-m0_curr <- m0_vec[sim_id]
+m <- 100
+
+Time <- Times[sim_id]
 
 
-m0_curr <- floor(m/4)
+m0_curr <- m/4
 n0_vals <- 20
 
 # for(exp_num in seq_along(m_vec)) {
@@ -65,7 +61,7 @@ for(sim in 1:no_sims){
     true_B <- matrix(0, K, K)
   }
   # Pi <- c(0.2, 0.3, 0.3, 0.2)
-  Pi <- c(0.2, 0.3)
+  Pi <- c(0.5, 0.5)
   
   Z <- sample(0:(K-1), size = m, prob = Pi, replace = TRUE)
   # then generate A
@@ -136,7 +132,7 @@ for(sim in 1:no_sims){
 ### then save these somewhere
 saveRDS(results, file = here("Experiments",
                              "thesis_output",
-                             paste0("exp_pois_elbo_april_30_rho_",
+                             paste0("exp_pois_elbo_time_april_30_rho_",
                                     100*sparsity, sim_id, ".RDS")))
 
 ## fixed here meaning fixed n0, m0
