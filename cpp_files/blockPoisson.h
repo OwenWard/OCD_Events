@@ -362,8 +362,6 @@ Rcpp::List batch_estimator_hom_Poisson(
     int m,
     int K,
     double T,
-    arma::mat B_start,
-    arma::mat tau_start,
     int itermax,
     double stop_eps
 ){
