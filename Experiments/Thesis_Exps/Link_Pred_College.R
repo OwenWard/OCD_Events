@@ -16,7 +16,7 @@ jobid <- as.numeric(jobid)
 sim_id <- jobid
 ### Read in raw data and preprocess to our format ####
 # this section uses dplyr
-college <- read.csv(gzfile("Data/CollegeMsg.txt.gz"))
+college <- read.csv(gzfile(here("Data/CollegeMsg.txt.gz"))
 
 dim(college)
 
