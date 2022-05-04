@@ -11,10 +11,11 @@ source(here("functions/init_fcn.R"))
 
 set.seed(100)
 
-
+jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
+jobid <- as.numeric(jobid)
+sim_id <- jobid
 ### Read in raw data and preprocess to our format ####
 # this section uses dplyr
-library(tidyverse)
 college <- read.csv(gzfile("Data/CollegeMsg.txt.gz"))
 
 dim(college)
@@ -89,7 +90,7 @@ tau <- tau/rowSums(tau)
 S <- matrix(0, nrow = m, ncol = K)
 
 # online estimate
-system.time(
+a <- system.time(
   results_pois_train <- estimate_Poisson(full_data = as.matrix(college_train),
                                          A_test,
                                          m,
@@ -100,14 +101,14 @@ system.time(
                                          inter_T = 5) )
 
 # batch estimate for hom-Poisson needed here
-system.time(
+b <- system.time(
   results_pois_batch <- batch_estimator_hom_Poisson(
     alltimes = as.matrix(college_train),
     A_test,
     m,
     K,
     T = train_time,
-    itermax = 400,
+    itermax = 100,
     stop_eps = 0.01)
 )
 
@@ -171,6 +172,9 @@ batch_poss_pred <- pred_test_set_batch %>%
   summarise(RMSE = sqrt(mean(diff_mean^2)),
             RMSE_0 = sqrt(mean(diff_zero^2)))
 
+pois_results <- bind_rows(online_poss_pred, batch_poss_pred) %>% 
+  mutate(time = c(as.numeric(a)[3], as.numeric(b)[3]),
+         model = c("Online Poisson", "Batch Poisson"))
 
 
 ### Hom Hawkes ####
@@ -185,7 +189,7 @@ tau <- tau/rowSums(tau)
 S <- matrix(1/K, nrow = m, ncol = K)
 
 # online estimator
-system.time(
+a <- system.time(
   results_hawkes_sim <- online_estimator_eff_revised(as.matrix(college_train), 
                                                      A_test,
                                                      m,
@@ -199,7 +203,7 @@ system.time(
                                                      inter_T = 1))
 #### here!
 # batch estimator..
-system.time(
+b <- system.time(
   results_hawkes_batch <- batch_estimator(as.matrix(college_train), 
                                           A_test,
                                           m,
@@ -266,6 +270,11 @@ hawkes_batch_pred <- test_set %>%
   summarise(RMSE = sqrt(mean(diff_mean^2)),
             RMSE_0 = sqrt(mean(diff_zer^2)))
 
+hawkes_results <- bind_rows(hawkes_pred,
+                            hawkes_batch_pred) %>% 
+  mutate(time = c(as.numeric(a)[3], as.numeric(b)[3]),
+         model = c("Online Hawkes", "Batch Hawkes"))
+
 
 #### Inhom Poisson ####
 window <- 1/7
@@ -274,7 +283,7 @@ H <- 7
 dT <- 1 # 2 for email, 0.5 for college, 6 for math
 MuA_start <- array(0, c(K, K, H))
 tau_start <- matrix(1/K, m, K)
-system.time(
+a <- system.time(
   non_hom_pois_est <- nonhomoPois_estimator(as.matrix(college_train),
                                             A_test,
                                             m,
@@ -287,7 +296,7 @@ system.time(
                                             MuA_start,
                                             tau_start) )
 
-system.time(
+b <- system.time(
   batch <- batch_nonhomoPois_estimator(as.matrix(college_train),
                                        A_test,
                                        m,
@@ -303,7 +312,7 @@ system.time(
                                        stop_eps = 0.002 ))
 
 # taking the average of these basis functions for link prediction
-dim(non_hom_pois_est$MuA)
+# dim(non_hom_pois_est$MuA)
 
 baseline <- apply(non_hom_pois_est$MuA, c(1, 2), mean)
 est_Z <- apply(non_hom_pois_est$tau, 1, which.max)
@@ -324,7 +333,7 @@ for(i in 1:length(mu)){
 
 pred_test_set$Mean <- mu
 
-in_pois_pres <- pred_test_set %>% 
+in_pois_pred <- pred_test_set %>% 
   mutate(mean_events = Mean*(test_time-train_time)) %>%
   mutate(diff_mean = n -mean_events) %>%
   mutate(diff_zero = n - 0) %>%
@@ -362,12 +371,16 @@ in_pois_batch <- pred_test_set %>%
   summarise(RMSE = sqrt(mean(diff_mean^2)),
             RMSE_0 = sqrt(mean(diff_zero^2)))
 
+in_pois_results <- bind_rows(in_pois_pred,
+                             in_pois_batch) %>% 
+  mutate(time = c(as.numeric(a)[3], as.numeric(b)[3]),
+         model = c("Online InPois", "Batch InPois"))
 
 
 #### Inhom Hawkes ####
 
 B_start <- matrix(0, K, K)
-system.time(
+a <- system.time(
   non_homo_Hawkes_est <- nonhomoHak_estimator_eff_revised(
     as.matrix(college_train),
     A_test,
@@ -384,7 +397,7 @@ system.time(
     B_start = B_start) )
 
 ## batch estimator
-system.time(
+b <- system.time(
   non_homo_Hawkes_batch <- batch_nonhomoHak_estimator(
     as.matrix(college_train),
     A_test,
@@ -404,9 +417,9 @@ system.time(
 
 
 
-non_homo_Hawkes_est$MuA
-non_homo_Hawkes_est$Pi
-non_homo_Hawkes_est$B
+# non_homo_Hawkes_est$MuA
+# non_homo_Hawkes_est$Pi
+# non_homo_Hawkes_est$B
 
 
 baseline <- apply(non_homo_Hawkes_est$MuA, c(1, 2), mean)
@@ -466,3 +479,24 @@ in_hawkes_batch <- test_set %>%
   ungroup() %>%
   summarise(RMSE = sqrt(mean(diff_mean^2)),
             RMSE_0 = sqrt(mean(diff_zer^2)))
+
+
+in_hawkes_results <- bind_rows(in_hawkes_pred,
+          in_hawkes_batch) %>% 
+  mutate(time = c(as.numeric(a)[3],
+                  as.numeric(b)[3]),
+         model = c("Online InHawkes", "Batch InHawkes"))
+
+
+results <- bind_rows(pois_results,
+                     hawkes_results,
+                     in_pois_results,
+                     in_hawkes_results) %>% 
+  mutate(sim = sim_id)
+
+results
+
+saveRDS(results, file = here("Experiments",
+                             "thesis_output",
+                              paste0("College_Link_pred_",
+                              sim_id, ".RDS")))
