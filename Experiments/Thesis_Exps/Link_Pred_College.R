@@ -151,7 +151,7 @@ pred_test_set_batch <- test_set %>%
   left_join(groups, by = "Send")
 
 groups <- tibble(Rec = c(1:m) - 1, Z = est_Z_batch)
-pred_test_set_batch <- pred_test_set %>% 
+pred_test_set_batch <- pred_test_set_batch %>% 
   left_join(groups,by = "Rec")
 
 
@@ -321,9 +321,8 @@ groups <- tibble(Send = c(1:m) - 1, Z = est_Z)
 
 pred_test_set <- test_set %>% left_join(groups, by = "Send")
 
-groups = tibble(Rec = c(1:m) - 1, Z = est_Z)
+groups <- tibble(Rec = c(1:m) - 1, Z = est_Z)
 pred_test_set <- pred_test_set %>% left_join(groups,by = "Rec")
-
 
 
 mu <- rep(0,dim(pred_test_set)[1])
@@ -352,7 +351,7 @@ pred_test_set <- test_set %>%
 
 groups_batch <- tibble(Rec = c(1:m) - 1, Z = est_Z_batch)
 pred_test_set <- pred_test_set %>% 
-  left_join(groups, by = "Rec")
+  left_join(groups_batch, by = "Rec")
 
 
 
