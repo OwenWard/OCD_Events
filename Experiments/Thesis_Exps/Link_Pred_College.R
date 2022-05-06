@@ -109,7 +109,7 @@ b <- bench::mark(
     m,
     K,
     T = train_time,
-    itermax = 50,
+    itermax = 100,
     stop_eps = 0.01),
   iterations = 1
 )
@@ -218,7 +218,7 @@ b <- bench::mark(
                                           B,
                                           Mu,
                                           tau,
-                                          itermax =  50,
+                                          itermax = 100,
                                           stop_eps = 0.01),
   iterations = 1)
 
@@ -315,7 +315,7 @@ b <- bench::mark(
                                        gravity = 0.001,
                                        MuA_start,
                                        tau_start,
-                                       itermax = 50,
+                                       itermax = 100,
                                        stop_eps = 0.002 ),
   iterations = 1)
 
@@ -420,7 +420,7 @@ b <- bench::mark(
     tau_start = tau_start,
     lam = 1,
     B_start = B_start,
-    itermax = 50,
+    itermax = 100,
     stop_eps = 0.01),
   iterations = 1)
 
