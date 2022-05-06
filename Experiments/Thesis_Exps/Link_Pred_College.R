@@ -380,7 +380,7 @@ in_pois_batch <- pred_test_set %>%
 
 in_pois_results <- bind_rows(in_pois_pred,
                              in_pois_batch) %>% 
-  mutate(time = c(a$total_time[3], b$total_time[3]),
+  mutate(time = c(a$total_time, b$total_time),
          memory = c(a$mem_alloc, b$mem_alloc),
          model = c("Online InPois", "Batch InPois"))
 
