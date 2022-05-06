@@ -500,5 +500,5 @@ results
 
 saveRDS(results, file = here("Experiments",
                              "thesis_output",
-                             paste0("College_Link_pred_",
+                             paste0("Email_Link_pred_",
                                     sim_id, ".RDS")))
