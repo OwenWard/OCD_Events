@@ -109,7 +109,7 @@ b <- system.time(
     m_math,
     K,
     T = math_train_time,
-    itermax = 100,
+    itermax = 50,
     stop_eps = 0.01)
 )
 
@@ -217,7 +217,7 @@ b <- system.time(
                                           B,
                                           Mu,
                                           tau,
-                                          itermax =  20,
+                                          itermax =  50,
                                           stop_eps = 0.01))
 
 
@@ -314,7 +314,7 @@ b <- system.time(
                                        gravity = 0.001,
                                        MuA_start,
                                        tau_start,
-                                       itermax = 100,
+                                       itermax = 50,
                                        stop_eps = 0.01 ))
 
 # taking the average of these basis functions for link prediction
@@ -419,7 +419,7 @@ b <- system.time(
     tau_start = tau_start,
     lam = 0.001,
     B_start = B_start,
-    itermax = 20,
+    itermax = 50,
     stop_eps = 0.01))
 
 
