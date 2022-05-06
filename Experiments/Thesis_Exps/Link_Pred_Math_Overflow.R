@@ -91,7 +91,7 @@ tau <- tau/rowSums(tau)
 S <- matrix(0, nrow = m_math, ncol = K)
 
 # online estimate
-a <- system.time(
+a <- bench::mark(
   results_pois_train <- estimate_Poisson(full_data = as.matrix(math_train),
                                          A_test_math,
                                          m_math,
@@ -99,10 +99,11 @@ a <- system.time(
                                          T = math_train_time,
                                          dT,
                                          B,
-                                         inter_T = 5) )
+                                         inter_T = 5),
+  iterations = 1)
 
 # batch estimate for hom-Poisson needed here
-b <- system.time(
+b <- bench::mark(
   results_pois_batch <- batch_estimator_hom_Poisson(
     alltimes = as.matrix(math_train),
     A_test_math,
@@ -110,7 +111,8 @@ b <- system.time(
     K,
     T = math_train_time,
     itermax = 50,
-    stop_eps = 0.01)
+    stop_eps = 0.01),
+  iterations = 1
 )
 
 # simulate events
@@ -175,7 +177,7 @@ batch_poss_pred <- pred_test_set_batch %>%
             RMSE_0 = sqrt(mean(diff_zero^2)))
 
 pois_results <- bind_rows(online_poss_pred, batch_poss_pred) %>% 
-  mutate(time = c(as.numeric(a)[3], as.numeric(b)[3]),
+  mutate(time = c(a$total_time, b$total_time),
          model = c("Online Poisson", "Batch Poisson"))
 
 
@@ -192,7 +194,7 @@ S <- matrix(1/K, nrow = m_math, ncol = K)
 
 # online estimator
 ## this is taking ages
-a <- system.time(
+a <- bench::mark(
   results_hawkes_sim <- online_estimator_eff_revised(as.matrix(math_train), 
                                                      A_test_math,
                                                      m_math,
@@ -203,10 +205,11 @@ a <- system.time(
                                                      B,
                                                      Mu,
                                                      tau,
-                                                     inter_T = 1))
+                                                     inter_T = 1),
+  iterations = 1)
 #### this is crashing...
 # batch estimator..
-b <- system.time(
+b <- bench::mark(
   results_hawkes_batch <- batch_estimator(as.matrix(math_train), 
                                           A_test_math,
                                           m_math,
@@ -218,7 +221,8 @@ b <- system.time(
                                           Mu,
                                           tau,
                                           itermax =  50,
-                                          stop_eps = 0.01))
+                                          stop_eps = 0.01),
+  iterations = 1)
 
 
 
@@ -278,7 +282,7 @@ hawkes_batch_pred <- math_test_set %>%
 
 hawkes_results <- bind_rows(hawkes_pred,
                             hawkes_batch_pred) %>% 
-  mutate(time = c(as.numeric(a)[3], as.numeric(b)[3]),
+  mutate(time = c(a$total_time, b$total_time),
          model = c("Online Hawkes", "Batch Hawkes"))
 
 
@@ -289,7 +293,7 @@ H <- 7
 dT <- 6 # 2 for email, 0.5 for college, 6 for math
 MuA_start <- array(runif(K*K*H), c(K, K, H))
 tau_start <- matrix(1/K, m_math, K)
-a <- system.time(
+a <- bench::mark(
   non_hom_pois_est <- nonhomoPois_estimator(as.matrix(math_train),
                                             A_test_math,
                                             m_math,
@@ -300,9 +304,10 @@ a <- system.time(
                                             dT,
                                             gravity = 0.001,
                                             MuA_start,
-                                            tau_start) )
+                                            tau_start),
+  iterations = 1)
 
-b <- system.time(
+b <- bench::mark(
   batch <- batch_nonhomoPois_estimator(as.matrix(math_train),
                                        A_test_math,
                                        m_math,
@@ -315,7 +320,8 @@ b <- system.time(
                                        MuA_start,
                                        tau_start,
                                        itermax = 50,
-                                       stop_eps = 0.01 ))
+                                       stop_eps = 0.01 ),
+  iterations = 1)
 
 # taking the average of these basis functions for link prediction
 # dim(non_hom_pois_est$MuA)
@@ -380,14 +386,14 @@ in_pois_batch <- pred_test_set %>%
 
 in_pois_results <- bind_rows(in_pois_pred,
                              in_pois_batch) %>% 
-  mutate(time = c(as.numeric(a)[3], as.numeric(b)[3]),
+  mutate(time = c(a$total_time, b$total_time),
          model = c("Online InPois", "Batch InPois"))
 
 
 #### Inhom Hawkes ####
 
 B_start <- matrix(runif(K * K), K, K)
-a <- system.time(
+a <- bench::mark(
   non_homo_Hawkes_est <- nonhomoHak_estimator_eff_revised(
     as.matrix(math_train),
     A_test_math,
@@ -401,10 +407,10 @@ a <- system.time(
     gravity = 0.001,
     MuA_start = MuA_start,
     tau_start = tau_start,
-    B_start = B_start) )
+    B_start = B_start), iterations = 1 )
 
 ## batch estimator
-b <- system.time(
+b <- bench::mark(
   non_homo_Hawkes_batch <- batch_nonhomoHak_estimator(
     as.matrix(math_train),
     A_test_math,
@@ -420,7 +426,7 @@ b <- system.time(
     lam = 0.001,
     B_start = B_start,
     itermax = 50,
-    stop_eps = 0.01))
+    stop_eps = 0.01), iterations = 1)
 
 
 
@@ -491,8 +497,8 @@ in_hawkes_batch <- math_test_set %>%
 
 in_hawkes_results <- bind_rows(in_hawkes_pred,
                                in_hawkes_batch) %>% 
-  mutate(time = c(as.numeric(a)[3],
-                  as.numeric(b)[3]),
+  mutate(time = c(a$total_time,
+                  b$total_time),
          model = c("Online InHawkes", "Batch InHawkes"))
 
 
