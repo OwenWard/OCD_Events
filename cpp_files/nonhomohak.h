@@ -1701,13 +1701,14 @@ Rcpp::List update_nonhomo_sparse_trunc(
     	}
     }
 
-    double lam_new = lam + eta * grad_lam;
-    if (lam_new > 5*lam) {
-        lam_new = 5 * lam;
-    } else if (lam_new <= 0.0) {
-        lam_new = lam/2.0;
-    }
-
+    // double lam_new = lam + eta * grad_lam;
+    // if (lam_new > 1.5*lam) {
+    //     lam_new = 1.5 * lam;
+    // } else if (lam_new <= 0.0) {
+    //     lam_new = lam/2.0;
+    // }
+    double lam_new = 0.25;
+    
     arma::mat tau_new(m,K);
     tau_new.fill(0.0);
 
@@ -1790,14 +1791,14 @@ Rcpp::List batch_nonhomoHak_estimator(
     double eta = 1.0/nall * (K * K);
 
 	for (int iter = 0; iter < itermax; iter++) {
-        eta = 1.0/nall * (K * K) / sqrt(iter / H + 1.0);
+        eta = 1.0/nall * (K * K * 100) / sqrt(iter / H + 1.0);
         S.fill(0.0);
         paralist = update_nonhomo_sparse_trunc(tau, MuA, B, Pi, S, datamap, t_start, Tn, m, K, A, window, lam, eta, gravity, 5);
         // paralist = update_nonhomo_sparse(tau, MuA, B, Pi, S, datamap, t_start, Tn, m, K, A, window, lam, eta, gravity);
-		arma::mat tau_new = paralist["tau"], B_new = paralist["B"], S_new = paralist["S"];
-		arma::cube MuA_new = paralist["MuA"];
-		arma::rowvec Pi_new = paralist["Pi"];
-		double lam_new = paralist["lam"];
+		    arma::mat tau_new = paralist["tau"], B_new = paralist["B"], S_new = paralist["S"];
+		    arma::cube MuA_new = paralist["MuA"];
+		    arma::rowvec Pi_new = paralist["Pi"];
+		    double lam_new = paralist["lam"];
 
         gap = max(abs(MuA - MuA_new).max(), abs(B - B_new).max());
         tau = tau_new; 
