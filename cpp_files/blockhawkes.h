@@ -483,7 +483,7 @@ Rcpp::List update_lam_trunc(
     // } else if (lam_new <= 0.0) {
     //     lam_new = lam/2.0;
     // }
-    double lam_new = 0.25;
+    double lam_new = 0.15;
 
     arma::mat tau_new(m,K);
     
