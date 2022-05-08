@@ -477,13 +477,13 @@ Rcpp::List update_lam_trunc(
     }
     // Rprintf("Grad lambda \n");
     // cout << grad_lam << endl;
-    double lam_new = lam + eta * grad_lam;
-    if (lam_new > 1.5*lam) {
-        lam_new = 1.5 * lam;
-    } else if (lam_new <= 0.0) {
-        lam_new = lam/2.0;
-    }
-    // double lam_new = 0.25;
+    // double lam_new = lam + eta * grad_lam;
+    // if (lam_new > 1.5*lam) {
+    //     lam_new = 1.5 * lam;
+    // } else if (lam_new <= 0.0) {
+    //     lam_new = lam/2.0;
+    // }
+    double lam_new = 0.25;
 
     arma::mat tau_new(m,K);
     
