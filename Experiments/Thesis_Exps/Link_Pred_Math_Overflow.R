@@ -5,7 +5,7 @@
 .libPaths("/moto/stats/users/ogw2103/rpackages")
 
 library(here)
-library(ppsbm)
+##library(ppsbm)
 source(here("Experiments/", "utils.R"))
 source(here("functions/init_fcn.R"))
 
