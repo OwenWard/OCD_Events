@@ -26,7 +26,7 @@ results <- list()
 
 for(sim in 1:no_sims) {
   cat("Sim:", sim, "\n")
-  m <- 100
+  m <- 200
   Time <- 200
   m0_curr <- m/4
   curr_n0 <- 20
