@@ -19,7 +19,7 @@ inter_T <- 1
 K <- 2
 # m_vec <- c(rep(100, 3), rep(200, 3), rep(500, 3), rep(1000, 3),
 #            rep(5000, 3))
-m_vec <- c(100, 200, 500, 1000, 5000)
+m_vec <- c(rep(100, 3), rep(200, 3), rep(500, 3), rep(1000, 3), rep(5000, 3))
 
 sparsity <- 0.05 # prop of edges which can have events
 
