@@ -60,7 +60,10 @@ for(sim in 1:no_sims){
   }
   alltimes <- sampleBlockHak(Time, A, Z, Mu = true_Mu, B = true_B, lam = 1)
   
-  
+  ## random initialization for now
+  Mu <- matrix(runif(K * K), K, K)
+  B <- matrix(runif(K * K), K, K)
+  tau <- matrix(1/K, nrow = m, ncol = K)
   results_online <- online_estimator_eff_revised(alltimes, 
                                                  A,
                                                  m,
