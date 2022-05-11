@@ -48,10 +48,10 @@ cat(model, "\n")
 for(sim in 1:no_sims){
   cat("Sim:", sim, "======\n")
   ## baseline rate of the process
-  true_Mu <- matrix(0.05, 
+  true_Mu <- matrix(0.25, 
                     nrow = K, ncol = K, byrow = T)
-  diag(true_Mu) <- 1.5 * c(1:K)
-  true_B <- matrix(0.05, nrow = K, ncol = K, byrow = TRUE)
+  diag(true_Mu) <- c(1:K)
+  true_B <- matrix(0.0, nrow = K, ncol = K, byrow = TRUE)
   diag(true_B) <- 0.5
   # Pi <- c(0.2, 0.3, 0.3, 0.2)
   Pi <- rep(1/K, K)
