@@ -22,23 +22,23 @@ no_sims <- 50
 curr_dT <- dT_vec[sim_id]
 
 
-results <- list()
+results <- tibble()
 
 for(sim in 1:no_sims) {
   cat("Sim:", sim, "\n")
   m <- 200
   Time <- 200
-  m0_curr <- m/4
+  m0_curr <- m/2
   curr_n0 <- 10
   inter_T <- 1
-  K <- 2
+  K <- 3
   ## baseline rate of the process
-  true_Mu <- matrix(c(2, 0.25, 0.05, 1.5), 
+  true_Mu <- matrix(c(2, 0.05, 0.15, 0.05, 1.25, 0.05, 0.15, 0.05, 0.75), 
                     nrow = K, ncol = K, byrow = T)
   
   true_B <- matrix(0, nrow = K, ncol = K, byrow = TRUE)
   # Pi <- c(0.2, 0.3, 0.3, 0.2)
-  Pi <- c(0.2, 0.3)
+  Pi <- c(1/K, 1/K, 1/K)
   
   Z <- sample(0:(K-1), size = m, prob = Pi, replace = TRUE)
   # then generate A
@@ -79,13 +79,14 @@ for(sim in 1:no_sims) {
   
 
   
-  sim_pars <- list(
-    B = Mu_est, 
+  sim_pars <- tibble(
+    # B = Mu_est, 
+    sim = sim,
     clust = clust_est_init,
-    tau = results_online_init$tau,
+    # tau = results_online_init$tau,
     dT = curr_dT
   )
-  results[[sim]] <- sim_pars
+  results <- results %>%  bind_rows(sim_pars)
 }
 
 # all_results <- list(results, init)
