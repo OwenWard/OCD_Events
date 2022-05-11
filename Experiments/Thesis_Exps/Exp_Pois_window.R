@@ -29,7 +29,7 @@ for(sim in 1:no_sims) {
   m <- 200
   Time <- 200
   m0_curr <- m/4
-  curr_n0 <- 20
+  curr_n0 <- 10
   inter_T <- 1
   K <- 2
   ## baseline rate of the process
