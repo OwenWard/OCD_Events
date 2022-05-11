@@ -51,11 +51,8 @@ for(sim in 1:no_sims){
   true_Mu <- matrix(0.05, 
                     nrow = K, ncol = K, byrow = T)
   diag(true_Mu) <- 1.5 * c(1:K)
-  true_B <- matrix(0, nrow = K, ncol = K, byrow = TRUE)
+  true_B <- matrix(0.05, nrow = K, ncol = K, byrow = TRUE)
   diag(true_B) <- 0.5
-  if(model == "Poisson") {
-    true_B <- matrix(0, K, K)
-  }
   # Pi <- c(0.2, 0.3, 0.3, 0.2)
   Pi <- rep(1/K, K)
   
