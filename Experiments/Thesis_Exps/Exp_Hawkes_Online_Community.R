@@ -17,7 +17,7 @@ no_sims <- 50
 dT <- 1
 inter_T <- 20
 K <- 2
-m_vec <- c(rep(200, 3), rep(500, 3), rep(1000, 3))
+m_vec <- c(200, 500, 1000)
 
 sparsity <- 0.1 # prop of edges which can have events
 
@@ -29,13 +29,7 @@ model <- "Hawkes"
 
 results <- list()
 m <- m_vec[sim_id]
-m0_vec <- c(200 * c(1/10, 1/4, 1/2),
-            500 * c(1/10, 1/4, 1/2),
-            1000 * c(1/10, 1/4, 1/2))
 
-m0_curr <- m0_vec[sim_id]
-
-n0_vals <- 20
 
 # for(exp_num in seq_along(m_vec)) {
 #   dT <- 1
