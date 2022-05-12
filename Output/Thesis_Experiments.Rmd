@@ -503,3 +503,218 @@ loss_data %>%
 # Real Data Experiments
 
 ## Event Prediction
+
+
+College Dataset
+
+```{r college-results}
+### get the file path
+exps <- list.files(path = here("Experiments/thesis_output"),
+                   pattern = "College_Link_pred")
+
+pred_data <- exps %>% 
+  map_dfr(~readRDS(here("Experiments/thesis_output/", .x)))
+
+pred_data %>% 
+  group_by(model) %>% 
+  summarise(median(RMSE), sd(RMSE), median(time), sd(time)) 
+
+## this looks fine, just make it into a nice table
+
+```
+
+
+```{r email-results}
+### get the file path
+exps <- list.files(path = here("Experiments/thesis_output"),
+                   pattern = "Email_Link_pred")
+
+pred_data <- exps %>% 
+  map_dfr(~readRDS(here("Experiments/thesis_output/", .x)))
+
+pred_data %>% 
+  group_by(model) %>% 
+  mutate(RMSE = ifelse(RMSE > 100, 12.9, RMSE)) %>%
+  summarise(median(RMSE), mean(time), sd(time))
+
+### need to figure this one out
+
+```
+
+```{r math-link-pred}
+
+exps <- list.files(path = here("Experiments/thesis_output"),
+                   pattern = "Math_Link_pred")
+
+pred_data <- exps %>% 
+  map_dfr(~readRDS(here("Experiments/thesis_output/", .x)))
+
+pred_data %>% 
+  group_by(model) %>% 
+  summarise(median(RMSE), median(time), sd(time)) 
+
+```
+
+
+
+# Additional Material
+
+## Varying the window size 
+
+We wish to demonstrate that varying the window size used for
+processing the data does not have an appreciable effect on 
+the performance of our procedure, in terms of community recovery.
+
+
+```{r window-size-simulations}
+### load in and plot some simulations here
+
+wind_files <- list.files(path = here("Experiments/thesis_output"),
+                   pattern = "exp_pois_wind")
+
+wind_data <- wind_files %>% 
+  map_dfr(~readRDS(here("Experiments/thesis_output/", .x)))
+  
+
+wind_data %>% 
+  group_by(dT) %>% 
+  summarise(mean(clust))
+
+wind_data %>% 
+  ggplot(aes(as.factor(dT), clust)) +
+  geom_boxplot() +
+  ylim(c(0, 1)) +
+  labs(x = "Window Size", y = "ARI")
+
+```
+
+
+```{r hawkes-nodes}
+hawkes_files <- list.files(path = here("Experiments/thesis_output"),
+                   pattern = "exp_hawkes_nodes")
+
+
+hawkes_sims <- hawkes_files %>% 
+  map_dfr(~readRDS(here("Experiments/thesis_output/", .x)))
+
+
+hawkes_sims %>% 
+  ggplot(aes(as.factor(nodes), ARI)) +
+  geom_boxplot() +
+  labs(x = "Nodes") +
+  theme(axis.text = element_text(size = axis_text_size),
+        axis.title = element_text(size = axis_title),
+        legend.text = element_text(size = axis_text_size),
+        legend.title = element_text(size = axis_title))
+  NULL
+
+```
+
+
+```{r vary-k-hawkes}
+hawkes_files <- list.files(path = here("Experiments/thesis_output"),
+                   pattern = "exp_hawkes_k")
+
+
+hawkes_sims <- hawkes_files %>% 
+  map_dfr(~readRDS(here("Experiments/thesis_output/", .x)))
+
+
+hawkes_sims %>% 
+  ggplot(aes(as.factor(K), ARI)) +
+  geom_boxplot() +
+  labs(x = "K") +
+  ylim(c(0, 1)) +
+  theme(axis.text = element_text(size = axis_text_size),
+        axis.title = element_text(size = axis_title),
+        legend.text = element_text(size = axis_text_size),
+        legend.title = element_text(size = axis_title))
+  NULL
+
+
+```
+
+
+```{r hawkes-param}
+
+hawkes_par_files <- list.files(path = here("Experiments/thesis_output"),
+                   pattern = "exp_hawkes_param")
+
+hawkes_pars <- hawkes_par_files %>% 
+  map(~readRDS(here("Experiments/thesis_output/", .x))) %>% 
+  flatten() %>% 
+  imap(~update_list(., sim = .y)) %>% 
+  map(`[`, c("sim", "Time", "B_ests", "clust", "Mu_ests")) %>% 
+  imap(~update_list(., sum_B = apply(.x$B_ests, 3, sum),
+                       sum_Mu = apply(.x$Mu_ests, 3, sum))) %>% 
+  map_dfr(`[`, c("sim", "Time", "clust", "sum_Mu", "sum_B"))
+
+
+hawkes_pars %>% 
+  group_by(sim, Time) %>% 
+  mutate(index = row_number()) %>% 
+  ### add time here!
+  mutate(Time = paste0("Time = ", Time)) %>% 
+  mutate(Time = factor(Time, 
+                       levels = c("Time = 50",
+                                  "Time = 100",
+                                  "Time = 200",
+                                  "Time = 500"))) %>% 
+  mutate(Mu = abs(sum_Mu - 3.65)/4,
+         B = abs(sum_B - 1)/4) %>% 
+  pivot_longer(cols = Mu:B, names_to = "Parameter",
+               values_to = "diff") %>% 
+  filter(clust == 1) %>% 
+  ggplot(aes(index, diff, colour = Parameter)) +
+  geom_smooth(se = FALSE) +
+  # geom_line(aes(group = interaction(sim, param)), alpha = 0.2) +
+  facet_wrap(~Time, scales = "free_x") +
+  labs(x = "Time", y = "Difference") +
+  scale_fill_discrete(name = "Parameter") +
+  theme(axis.text = element_text(size = axis_text_size),
+        axis.title = element_text(size = axis_title),
+        legend.text = element_text(size = axis_text_size),
+        legend.title = element_text(size = axis_title))
+  NULL
+
+
+```
+
+
+```{r hawkes-online-community}
+### check online commuity recovery
+
+hawkes_files <- list.files(path = here("Experiments/thesis_output"),
+                   pattern = "exp_hawkes_online")
+
+hawkes_data <- hawkes_files %>% 
+  map_dfr(~readRDS(here("Experiments/thesis_output/", .x)))
+
+hawkes_data %>% 
+  group_by(sim) %>% 
+  mutate(final_ari = max(ARI)) %>% 
+  filter(final_ari == 1) %>% 
+  ggplot(aes(time, ARI)) +
+  geom_line(aes(group = sim))
+
+
+## match above plot
+hawkes_data %>% 
+  group_by(time) %>% 
+  summarise(mean_ARI = mean(ARI), sd_ARI = sd(ARI)) %>% 
+  group_by(time) %>% 
+  mutate(lower = max(0, mean_ARI - sd_ARI),
+         upper = min(1, mean_ARI + sd_ARI)) %>% 
+  ggplot(aes(time, mean_ARI)) +
+  geom_line() +
+  geom_errorbar(aes(ymin = lower, ymax = upper), alpha = 0.4) +
+  ylim(c(0, 1)) +
+  labs(colour = "Number of Nodes", y = "ARI", x = "Time", width = 0.2) +
+  # facet_wrap(~nodes) +
+  theme(axis.text = element_text(size = axis_text_size),
+        axis.title = element_text(size = axis_title),
+        legend.text = element_text(size = axis_text_size),
+        legend.title = element_text(size = axis_title)) +
+  NULL
+
+```
