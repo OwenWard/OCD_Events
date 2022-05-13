@@ -29,7 +29,7 @@ sim_id <- jobid
 model <- "Hawkes"
 
 results <- list()
-m <- m_vec[sim_id]
+##m <- m_vec[sim_id]
 
 
 # for(exp_num in seq_along(m_vec)) {
