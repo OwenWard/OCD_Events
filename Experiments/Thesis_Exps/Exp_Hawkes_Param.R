@@ -17,7 +17,8 @@ no_sims <- 50
 dT <- 1
 inter_T <- 20
 K <- 2
-m_vec <- c(100, 200, 500, 1000)
+Time_vec <- c(50, 100, 200, 500)
+m <- 200
 
 sparsity <- 0.1 # prop of edges which can have events
 
