@@ -30,7 +30,7 @@ model <- "Hawkes"
 
 results <- list()
 ##m <- m_vec[sim_id]
-
+Time <- Time_vec[sim_id]
 
 # for(exp_num in seq_along(m_vec)) {
 #   dT <- 1
