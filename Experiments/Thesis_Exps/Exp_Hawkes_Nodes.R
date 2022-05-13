@@ -53,7 +53,7 @@ cat(model, "\n")
 for(sim in 1:no_sims){
   cat("Sim:", sim, "======\n")
   ## baseline rate of the process
-  true_Mu <- matrix(c(2, 0.25, 0.05, 1.5), 
+  true_Mu <- matrix(c(1, 0.25, 0.25, 2), 
                     nrow = K, ncol = K, byrow = T)
   true_B <- matrix(c(0.5, 0, 0, .5), nrow = K, ncol = K, byrow = TRUE)
   # diag(true_B) <- 0.5
@@ -116,7 +116,5 @@ results <- curr_dt_sims
 ### then save these somewhere
 saveRDS(results, file = here("Experiments",
                              "thesis_output",
-                             paste0("exp_hawkes_nodes_rho_",
+                             paste0("exp_hawkes_new_nodes_rho_",
                                     100*sparsity, "_", sim_id, ".RDS")))
-
-## fixed here meaning fixed n0, m0
