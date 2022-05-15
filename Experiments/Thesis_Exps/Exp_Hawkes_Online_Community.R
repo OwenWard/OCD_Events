@@ -40,9 +40,9 @@ cat(model, "\n")
 for(sim in 1:no_sims){
   cat("Sim:", sim, "======\n")
   ## baseline rate of the process
-  true_Mu <- matrix(c(2, 0.05, 0.1, 1.5), 
+  true_Mu <- matrix(0.25, 
                     nrow = K, ncol = K, byrow = T)
-  
+  diag(true_Mu) <- 1:K
   true_B <- matrix(0, nrow = K, ncol = K, byrow = TRUE)
   diag(true_B) <- 0.5
   # Pi <- c(0.2, 0.3, 0.3, 0.2)
@@ -105,5 +105,5 @@ results <- curr_dt_sims
 ### then save these somewhere
 saveRDS(results, file = here("Experiments",
                              "thesis_output",
-                             paste0("exp_hawkes_online_rho_",
+                             paste0("exp_hawkes_new_online_rho_",
                                     100*sparsity, sim_id, ".RDS")))
