@@ -1786,7 +1786,7 @@ Rcpp::List online_estimator_eff_revised(
                           Rcpp::Named("early_tau")= inter_tau,
                           Rcpp::Named("inter_B") = inter_B,
                           Rcpp::Named("inter_mu") = inter_mu,
-                          Rcpp::Named("elbo") = elbo_vec
+                          Rcpp::Named("elbo") = elbo_vec,
                           Rcpp::Named("lambda_vec") = lam_vec);
 }
 
