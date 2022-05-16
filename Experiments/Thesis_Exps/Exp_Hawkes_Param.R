@@ -89,6 +89,7 @@ for(sim in 1:no_sims){
     B_ests = results_online$inter_B,
     Mu_ests = results_online$inter_mu,
     clust = ari_final,
+    lambda = results_online$lambda_vec,
     # regret = regret,
     # card_A = card_A,
     # batch_ave_loss = batch_average,
