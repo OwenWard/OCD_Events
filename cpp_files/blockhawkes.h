@@ -1710,6 +1710,7 @@ Rcpp::List online_estimator_eff_revised(
     arma::cube inter_tau(m,K,slices+1);
     arma::cube inter_B(K,K,N);
     arma::cube inter_mu(K,K,N);
+    arma::vec lam_vec(N);
 
     for (int n = 0; n < N; n++ ){
         // R = min(5.0 / lam, 10.0);
@@ -1755,6 +1756,7 @@ Rcpp::List online_estimator_eff_revised(
         //Rprintf("iter: %d; number: %d \n", n, n_t); 
         inter_mu.slice(n) = Mu;
         inter_B.slice(n) = B;
+        lam_vec(n) = lam;
         //B.print();
         //Mu.print();
         //Rprintf("lam: %2.3f", lam);
@@ -1784,7 +1786,8 @@ Rcpp::List online_estimator_eff_revised(
                           Rcpp::Named("early_tau")= inter_tau,
                           Rcpp::Named("inter_B") = inter_B,
                           Rcpp::Named("inter_mu") = inter_mu,
-                          Rcpp::Named("elbo") = elbo_vec);
+                          Rcpp::Named("elbo") = elbo_vec
+                          Rcpp::Named("lambda_vec") = lam_vec);
 }
 
 
