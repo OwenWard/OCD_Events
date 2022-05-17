@@ -109,11 +109,17 @@ for(sim in 1:nsims) {
   z_est <- apply(results_online_init$tau, 1, which.max)
   clust_est <- aricode::ARI(z_true, z_est)
   
+  ### then empirical regret also
+  emp_loss <- -out$EmpLLH/card_A
+  
+  emp_regret <- cumsum(emp_loss) - cumsum(best_loss)
+  
   sim_pars <- list(
     B = B,
     est_elbo = results_online_init$AveELBO,
     clust = clust_est,
     regret = regret,
+    emp_regret = emp_regret,
     card_A = card_A
   )
   results[[sim]] <- sim_pars
@@ -121,7 +127,7 @@ for(sim in 1:nsims) {
 
 saveRDS(results, file = here("Experiments",
                              "thesis_output",
-                             paste0("exp_pois_regret_may_17",
+                             paste0("exp_pois_regret_may_17_",
                                     Time, ".RDS")))
 
 
