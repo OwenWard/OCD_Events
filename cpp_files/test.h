@@ -192,13 +192,14 @@ Rcpp::List compute_regret(
   // int ind = 0;
   int nall = full_data.n_rows;
   arma::vec curr_elbo, ave_elbo, ave_ll, curr_ll, true_ll, av_true_ll, pred_ll;
-  arma::vec event_loss_trueZ, event_loss_estZ, ave_pred_ll;
+  arma::vec event_loss_trueZ, event_loss_estZ, ave_pred_ll, emp_ll;
   event_loss_trueZ.zeros(N);
   event_loss_estZ.zeros(N);
   curr_elbo.zeros(N);
   curr_ll.zeros(N);
   ave_ll.zeros(N);
   true_ll.zeros(N);
+  emp_ll.zeros(N);
   av_true_ll.zeros(N);
   ave_elbo.zeros(N);
   pred_ll.zeros(N-1);
@@ -252,6 +253,11 @@ Rcpp::List compute_regret(
     curr_ll(n) = computeLL(sub_data, tau, curr_B, curr_Pi, A, m, K, t_length);
     ave_ll(n) = curr_ll(n)/cum_events;
     true_ll(n) = computeLL(sub_data, tau, true_B, curr_Pi, A, m, K, t_length);
+    /// also compute "empirical regret" here,
+    // using estimated z and theta
+    emp_ll(n) = computeLL(sub_data, curr_tau, curr_B, curr_Pi, A, m, K, t_length);
+    
+    
     // was sub_data
     av_true_ll(n) = true_ll(n)/cum_events;
     //
@@ -267,6 +273,7 @@ Rcpp::List compute_regret(
                             Named("Ave_est_LLH") = ave_ll,
                             Named("TrueLLH") = true_ll,
                             Named("Ave_true_LLH") = av_true_ll,
+                            Named("EmpLLH") = emp_ll,
                             Named("Pred_LL") = pred_ll,
                             Named("Ave_Pred_LL") = ave_pred_ll,
                             Named("Online_Loss_True") = event_loss_trueZ,
