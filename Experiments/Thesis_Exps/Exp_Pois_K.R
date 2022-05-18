@@ -34,11 +34,11 @@ model <- "Poisson"
 
 results <- list()
 m <- m_vec[sim_id]
-m0_vec <- c(rep(100, 4), rep(250, 4), rep(500, 4)) ##1/2 of data
+m0_vec <- c(rep(50, 4), rep(125, 4), rep(250, 4)) ##1/2 of data
 m0_curr <- m0_vec[sim_id]
 K <- K_vec[sim_id]
 
-n0_vals <- 50
+n0_vals <- 20
 
 # for(exp_num in seq_along(m_vec)) {
 #   dT <- 1
@@ -163,6 +163,6 @@ results <- curr_dt_sims
 ### then save these somewhere
 saveRDS(results, file = here("Experiments",
                              "thesis_output",
-                             paste0("exp_pois_K_april_30_rho_",
+                             paste0("exp_pois_K_may_18_rho_",
                                     100*sparsity, "_K_",K, "_sim_",
                                     sim_id, ".RDS")))
