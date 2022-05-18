@@ -39,7 +39,7 @@ for(i in 1:m){
 
 system.time(alltimes <- sampleBlockHak_nonhomo(Time,
                                                A, Z, MuA, B, window,
-                                               lam = 1))
+                                               lam = 0))
 
 
 results <- tibble()
@@ -68,7 +68,7 @@ for(sim in 1:no_sims){
   ### then compute the batch estimator
   t2 <- bench::mark(results.batch <- 
                       batch_nonhomoPois_estimator(alltimes, A,
-                                                  m, K, H, window, T, dT,
+                                                  m, K, H, window, Time, dT,
                                                   gravity = 0.001, 
                                                   init_MuA,
                                                   init_tau,
