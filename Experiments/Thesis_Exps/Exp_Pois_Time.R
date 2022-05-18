@@ -29,7 +29,7 @@ for(i in 1:m){
 
 system.time(alltimes <- sampleBlockHak(Time, A, Z, Mu, B, lam = 1))
 
-results <- tibble()
+result_sims <- tibble()
 
 for(sim in 1:no_sims){
   cat("Sim:", sim, "-----\n")
@@ -69,7 +69,7 @@ for(sim in 1:no_sims){
     ll_batch = ll_batch,
     perc_diff = diff
   )
-  results <- results %>% 
+  result_sims <- result_sims %>% 
     bind_rows(curr_sim)
 }
 
