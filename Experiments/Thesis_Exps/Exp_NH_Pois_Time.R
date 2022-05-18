@@ -94,8 +94,8 @@ for(sim in 1:no_sims){
   
   curr_sim <- tibble(
     sim = sim,
-    t_on = t1$total_time,
-    t_batch = t2$total_time,
+    t_on = as.numeric(t1$total_time),
+    t_batch = as.numeric(t2$total_time),
     ll_online = ll_online,
     ll_batch = ll_batch,
     perc_diff = diff
