@@ -76,6 +76,6 @@ for(sim in 1:no_sims){
 
 
 ## then save results to something down here
-saveRDS(result_sim, file = here("Experiments",
+saveRDS(result_sims, file = here("Experiments",
                              "thesis_output",
                              paste0("exp_time_pois", ".RDS")))
