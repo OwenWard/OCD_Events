@@ -46,11 +46,12 @@ Rcpp::List estimate_Poisson_init(
   arma::cube inter_tau(m,K,slices);
   arma::cube inter_B(K,K,N);
   arma::cube inter_S(m, K, N);
-  arma::vec curr_elbo, ave_elbo, ave_ll, curr_ll;
+  arma::vec curr_elbo, ave_elbo, ave_ll, curr_ll, full_elbo;
   curr_elbo.zeros(N);
   curr_ll.zeros(N);
   ave_ll.zeros(N);
   ave_elbo.zeros(N);
+  full_elbo.zeros(N);
   int cum_events = 0;
   for(int n = 0; n < N; ++n){
     // cout<<n<<endl;
@@ -91,6 +92,7 @@ Rcpp::List estimate_Poisson_init(
       ave_elbo(n) = curr_elbo(n)/cum_events;
       curr_ll(n) = computeLL(sub_data, tau, B, Pi, A, m, K, t_curr);
       ave_ll(n) = curr_ll(n)/cum_events;
+      full_elbo(n) = computeELBO(full_data, tau, B, Pi, A, m, K, T);
     }
     if(n % inter_T == 0 ){
       inter_tau.slice(ind) = tau;
@@ -108,7 +110,8 @@ Rcpp::List estimate_Poisson_init(
                             Named("wind_elbo") = curr_elbo,
                             Named("AveELBO")=ave_elbo,
                             Named("wind_ll") = curr_ll,
-                            Named("logL") = ave_ll);
+                            Named("logL") = ave_ll,
+                            Named("full_ELBO") = full_elbo);
 }
 
 
