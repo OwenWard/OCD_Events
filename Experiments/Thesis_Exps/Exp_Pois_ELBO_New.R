@@ -122,7 +122,8 @@ for(sim in 1:no_sims){
                        m0 = m0_curr,
                        sparsity = sparsity,
                        Time = Time,
-                       elbo = results_online_init$full_ELBO)
+                       elbo = results_online_init$full_ELBO,
+                       wind_elbo = results_online_init$wind_elbo)
       results[[sim]] <- curr_sim
     }
   }
