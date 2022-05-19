@@ -18,8 +18,8 @@ inter_T <- 1
 K <- 2
 # m_vec <- c(rep(100, 3), rep(200, 3), rep(500, 3), rep(1000, 3),
 #            rep(5000, 3))
-Times <- c(50, 100, 200, 500, 1000)
-
+Time <- 200
+m_vec <- c(50, 100, 200, 500, 1000)
 
 sparsity <- 0.1 # prop of edges which can have events
 
@@ -33,9 +33,8 @@ model <- "Poisson"
 # }
 
 results <- list()
-m <- 100
 
-Time <- Times[sim_id]
+m <- m_vec[sim_id]
 
 
 m0_curr <- m/4
@@ -133,7 +132,7 @@ for(sim in 1:no_sims){
 ### then save these somewhere
 saveRDS(results, file = here("Experiments",
                              "thesis_output",
-                             paste0("exp_pois_elbo_time_may_19_rho_",
+                             paste0("exp_pois_elbo_nodes_may_19_rho_",
                                     100*sparsity, sim_id, ".RDS")))
 
 ## fixed here meaning fixed n0, m0
