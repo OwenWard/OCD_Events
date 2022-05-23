@@ -38,7 +38,7 @@ for(sim in 1:no_sims) {
   
   true_B <- matrix(0, nrow = K, ncol = K, byrow = TRUE)
   # Pi <- c(0.2, 0.3, 0.3, 0.2)
-  Pi <- rep(1/K, K)
+  Pi <- c(0.2, 0.3)
   
   Z <- sample(0:(K-1), size = m, prob = Pi, replace = TRUE)
   # then generate A
