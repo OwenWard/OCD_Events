@@ -28,7 +28,7 @@ for(sim in 1:no_sims) {
   cat("Sim:", sim, "\n")
   m <- 200
   Time <- 200
-  m0_curr <- m/2
+  m0_curr <- m/4
   curr_n0 <- 20
   inter_T <- 1
   K <- 3
