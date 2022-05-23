@@ -29,7 +29,7 @@ for(sim in 1:no_sims) {
   m <- 200
   Time <- 200
   m0_curr <- m/2
-  curr_n0 <- 10
+  curr_n0 <- 20
   inter_T <- 1
   K <- 3
   ## baseline rate of the process
@@ -93,6 +93,6 @@ for(sim in 1:no_sims) {
 
 saveRDS(results, file = here("Experiments",
                              "thesis_output",
-                             paste0("exp_pois_wind_", curr_dT, ".RDS")))
+                             paste0("exp_pois_wind_may_23_", curr_dT, ".RDS")))
 # to save it after each run also
 
