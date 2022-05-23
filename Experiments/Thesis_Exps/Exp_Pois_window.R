@@ -31,7 +31,7 @@ for(sim in 1:no_sims) {
   m0_curr <- m/4
   curr_n0 <- 20
   inter_T <- 1
-  K <- 3
+  K <- 2
   ## baseline rate of the process
   true_Mu <- matrix(c(2, 0.25, 0.05, 1.5), 
                     nrow = K, ncol = K, byrow = T)
