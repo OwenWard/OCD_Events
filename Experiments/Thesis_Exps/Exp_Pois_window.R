@@ -33,12 +33,12 @@ for(sim in 1:no_sims) {
   inter_T <- 1
   K <- 3
   ## baseline rate of the process
-  true_Mu <- matrix(c(2, 0.05, 0.15, 0.05, 1.25, 0.05, 0.15, 0.05, 0.75), 
+  true_Mu <- matrix(c(2, 0.25, 0.05, 1.5), 
                     nrow = K, ncol = K, byrow = T)
   
   true_B <- matrix(0, nrow = K, ncol = K, byrow = TRUE)
   # Pi <- c(0.2, 0.3, 0.3, 0.2)
-  Pi <- c(1/K, 1/K, 1/K)
+  Pi <- rep(K, 1/K)
   
   Z <- sample(0:(K-1), size = m, prob = Pi, replace = TRUE)
   # then generate A
