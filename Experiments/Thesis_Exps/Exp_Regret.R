@@ -7,7 +7,7 @@ library(ppsbm)
 source(here("Experiments/", "utils.R"))
 source(here("functions/init_fcn.R"))
 
-nsims <- 100
+nsims <- 50
 
 jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
 jobid <- as.numeric(jobid)
@@ -142,7 +142,7 @@ for(sim in 1:nsims) {
 
 saveRDS(results, file = here("Experiments",
                              "thesis_output",
-                             paste0("exp_pois_regret_may_24_",
+                             paste0("exp_pois_regret_small_may_24_",
                                     Time, ".RDS")))
 
 
