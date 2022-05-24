@@ -92,7 +92,19 @@ for(sim in 1:nsims) {
                         B_ests = B_ests,
                         tau_ests = results_online_init$early_tau,
                         true_B = true_B)
-  
+  ### permute z_true, only store the est loss from the second run
+  z_true_perm <- apply(sim1$z, 2, which.min)
+  out_perm <- compute_regret(full_data = 
+                               result$rest_events,
+                             A = proc_sim$edge, 
+                             m,
+                             K,
+                             init_time,
+                             dT,
+                             true_z = z_true_perm,
+                             B_ests = B_ests,
+                             tau_ests = results_online_init$early_tau,
+                             true_B = true_B)
   
   card_A <- as_tibble(proc_sim$events) %>% 
     select(V1, V2) %>% 
@@ -100,9 +112,11 @@ for(sim in 1:nsims) {
     nrow()
   ## is this regret function correct?
   est_loss <- -out$EstLLH/card_A
+  est_loss_perm <- -out_perm$EstLLH/card_A
   best_loss <- -out$TrueLLH/card_A
   ## am I computing this correctly?
   regret <- cumsum(est_loss) - cumsum(best_loss)
+  regret_perm <- cumsum(est_loss_perm) - cumsum(best_loss)
   ## cumsum(regret)
   # regret <- cumsum(regret)
   ## run this
@@ -119,6 +133,7 @@ for(sim in 1:nsims) {
     est_elbo = results_online_init$AveELBO,
     clust = clust_est,
     regret = regret,
+    regret_perm = regret_perm,
     emp_regret = emp_regret,
     card_A = card_A
   )
@@ -127,7 +142,7 @@ for(sim in 1:nsims) {
 
 saveRDS(results, file = here("Experiments",
                              "thesis_output",
-                             paste0("exp_pois_regret_may_17_",
+                             paste0("exp_pois_regret_may_24_",
                                     Time, ".RDS")))
 
 
