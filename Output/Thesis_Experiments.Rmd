@@ -17,7 +17,9 @@ library(tidyverse)
 source(here("Experiments/utils.R"))
 
 axis_title <- 16
-axis_text_size <- 12
+axis_text_size <- 14
+legend_text <- 14
+line_size <- 1
 ```
 
 # Figures for the Introduction
@@ -58,7 +60,8 @@ fig_1 <- fig_1_data %>%
   theme(legend.position = "none",
         axis.title.y = element_text(size = axis_title),
         strip.text.x = element_text(size = axis_title),
-        axis.text = element_text(size = axis_text_size))
+        axis.text = element_text(size = axis_text_size),
+        legend.text = element_text(size = legend_text))
 
 fig_1
   
@@ -89,7 +92,7 @@ and $m0$, the number of nodes used for the initialization.
 ```{r recov-nodes}
 ## recovery as the number of nodes changes
 node_sims <- list.files(path = here("Experiments", "thesis_output"),
-                   pattern = "exp_pois_nodes_fixed_april_26_rho_5")
+                   pattern = "exp_pois_nodes_fixed_may_2")
 ## to be consistent in the sparsity across all the plots,
 ## rerunning now
 
@@ -97,10 +100,10 @@ node_data <- node_sims %>%
   map_dfr(~readRDS(here("Experiments/thesis_output/", .x)))
   
 
-node_data %>% 
-  filter(init == "Init") %>%
-  group_by(nodes, n0, m0) %>% 
-  summarise(mean(ARI), sd(ARI))
+# node_data %>%
+#   filter(init == "Init") %>%
+#   group_by(nodes, n0, m0) %>%
+#   summarise(mean(ARI), sd(ARI))
 
 node_data %>% 
   # group_by(sim, nodes, m0) %>% top_n(1) %>% 
@@ -110,7 +113,8 @@ node_data %>%
   geom_boxplot() +
   labs(x = "Number of Nodes") +
   theme(axis.text = element_text(size = axis_text_size),
-        axis.title = element_text(size = axis_title))
+        axis.title = element_text(size = axis_title),
+        legend.text = element_text(size = legend_text))
 
 ## this looks ok now I guess
 ```
@@ -124,14 +128,18 @@ node_data %>%
 ## now just one setting for all, in terms of the sparse initialization 
 ## scheme
 
+# K_sims <- list.files(path = here("Experiments", "thesis_output"),
+#                    pattern = "exp_pois_K_april_25_rho_5")
+
 K_sims <- list.files(path = here("Experiments", "thesis_output"),
-                   pattern = "exp_pois_K_april_25_rho_5")
+                   pattern = "exp_pois_K_may_18_rho_5")
 
 K_data <- K_sims %>% 
   map_dfr(~readRDS(here("Experiments/thesis_output/", .x)))
 
 K_data %>% 
   filter(init == "Init") %>%
+  filter(nodes == 200) %>% 
   # filter(nodes == 1000) %>% 
   ggplot(aes(as.factor(K), ARI)) +
   geom_boxplot() +
@@ -139,7 +147,8 @@ K_data %>%
   # facet_wrap(~nodes) +
   labs(x = "K") +
   theme(axis.text = element_text(size = axis_text_size),
-        axis.title = element_text(size = axis_title))
+        axis.title = element_text(size = axis_title),
+        legend.text = element_text(size = legend_text))
 
 ## across multiple community sizes actually looks good too
 
@@ -150,7 +159,7 @@ K_data %>%
 
 ```{r online_ari}
 on_sims <- list.files(path = here("Experiments", "thesis_output"),
-                   pattern = "exp_pois_online_april_26")
+                   pattern = "exp_pois_online_may_19")
 
 
 online_dat <- on_sims %>% 
@@ -160,24 +169,51 @@ online_dat %>%
   filter(m0 == nodes/4) %>%
   group_by(time, m0, nodes) %>% 
   summarise(Mean_ARI = mean(ARI), sd = sd(ARI)) %>% 
-  mutate(lower = Mean_ARI - sd, upper = min(1, Mean_ARI + sd)) %>% 
-  ggplot(aes(time, Mean_ARI, colour = as.factor(nodes))) +
+  mutate(nodes = paste0("n = ", nodes)) %>% 
+  mutate(nodes = factor(nodes, 
+                       levels = c("n = 100", "n = 200", "n = 500",
+                                  "n = 1000"))) %>% 
+  mutate(lower = max(Mean_ARI - sd, 0), upper = min(1, Mean_ARI + sd)) %>% 
+  ggplot(aes(time, Mean_ARI)) +
   geom_point() +
-  geom_line() +
+  geom_line(size = line_size) +
   geom_errorbar(aes(ymin = lower, ymax = upper), alpha = 0.4) +
   ylim(c(0, 1)) +
   labs(colour = "Number of Nodes", y = "ARI", x = "Time", width = 0.2) +
-  # facet_wrap(~nodes) +
+  facet_wrap(~nodes) +
+  theme(axis.text = element_text(size = axis_text_size),
+        axis.title = element_text(size = axis_title),
+        legend.title = element_text(size = axis_title),
+        legend.text = element_text(size = legend_text))
+
+## need this to be a bit tidier here, but fine
+
+## Old Experiment 9 also has some interesting experiments
+```
+
+```{r check-this}
+online_dat %>% 
+  filter(m0 == nodes/4) %>%
+  filter(nodes == 100) %>% 
+  group_by(time, m0, nodes) %>% 
+  summarise(Mean_ARI = mean(ARI), sd = sd(ARI)) %>% 
+  mutate(nodes = paste0("n = ", nodes)) %>% 
+  mutate(nodes = factor(nodes, 
+                       levels = c("n = 100", "n = 200", "n = 500",
+                                  "n = 1000"))) %>% 
+  mutate(lower = max(Mean_ARI - sd, 0), upper = min(1, Mean_ARI + sd)) %>% 
+  ggplot(aes(time, Mean_ARI)) +
+  geom_point() +
+  geom_line(size = line_size) +
+  geom_errorbar(aes(ymin = lower, ymax = upper), alpha = 0.4) +
+  ylim(c(0, 1)) +
+  labs(colour = "Number of Nodes", y = "ARI", x = "Time", width = 0.2) +
+  facet_wrap(~nodes) +
   theme(axis.text = element_text(size = axis_text_size),
         axis.title = element_text(size = axis_title),
         legend.text = element_text(size = axis_text_size),
         legend.title = element_text(size = axis_title))
-  NULL
 
-## need this to be a bit tidier here, but fine
-
-
-## Old Experiment 9 also has some interesting experiments
 ```
 
 ## Monitoring Convergence
@@ -217,7 +253,8 @@ elbo_sims %>%
   labs(x = "Time", y = "ELBO") +
   theme(axis.text = element_text(size = axis_text_size),
         axis.title = element_text(size = axis_title),
-        strip.text.x = element_text(size = axis_title))
+        strip.text.x = element_text(size = axis_title),
+        legend.text = element_text(size = legend_text))
 
 ```
 
@@ -249,7 +286,8 @@ elbo_sims %>%
   labs(x = "Time", y = "ELBO") +
   theme(axis.text = element_text(size = axis_text_size),
         axis.title = element_text(size = axis_title),
-        strip.text.x = element_text(size = axis_title))
+        strip.text.x = element_text(size = axis_title),
+        legend.text = element_text(size = legend_text))
 
 ## sanity check, this looks the same as the community plot
 # elbo_sims %>% 
@@ -293,7 +331,15 @@ elbo_time_sims %>%
   labs(x = "Time", y = "ELBO") +
   theme(axis.text = element_text(size = axis_text_size),
         axis.title = element_text(size = axis_title),
-        strip.text.x = element_text(size = axis_title))
+        strip.text.x = element_text(size = axis_title),
+        legend.text = element_text(size = legend_text))
+
+```
+
+
+## New ELBO Plot
+
+```{r label, options}
 
 ```
 
@@ -326,13 +372,14 @@ param_data %>%
   mutate(diff = abs(sum_B - 3.1)/4) %>% 
   ggplot(aes(index, diff)) +
   # geom_line(aes(group = sim), alpha = 0.2) +
-  geom_smooth(se = FALSE, method = "loess") +
+  geom_smooth(se = FALSE, method = "loess", size = 1) +
   facet_wrap(~Time, scales = "free_x") +
   labs(x = "Time", y = "Difference") +
   scale_y_continuous(expand = c(0, 0), limits = c(0, NA)) +
   theme(axis.text = element_text(size = axis_text_size),
         axis.title = element_text(size = axis_title),
-        strip.text.x = element_text(size = axis_title))
+        strip.text.x = element_text(size = axis_title),
+        legend.text = element_text(size = legend_text))
 
 ```
 
@@ -432,9 +479,183 @@ regret_sims %>%
   labs(y = "Empirical Regret", x = "Time") +
   theme(axis.text = element_text(size = axis_text_size),
         axis.title = element_text(size = axis_title),
-        strip.text.x = element_text(size = axis_title))
+        strip.text.x = element_text(size = axis_title),
+        legend.text = element_text(size = legend_text))
 
 ### maybe without a facet wrap might look better
+
+```
+
+
+```{r new-regret-plot}
+regret_files <- list.files(path = here("Experiments/thesis_output/"),
+                          pattern = "exp_pois_regret_may_24_")
+
+regret_50 <- list.files(path = here("Experiments/thesis_output/"),
+                          pattern = "exp_pois_regret_small_may_24_")
+
+regret_files
+
+## then tidy these up, etc
+sim_50 <- read_rds(here("Experiments",
+                             "thesis_output",
+                             regret_files[3])) %>% 
+  tibble(
+  sim = 1:100,
+  ARI = map_dbl(., "clust"),
+  regret = map(., "regret"),
+  perm_regret = map(., "regret_perm"),
+  emp_regret = map(., "emp_regret"),
+  dT = list(6:50)) %>% 
+  unnest(cols = c(regret, perm_regret, emp_regret, dT)) %>% 
+  select(sim, ARI, regret, perm_regret, emp_regret, dT) %>% 
+  mutate(Time = 50) 
+
+min_perm <- sim_50 %>% 
+  group_by(sim) %>% 
+  summarise(s1 = sum(regret), s2 = sum(perm_regret)) %>%
+  mutate(min = ifelse(s1 < s2, "regret", "perm_regret"))
+
+new_sim_50 <- sim_50 %>% 
+  left_join(min_perm %>% select(sim, min), by = "sim") %>% 
+  pivot_longer(cols = regret:emp_regret, names_to = "form",
+               values_to = "regret") %>% 
+  filter((min == form)| form == "emp_regret") %>% 
+  mutate(form = ifelse(form == "perm_regret", "regret", form))
+
+
+
+## then pivot longer
+
+
+
+sim_100 <- read_rds(here("Experiments",
+                             "thesis_output",
+                             regret_files[1])) %>% 
+  tibble(
+  sim = 1:100,
+  ARI = map_dbl(., "clust"),
+  regret = map(., "regret"),
+  emp_regret = map(., "emp_regret"),
+  perm_regret = map(., "regret_perm"),
+  dT = list(6:100)) %>% 
+  unnest(cols = c(regret, perm_regret, emp_regret, dT)) %>% 
+  select(sim, ARI, regret, perm_regret, emp_regret, dT) %>% 
+  mutate(Time = 100) 
+
+
+min_perm <- sim_100 %>% 
+  group_by(sim) %>% 
+  summarise(s1 = sum(regret), s2 = sum(perm_regret)) %>%
+  mutate(min = ifelse(s1 < s2, "regret", "perm_regret"))
+
+new_sim_100 <- sim_100 %>% 
+  left_join(min_perm %>% select(sim, min), by = "sim") %>% 
+  pivot_longer(cols = regret:emp_regret, names_to = "form",
+               values_to = "regret") %>% 
+  filter((min == form)| form == "emp_regret") %>% 
+  mutate(form = ifelse(form == "perm_regret", "regret", form))
+
+# 
+# sim_100 %>% 
+#   # filter(ARI == 1) %>%
+#   group_by(Time, dT, form) %>% 
+#   ggplot(aes(dT, regret, colour = form)) +
+#   # geom_line(alpha = 0.5) +
+#   geom_smooth() 
+
+sim_200 <- read_rds(here("Experiments",
+                             "thesis_output",
+                             regret_files[2])) %>% 
+  tibble(
+  sim = 1:100,
+  ARI = map_dbl(., "clust"),
+  regret = map(., "regret"),
+  perm_regret = map(., "regret_perm"),
+  emp_regret = map(., "emp_regret"),
+  dT = list(6:200)) %>% 
+  unnest(cols = c(regret, perm_regret, emp_regret, dT)) %>% 
+  select(sim, ARI, regret, perm_regret, emp_regret, dT) %>% 
+  mutate(Time = 200) 
+
+
+min_perm <- sim_200 %>% 
+  group_by(sim) %>% 
+  summarise(s1 = sum(regret), s2 = sum(perm_regret)) %>%
+  mutate(min = ifelse(s1 < s2, "regret", "perm_regret"))
+
+new_sim_200 <- sim_200 %>% 
+  left_join(min_perm %>% select(sim, min), by = "sim") %>% 
+  pivot_longer(cols = regret:emp_regret, names_to = "form",
+               values_to = "regret") %>% 
+  filter((min == form)| form == "emp_regret") %>% 
+  mutate(form = ifelse(form == "perm_regret", "regret", form))
+
+sim_500 <- read_rds(here("Experiments",
+                             "thesis_output",
+                             regret_50)) %>%
+  tibble(
+  sim = 1:50,
+  ARI = map_dbl(., "clust"),
+  regret = map(., "regret"),
+  perm_regret = map(., "regret_perm"),
+  emp_regret = map(., "emp_regret"),
+  dT = list(6:500)) %>%
+  unnest(cols = c(regret, perm_regret, emp_regret, dT)) %>%
+  select(sim, ARI, regret, perm_regret, emp_regret, dT) %>%
+  mutate(Time = 500)
+  
+min_perm <- sim_500 %>% 
+  group_by(sim) %>% 
+  summarise(s1 = sum(regret), s2 = sum(perm_regret)) %>%
+  mutate(min = ifelse(s1 < s2, "regret", "perm_regret")) 
+
+new_sim_500 <- sim_500 %>% 
+  left_join(min_perm %>% select(sim, min), by = "sim") %>% 
+  pivot_longer(cols = regret:emp_regret, names_to = "form",
+               values_to = "regret") %>% 
+  filter((min == form)| form == "emp_regret") %>% 
+  mutate(form = ifelse(form == "perm_regret", "regret", form))
+
+
+regret_sims <- bind_rows(new_sim_50,
+                         new_sim_100,
+                         new_sim_200,
+                         new_sim_500)
+
+equal_breaks <- function(n = 3, s = 0.05, ...){
+  function(x){
+    # rescaling
+    # d <- s * diff(range(x)) / (1+2*s)
+    floor(seq(0, max(x), length=n))
+  }
+}
+
+dT <- 1
+## for the breaks in the facet here
+
+regret_sims %>% 
+  mutate(form = ifelse(form == "regret", "True Membership", form)) %>% 
+  mutate(form = ifelse(form == "emp_regret", "Estimated Membership", form)) %>%
+  mutate(Time = paste0("Time = ", Time)) %>% 
+  mutate(Time = factor(Time, 
+                       levels = c("Time = 50", "Time = 100", "Time = 200",
+                                  "Time = 500"))) %>% 
+  filter(ARI == 1) %>%
+  filter(form == "Estimated Membership") %>%
+  group_by(Time, dT, form) %>% 
+  ggplot(aes(dT, regret, colour = form)) +
+  # geom_line(alpha = 0.5) +
+  geom_smooth(se = FALSE, size = 1) +
+  facet_wrap(~Time, scales = "free_x") +
+  labs(y = "Regret", x = "Time", colour = "") +
+  scale_x_continuous(breaks = equal_breaks(n=3, s=0.05),
+                     expand = c(0, max(dT)-1)) +
+  theme(axis.text = element_text(size = axis_text_size),
+        axis.title = element_text(size = axis_title),
+        strip.text.x = element_text(size = axis_title),
+        legend.text = element_text(size = legend_text),
+        legend.position = "none")
 
 ```
 
@@ -485,7 +706,8 @@ loss_data %>%
   theme(legend.position = "null",
         axis.text = element_text(size = axis_text_size),
         axis.title = element_text(size = axis_title),
-        strip.text.x = element_text(size = axis_title))
+        strip.text.x = element_text(size = axis_title),,
+        legend.text = element_text(size = legend_text))
 
 # single_sim <- loss_data %>% 
 #   reduce(data.frame) %>% 
@@ -575,7 +797,7 @@ the performance of our procedure, in terms of community recovery.
 ### load in and plot some simulations here
 
 wind_files <- list.files(path = here("Experiments/thesis_output"),
-                   pattern = "exp_pois_wind")
+                   pattern = "exp_pois_wind_may_23")
 
 wind_data <- wind_files %>% 
   map_dfr(~readRDS(here("Experiments/thesis_output/", .x)))
@@ -589,7 +811,12 @@ wind_data %>%
   ggplot(aes(as.factor(dT), clust)) +
   geom_boxplot() +
   ylim(c(0, 1)) +
-  labs(x = "Window Size", y = "ARI")
+  labs(x = "Window Size", y = "ARI")  +
+  theme(axis.text = element_text(size = axis_text_size),
+        axis.title = element_text(size = axis_title),
+        strip.text.x = element_text(size = axis_title)) +
+  scale_x_discrete(breaks = c(1:5))
+
 
 ```
 
@@ -609,8 +836,8 @@ hawkes_sims %>%
   labs(x = "Nodes") +
   theme(axis.text = element_text(size = axis_text_size),
         axis.title = element_text(size = axis_title),
-        legend.text = element_text(size = axis_text_size),
-        legend.title = element_text(size = axis_title))
+        legend.title = element_text(size = axis_title),
+        legend.text = element_text(size = legend_text))
 
 ```
 
@@ -631,8 +858,8 @@ hawkes_sims %>%
   ylim(c(0, 1)) +
   theme(axis.text = element_text(size = axis_text_size),
         axis.title = element_text(size = axis_title),
-        legend.text = element_text(size = axis_text_size),
-        legend.title = element_text(size = axis_title))
+        legend.title = element_text(size = axis_title),
+        legend.text = element_text(size = legend_text))
 
 ```
 
@@ -677,7 +904,7 @@ new_hawkes %>%
                values_to = "diff") %>% 
   filter(clust == 1) %>% 
   ggplot(aes(index, diff, colour = Parameter)) +
-  geom_smooth(se = FALSE, method = "loess") +
+  geom_smooth(se = FALSE, method = "loess", size = line_size) +
   # geom_line(aes(group = interaction(sim, param)), alpha = 0.2) +
   facet_wrap(~Time, scales = "free_x") +
   labs(x = "Time", y = "Difference") +
@@ -685,8 +912,8 @@ new_hawkes %>%
   scale_fill_discrete(name = "Parameter") +
   theme(axis.text = element_text(size = axis_text_size),
         axis.title = element_text(size = axis_title),
-        legend.text = element_text(size = axis_text_size),
-        legend.title = element_text(size = axis_title))
+        legend.title = element_text(size = axis_title),
+        legend.text = element_text(size = legend_text))
 ```
 
 
@@ -712,20 +939,51 @@ hawkes_data %>%
   group_by(time, nodes) %>% 
   summarise(mean_ARI = mean(ARI), sd_ARI = sd(ARI)) %>% 
   group_by(time) %>% 
+  mutate(nodes = paste0("n = ", nodes)) %>% 
+  mutate(nodes = factor(nodes, 
+                       levels = c("n = 200", "n = 500",
+                                  "n = 1000"))) %>% 
   mutate(lower = max(0, mean_ARI - sd_ARI),
          upper = min(1, mean_ARI + sd_ARI)) %>% 
   ggplot(aes(time, mean_ARI)) +
-  geom_line() +
+  geom_line(size = 1) +
+  geom_point() +
   geom_errorbar(aes(ymin = lower, ymax = upper), alpha = 0.4) +
   ylim(c(0, 1)) +
   labs(colour = "Number of Nodes", y = "ARI", x = "Time", width = 0.2) +
   facet_wrap(~nodes) +
   theme(axis.text = element_text(size = axis_text_size),
         axis.title = element_text(size = axis_title),
-        legend.text = element_text(size = axis_text_size),
-        legend.title = element_text(size = axis_title)) +
-  NULL
+        legend.title = element_text(size = axis_title),
+        legend.text = element_text(size = legend_text)) 
 
 ## do this via colour instead?
 ## also need to rerun to match the simulation settings for the rest
+```
+
+
+
+```{r final-exp}
+### read in these files and get the summaries
+
+
+data_path <- list.files(path = here("Experiments/thesis_output"),
+                   pattern = "exp_time_")
+
+data_path
+
+sims_data <- data_path %>% 
+  map_dfr(~readRDS(here("Experiments/thesis_output/", .x))) %>% 
+  mutate(method = c(rep("Poisson", 50),
+                    rep("Hawkes", 50),
+                    rep("InPois", 50),
+                    rep("InHawkes", 50)))
+
+
+sims_data %>% 
+  mutate(time_perc = t_on/t_batch) %>% 
+  group_by(method) %>% 
+  summarise(median(time_perc), median(perc_diff), mean(perc_diff))
+
+
 ```
