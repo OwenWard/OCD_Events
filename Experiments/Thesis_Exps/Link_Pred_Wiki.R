@@ -71,8 +71,8 @@ math_test <- math_data %>%
   top_frac(.15)
 
 ### most events happen early on
-math_train_time <- 1934
-math_test_time <- 2350
+math_train_time <- 2220
+math_test_time <- 2320
 
 
 math_test_set <- math_test %>% 
@@ -81,7 +81,7 @@ math_test_set <- math_test %>%
 
 
 #### Hom Poisson ####
-dT <- 6 # for math
+dT <- 20 # for math
 K <- 3 # 2 for college, 4 for email, 3 for math
 Pi <- rep(1/K, K)
 B <- matrix(runif(K * K), K, K)
@@ -183,7 +183,7 @@ pois_results <- bind_rows(online_poss_pred, batch_poss_pred) %>%
 
 ### Hom Hawkes ####
 K <- 3 # 4 for email, 2 for college, 3 for math
-dT <- 6  # 2 for email, 0.5 for college, 6 for math
+dT <- 20  # 2 for email, 0.5 for college, 6 for math
 Pi <- rep(1/K, K)
 B <- matrix(runif(K * K), K, K)
 Mu <- matrix(runif(K * K), K, K)
@@ -290,7 +290,7 @@ hawkes_results <- bind_rows(hawkes_pred,
 window <- 1/7
 K <- 3 # 4 for email, 2 for college, 3 for math
 H <- 7
-dT <- 6 # 2 for email, 0.5 for college, 6 for math
+dT <- 20 # 2 for email, 0.5 for college, 6 for math
 MuA_start <- array(runif(K*K*H), c(K, K, H))
 tau_start <- matrix(1/K, m_math, K)
 a <- bench::mark(
