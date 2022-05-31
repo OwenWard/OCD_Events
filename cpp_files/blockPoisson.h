@@ -278,7 +278,13 @@ Rcpp::List estimate_Poisson(
 ){
   // iterate this over the time windows...
   int N = int(T/dT);
-  int slices = int(N/inter_T);
+  arma::cube inter_tau(1,1,1);
+  inter_tau.fill(1.0);
+  if(inter_T !=0){
+    int slices = int(N/inter_T);
+    arma::cube inter_tau(m,K,slices+1);
+  }
+  
   double eta;
   int start_pos = 0;
   int curr_pos = 0;
@@ -291,7 +297,7 @@ Rcpp::List estimate_Poisson(
   arma::mat tau(m,K);
   S.fill(1.0/K);
   tau.fill(1.0/K);
-  arma::cube inter_tau(m,K,slices+1);
+  
   arma::cube inter_B(K,K,N);
   arma::vec curr_elbo, ave_elbo, ave_ll, curr_ll, full_elbo;
   curr_elbo.zeros(N);
@@ -334,11 +340,12 @@ Rcpp::List estimate_Poisson(
       ave_ll(n) = curr_ll(n)/cum_events;
       full_elbo(n) = computeELBO(full_data, tau, B, Pi, A, m, K, T);
     }
-    if(n % inter_T == 0 ){
-      inter_tau.slice(ind) = tau;
-      ind = ind + 1;
+    if(inter_T != 0){
+      if(n % inter_T == 0 ){
+        inter_tau.slice(ind) = tau;
+        ind = ind + 1;
+      }
     }
-    
   }
   
   return Rcpp::List::create(Named("S")= S,
@@ -416,12 +423,12 @@ Rcpp::List batch_estimator_hom_Poisson(
     arma::mat tau_new = updateTau(S_new,Pi,m,K); 
     arma::mat B_new = updateB(alltimes,tau_new,B,K,A,m,T,eta);
     arma::rowvec Pi_new = updatePi(tau_new,K);
-    curr_elbo(iter) = computeELBO(alltimes,tau_new,B_new,Pi_new,A,m,K,T);
+    // curr_elbo(iter) = computeELBO(alltimes,tau_new,B_new,Pi_new,A,m,K,T);
     ave_elbo(iter) = curr_elbo(iter)/ cum_events;
     //curr_ll(n) = computeLL(alltimes,tau,B,Pi,A,m,K,t_curr);
     // need to check this
     // then compare gap...
-    gap = abs(B - B_new).max();
+    gap = max(abs(Pi - Pi_new).max(), abs(B - B_new).max());
     // if(iter > 0){
     //   double elbo_gap = abs(curr_elbo(iter) - curr_elbo(iter-1));
     // }
@@ -445,5 +452,89 @@ Rcpp::List batch_estimator_hom_Poisson(
                             Named("ELBO")=curr_elbo,
                             Named("AveELBO")= ave_elbo);
 }
+
+
+// full online estimation procedure
+// [[Rcpp::export]]
+Rcpp::List estimate_Poisson_minimal(
+    arma::mat full_data, 
+    Rcpp::List A, //arma::mat A,
+    int m,
+    int K,
+    double T,
+    double dT,
+    arma::mat B,
+    bool is_elbo = false
+){
+  // iterate this over the time windows...
+  int N = int(T/dT);
+  double eta;
+  int start_pos = 0;
+  int curr_pos = 0;
+  int end_pos = 0;
+  int nall = full_data.n_rows;
+  arma::rowvec Pi(K);
+  Pi.fill(1.0 / K);
+  arma::mat S(m,K);
+  arma::mat tau(m,K);
+  S.fill(1.0/K);
+  tau.fill(1.0/K);
+  
+  arma::vec curr_elbo, ave_elbo, ave_ll, curr_ll, full_elbo;
+  curr_elbo.zeros(N);
+  curr_ll.zeros(N);
+  ave_ll.zeros(N);
+  ave_elbo.zeros(N);
+  full_elbo.zeros(N);
+  int cum_events = 0;
+  for(int n = 0; n < N; ++n){
+    cout<<n<<endl;
+    double Tn = dT*(n+1);
+    double T0 = dT*n;
+    // arma::rowvec event = full_data.row(start_pos);
+    // double t_curr = event(2);
+    // while(t_curr <= Tn){
+    //   if(curr_pos >= nall-1){
+    //     break;
+    //   }
+    //   else{
+    //     curr_pos += 1;
+    //     event = full_data.row(curr_pos);
+    //     t_curr = event(2);
+    //   }
+    // }
+    ////
+    arma::vec times = full_data.col(2);
+    arma::uvec valid = find(times < Tn && times > T0);
+    arma::mat sub_data = full_data.rows(valid);
+    // cout<<curr_times.n_rows<<endl;
+    // then just need to get the start of the indexing also, use that
+    // to get the whole subset
+    ////
+    // end_pos = curr_pos;
+    // arma::mat sub_data, elbo_dat;
+    // sub_data = full_data.rows(start_pos, end_pos);
+    cum_events += sub_data.n_rows;
+    // elbo_dat = full_data.rows(0,end_pos); 
+    // start_pos = curr_pos;
+    eta = 1/pow(1 + n, .5)/sub_data.n_rows*(K*K);
+    S = updateS(sub_data, tau, B, A, S, K, m, dT);
+    tau = updateTau(S,Pi,m,K); 
+    B = updateB(sub_data, tau, B, K, A, m, dT, eta);
+    Pi = updatePi(tau,K);
+    
+  }
+  
+  return Rcpp::List::create(Named("S")= S,
+                            Named("tau")=tau,
+                            Named("B")=B,
+                            Named("Pi")=Pi,
+                            Named("wind_elbo") = curr_elbo,
+                            Named("AveELBO")=ave_elbo,
+                            Named("wind_ll") = curr_ll,
+                            Named("logL") = ave_ll,
+                            Named("full_ELBO") = full_elbo);
+}
+
 
 

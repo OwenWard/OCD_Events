@@ -99,7 +99,7 @@ a <- bench::mark(
                                          T = math_train_time,
                                          dT,
                                          B),
-  iterations = 1)
+  max_iterations = 1)
 
 # batch estimate for hom-Poisson needed here
 b <- bench::mark(
@@ -110,7 +110,7 @@ b <- bench::mark(
     K,
     T = math_train_time,
     itermax = 100,
-    stop_eps = 0.01),
+    stop_eps = 0.002),
   iterations = 1
 )
 
@@ -220,7 +220,7 @@ b <- bench::mark(
                                           Mu,
                                           tau,
                                           itermax = 100,
-                                          stop_eps = 0.01),
+                                          stop_eps = 0.005),
   iterations = 1)
 
 
