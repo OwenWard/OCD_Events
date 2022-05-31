@@ -81,7 +81,7 @@ math_test_set <- math_test %>%
 
 
 #### Hom Poisson ####
-dT <- 20 # for math
+dT <- 25 # for math
 K <- 3 # 2 for college, 4 for email, 3 for math
 Pi <- rep(1/K, K)
 B <- matrix(runif(K * K), K, K)
@@ -92,14 +92,13 @@ S <- matrix(0, nrow = m_math, ncol = K)
 
 # online estimate
 a <- bench::mark(
-  results_pois_train <- estimate_Poisson(full_data = as.matrix(math_train),
+  results_pois_train <- estimate_Poisson_minimal(full_data = as.matrix(math_train),
                                          A_test_math,
                                          m_math,
                                          K,
                                          T = math_train_time,
                                          dT,
-                                         B,
-                                         inter_T = 5),
+                                         B),
   iterations = 1)
 
 # batch estimate for hom-Poisson needed here
@@ -183,7 +182,7 @@ pois_results <- bind_rows(online_poss_pred, batch_poss_pred) %>%
 
 ### Hom Hawkes ####
 K <- 3 # 4 for email, 2 for college, 3 for math
-dT <- 20  # 2 for email, 0.5 for college, 6 for math
+dT <- 25  # 2 for email, 0.5 for college, 6 for math
 Pi <- rep(1/K, K)
 B <- matrix(runif(K * K), K, K)
 Mu <- matrix(runif(K * K), K, K)
@@ -290,7 +289,7 @@ hawkes_results <- bind_rows(hawkes_pred,
 window <- 1/7
 K <- 3 # 4 for email, 2 for college, 3 for math
 H <- 7
-dT <- 20 # 2 for email, 0.5 for college, 6 for math
+dT <- 25 # 2 for email, 0.5 for college, 6 for math
 MuA_start <- array(runif(K*K*H), c(K, K, H))
 tau_start <- matrix(1/K, m_math, K)
 a <- bench::mark(
