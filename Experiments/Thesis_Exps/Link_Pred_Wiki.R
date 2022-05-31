@@ -2,7 +2,7 @@
 
 ## need to do online loss, and online link prediction for this here
 
-# .libPaths("/moto/stats/users/ogw2103/rpackages")
+.libPaths("/moto/stats/users/ogw2103/rpackages")
 
 library(here)
 ##library(ppsbm)
