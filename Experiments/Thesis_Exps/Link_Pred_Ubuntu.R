@@ -319,7 +319,7 @@ b <- bench::mark(
                                        MuA_start,
                                        tau_start,
                                        itermax = 100,
-                                       stop_eps = 0.005 ),
+                                       stop_eps = 0.002),
   iterations = 1)
 
 # taking the average of these basis functions for link prediction
