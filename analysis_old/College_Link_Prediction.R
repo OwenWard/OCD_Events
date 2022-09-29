@@ -5,7 +5,7 @@
 
 library(Rcpp)
 library(RcppArmadillo)
-sourceCpp("onlineblock.cpp")
+sourceCpp("cpp_files/onlineblock.cpp")
 
 set.seed(100)
 

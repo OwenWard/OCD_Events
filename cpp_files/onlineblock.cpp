@@ -1,15 +1,21 @@
+#define ARMA_64BIT_WORD 1
+
+#include <RcppArmadillo.h>
+// [[Rcpp::depends(RcppArmadillo)]]
+
 #include "onlineblock.h"
 #include "supportsim.h"
 
 
 
-
-#include "blockhawkes.h"
 #include "blockPoisson.h"
+#include "blockhawkes.h"
 #include "nonhomohak.h"
 #include "link_predict.h"
 #include "ccrm.h"
 #include "new_predict.h"
+#include "test.h"
+#include "init_Poisson.h"
 
 // [[Rcpp::export]]
 arma::vec func(arma::vec X){

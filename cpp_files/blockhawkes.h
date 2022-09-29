@@ -16,6 +16,18 @@ double trigger_lam(double t, double T, double lam){
     return exp( - lam * (T - t));
 }
 
+// arma::rowvec correct_tau(arma::rowvec tau){
+//   arma::rowvec mod_tau = tau;
+//   int m = tau.n_cols;
+//   for(int j = 0; j < m; ++j) {
+//     mod_tau[j] = min(tau[j], 1-1e-7);
+//     mod_tau[j] = max(tau[j], 1e-7);
+//   }
+//   // mod_tau = max(tau, 1e-7);
+//   // then normalise to sum to 1 again
+//   mod_tau = mod_tau/sum(mod_tau);
+//   return mod_tau;
+// }
 
 
 double ELBO_Hak(
@@ -266,17 +278,15 @@ Rcpp::List update_on(
 
     arma::mat tau_new(m,K);
     tau_new.fill(0.0);
-
-    arma::rowvec s;
     for (int i = 0; i < m; i++) {
-    	s = S.row(i) - S.row(i).max();
-    	s = s + log(Pi + 0.000001);
-    	s = exp(s)/sum(exp(s));
-    	tau_new.row(i) = s;
+      arma::rowvec s = arma::log(Pi) + S.row(i);
+      s = s - max(s);
+      s = exp(s)/sum(exp(s));
+      tau_new.row(i) = correct_tau(s);
     }
 
     for (k = 0; k < K; k++) {
-    	Pi(k) = sum(tau.col(k)) / (m + 0.0);
+    	Pi(k) = sum(tau_new.col(k)) / (m + 0.0);
     }	
 
 	return Rcpp::List::create(Rcpp::Named("tau") = tau_new,
@@ -304,10 +314,11 @@ Rcpp::List update_lam_trunc(
     double trunc_length
     ){
     arma::mat P1_mu(K,K), P2_mu(K,K), P1_B(K,K), P2_B(K,K), S_tp(m,K);
-    arma::mat P1_mu_tp(K,K), P2_mu_tp(K,K), P1_B_tp(K,K), P2_B_tp(K,K), P_S_tp(m,K), Lambda(K,K);
-    P1_mu.fill(0.0), P2_mu.fill(0.0), P1_B.fill(0.0), P2_B.fill(0.0), S_tp.fill(0.0), Lambda.fill(0.0);
+    arma::mat P1_mu_tp(K,K), P2_mu_tp(K,K), P1_B_tp(K,K), P2_B_tp(K,K);
+    arma::mat P_S_tp(m,K), Lambda(K,K);
+    P1_mu.fill(0.0), P2_mu.fill(0.0), P1_B.fill(0.0);
+    P2_B.fill(0.0), S_tp.fill(0.0), Lambda.fill(0.0);
     arma::mat lam_store(K,K);
-
 
     int l, k, n_edge;
     for (int i = 0; i < m; i++) {
@@ -333,7 +344,8 @@ Rcpp::List update_lam_trunc(
     for (itr = datamap.begin(); itr != datamap.end(); itr++) 
     { 
         // type itr->first stores the key part  and 
-        // itr->second stroes the value part 
+        // itr->second stores the value part 
+        
         key = itr->first;
         timevec = itr->second;
         arma::vec index = split(key);
@@ -342,7 +354,8 @@ Rcpp::List update_lam_trunc(
         if (i == j)
             continue;
         
-        P1_mu_tp.fill(0.0), P2_mu_tp.fill(0.0), P1_B_tp.fill(0.0), P2_B_tp.fill(0.0), P_S_tp.fill(0.0);
+        P1_mu_tp.fill(0.0), P2_mu_tp.fill(0.0);
+        P1_B_tp.fill(0.0), P2_B_tp.fill(0.0), P_S_tp.fill(0.0);
         lam_store.fill(0.0);
         P2_mu_tp = P2_mu_tp + t_end - t_start;
         ln = timevec.n_elem;
@@ -367,6 +380,7 @@ Rcpp::List update_lam_trunc(
                 }
                 lam_store = lam_store + B * (intensity_lam1 - intensity_lam2) / Lambda;
                 lam_store = lam_store - B * ((t_end - t_current) * exp(-lam*(t_end - t_current)));
+                
                 for (k = 0; k < K; k++) {
                     for (l = 0; l < K; l++){
                         P1_mu_tp(k,l) += 1.0 / Lambda(k,l);
@@ -377,15 +391,17 @@ Rcpp::List update_lam_trunc(
             } else {
                 P2_B_tp = P2_B_tp + integral2(t_current, t_start, t_end, lam);
                 lam_store = lam_store + B * ((t_start - t_current) * exp(-lam*(t_start - t_current)) - (t_end - t_current) * exp(-lam*(t_end - t_current)));
+                
             }
         }
-
+        // Rprintf("lam store \n");
+        // sum(lam_store, 0).print();
+        // lam_store.fill(1.0);
         for (k = 0; k < K; k++) {
             for (l = 0; l < K; l++) {
                 grad_lam += tau(i,k) * tau(j,l) * lam_store(k,l);
             }
         }
-
         for (k = 0; k < K; k++) {
             for (l = 0; l < K; l++) {
                 P1_mu(k,l) += tau(i,k) * tau(j,l) * P1_mu_tp(k,l);
@@ -400,8 +416,20 @@ Rcpp::List update_lam_trunc(
                 S_tp(i,k) += tau(j,l) * (P_S_tp(k,l) - B(k,l) * P2_B_tp(k,l));
             }
         }
+        // cout<<grad_lam<<endl;
+        // Rprintf("Check S_tp here \n");
+        // sum(S_tp, 0).print();
+        // // Rprintf("Check tau \n");
+        // // sum(tau, 0).print();
+        // // Rprintf("Check P_S_tp \n");
+        // // sum(P_S_tp, 0).print();
+        // Rprintf("Check P2_B_tp \n");
+        // sum(P2_B_tp, 0).print();
     } 
-
+    
+    
+    // Rprintf("Check B \n");
+    // B.print();
     // update S, second part
     for (int i = 0; i < m; i++) {
         arma::rowvec edge = A[i];
@@ -416,16 +444,20 @@ Rcpp::List update_lam_trunc(
         }
     }
 
-
     // update parameters
     S = S + S_tp;
     arma::mat grad_B = P1_B - P2_B;
-    //grad_B.print();
+    // Rprintf("P1_B \n");
+    // P1_B.print();
+    // Rprintf("P2_B \n");
+    // P2_B.print();
+    // Rprintf("------- \n");
+    // grad_B.print();
     arma::mat grad_mu = P1_mu - P2_mu;
     //grad_mu.print();
     arma::mat B_new = B + eta * grad_B;
-    //Rprintf("B new is: \n");   
-    //B_new.print();
+    // Rprintf("B new is: \n");
+    // B_new.print();
     arma::mat Mu_new = Mu + eta * grad_mu;
     //Rprintf("Mu new is: \n");
     //Mu_new.print();
@@ -443,28 +475,29 @@ Rcpp::List update_lam_trunc(
                 Mu_new(k,l) = Mu(k,l) * 2.0;
         }
     }
-    double lam_new = lam + eta * grad_lam;
-    if (lam_new > 5*lam) {
-        lam_new = 5 * lam;
-    } else if (lam_new <= 0.0) {
-        lam_new = lam/2.0;
-    }
+    // Rprintf("Grad lambda \n");
+    // cout << grad_lam << endl;
+    // double lam_new = lam + eta * grad_lam;
+    // if (lam_new > 1.5*lam) {
+    //     lam_new = 1.5 * lam;
+    // } else if (lam_new <= 0.0) {
+    //     lam_new = lam/2.0;
+    // }
+    double lam_new = 0.15;
 
     arma::mat tau_new(m,K);
+    
     tau_new.fill(0.0);
-
-    arma::rowvec s;
     for (int i = 0; i < m; i++) {
-        s = S.row(i) - S.row(i).max();
-        s = s + log(Pi + 0.000001);
-        s = exp(s)/sum(exp(s));
-        tau_new.row(i) = s;
+      arma::rowvec s = arma::log(Pi) + S.row(i);
+      s = s - max(s);
+      s = exp(s)/sum(exp(s));
+      tau_new.row(i) = correct_tau(s);
     }
 
     for (k = 0; k < K; k++) {
-        Pi(k) = sum(tau.col(k)) / (m + 0.0);
+        Pi(k) = sum(tau_new.col(k)) / (m + 0.0);
     }   
-
     return Rcpp::List::create(Rcpp::Named("tau") = tau_new,
                           Rcpp::Named("Mu") = Mu_new,
                           Rcpp::Named("B") = B_new,
@@ -621,6 +654,7 @@ Rcpp::List update_lam_stoch(
     } 
 
     Rprintf("zero_count: %d \n", zero_count);
+    cout<<"Print this?"<<endl;
 
 
     // update parameters
@@ -659,16 +693,15 @@ Rcpp::List update_lam_stoch(
     arma::mat tau_new(m,K);
     tau_new.fill(0.0);
 
-    arma::rowvec s;
     for (int i = 0; i < m; i++) {
-        s = S.row(i) - S.row(i).max();
-        s = s + log(Pi + eps);
-        s = exp(s)/sum(exp(s));
-        tau_new.row(i) = s;
+      arma::rowvec s = arma::log(Pi) + S.row(i);
+      s = s - max(s);
+      s = exp(s)/sum(exp(s));
+      tau_new.row(i) = correct_tau(s);
     }
 
     for (k = 0; k < K; k++) {
-        Pi(k) = sum(tau.col(k)) / (m + eps);
+        Pi(k) = sum(tau_new.col(k)) / (m + eps);
     }   
 
     return Rcpp::List::create(Rcpp::Named("tau") = tau_new,
@@ -700,6 +733,8 @@ Rcpp::List online_estimator(
 	Pi.fill(1.0 / K);
 	arma::mat B(K,K), Mu(K,K), S(m,K);
 	arma::mat tau(m,K);
+	tau.fill(1.0/K);
+	S.fill(1.0/K);
 	for (int k = 0; k < K; k++) {
         for (int l=0; l < K; l++) {
             B(k,l) = myrunif();
@@ -707,16 +742,16 @@ Rcpp::List online_estimator(
         }
     }
     //B.fill(0.5), Mu.fill(0.5); 
-    S.fill(0.0);
+    // S.fill(0.0);
 	//B = B_start, Mu = Mu_start;
-	for (int i = 0; i < m; i++) {
-		arma::rowvec tt(K);
-		for (int k = 0; k < K; k++) {
-			tt(k) = myrunif();
-		}
-		tt = tt / sum(tt);
-		tau.row(i) = tt;
-	}
+	// for (int i = 0; i < m; i++) {
+	// 	arma::rowvec tt(K);
+	// 	for (int k = 0; k < K; k++) {
+	// 		tt(k) = myrunif();
+	// 	}
+	// 	tt = tt / sum(tt);
+	// 	tau.row(i) = tt;
+	// }
 	//tau = tau_start;
 
 	int nall = alltimes.n_rows;
@@ -957,16 +992,15 @@ Rcpp::List update_lam(
     arma::mat tau_new(m,K);
     tau_new.fill(0.0);
 
-    arma::rowvec s;
     for (int i = 0; i < m; i++) {
-        s = S.row(i) - S.row(i).max();
-        s = s + log(Pi + 0.000001);
-        s = exp(s)/sum(exp(s));
-        tau_new.row(i) = s;
+      arma::rowvec s = arma::log(Pi) + S.row(i);
+      s = s - max(s);
+      s = exp(s)/sum(exp(s));
+      tau_new.row(i) = correct_tau(s);
     }
 
     for (k = 0; k < K; k++) {
-        Pi(k) = sum(tau.col(k)) / (m + 0.0);
+        Pi(k) = sum(tau_new.col(k)) / (m + 0.0);
     }   
 
     return Rcpp::List::create(Rcpp::Named("tau") = tau_new,
@@ -1249,12 +1283,11 @@ Rcpp::List update_lam_eff(
     arma::mat tau_new(m,K);
     tau_new.fill(0.0);
 
-    arma::rowvec s;
     for (int i = 0; i < m; i++) {
-        s = S.row(i) - S.row(i).max();
-        s = s + log(Pi + eps);
-        s = exp(s)/sum(exp(s));
-        tau_new.row(i) = s;
+      arma::rowvec s = arma::log(Pi) + S.row(i);
+      s = s - max(s);
+      s = exp(s)/sum(exp(s));
+      tau_new.row(i) = correct_tau(s);
     }
 
     for (k = 0; k < K; k++) {
@@ -1466,16 +1499,15 @@ Rcpp::List update_lam_eff_revised(
     arma::mat tau_new(m,K);
     tau_new.fill(0.0);
 
-    arma::rowvec s;
     for (int i = 0; i < m; i++) {
-        s = S.row(i) - S.row(i).max();
-        s = s + log(Pi + eps);
-        s = exp(s)/sum(exp(s));
-        tau_new.row(i) = s;
+      arma::rowvec s = arma::log(Pi) + S.row(i);
+      s = s - max(s);
+      s = exp(s)/sum(exp(s));
+      tau_new.row(i) = correct_tau(s);
     }
 
     for (k = 0; k < K; k++) {
-        Pi(k) = sum(tau.col(k)) / (m + eps);
+        Pi(k) = sum(tau_new.col(k)) / (m + eps);
     }   
 
     return Rcpp::List::create(Rcpp::Named("tau") = tau_new,
@@ -1638,14 +1670,16 @@ Rcpp::List online_estimator_eff_revised(
     Pi.fill(1.0 / K);
     arma::mat B(K,K), Mu(K,K), S(m,K);
     arma::mat tau(m,K);
-    // for (int k = 0; k < K; k++) {
-    //     for (int l=0; l < K; l++) {
-    //         B(k,l) = myrunif();
-    //         Mu(k,l) = myrunif();
-    //     }
-    // }
+    for (int k = 0; k < K; k++) {
+         for (int l=0; l < K; l++) {
+             B(k,l) = myrunif();
+             Mu(k,l) = myrunif();
+         }
+     }
     //B.fill(0.5), Mu.fill(0.5); 
-    //S.fill(0.0);
+    S.fill(1.0/K);
+    tau.fill(1.0/K);
+
     //B = B_start, Mu = Mu_start;
     // for (int i = 0; i < m; i++) {
     //     arma::rowvec tt(K);
@@ -1655,10 +1689,11 @@ Rcpp::List online_estimator_eff_revised(
     //     tt = tt / sum(tt);
     //     tau.row(i) = tt;
     // }
-    tau = tau_start;
-    B = B_start;
-    Mu = Mu_start;
-    S = S_start;
+
+    // tau = tau_start;
+    //B = B_start;
+    // Mu = Mu_start;
+    // S = S_start;
 
     int nall = alltimes.n_rows;
     int start_pos = 0, curr_pos = 0, end_pos = 0, ln_prev = 0, ln_curr, n_t;
@@ -1681,6 +1716,7 @@ Rcpp::List online_estimator_eff_revised(
     arma::cube inter_tau(m,K,slices+1);
     arma::cube inter_B(K,K,N);
     arma::cube inter_mu(K,K,N);
+    arma::vec lam_vec(N);
 
     for (int n = 0; n < N; n++ ){
         // R = min(5.0 / lam, 10.0);
@@ -1705,6 +1741,7 @@ Rcpp::List online_estimator_eff_revised(
 
         //datamap = transfer_eff2(datamap, truncdata, R);
         // transfer_eff(datamap, truncdata, R);
+        // Rprintf("Datamap \n");
         transfer_dynamic(datamap, truncdata, R, Tn);
 
         t_start = Tn - dT;
@@ -1725,9 +1762,10 @@ Rcpp::List online_estimator_eff_revised(
         //Rprintf("iter: %d; number: %d \n", n, n_t); 
         inter_mu.slice(n) = Mu;
         inter_B.slice(n) = B;
+        lam_vec(n) = lam;
         //B.print();
         //Mu.print();
-        Rprintf("lam: %2.3f", lam);
+        //Rprintf("lam: %2.3f", lam);
         
         
         if(n % inter_T == 0 ){
@@ -1742,7 +1780,7 @@ Rcpp::List online_estimator_eff_revised(
         }
 
         //S.print();
-        Rprintf("=============\n");
+        //Rprintf("=============\n");
     }
 
     return Rcpp::List::create(
@@ -1755,7 +1793,8 @@ Rcpp::List online_estimator_eff_revised(
                           Rcpp::Named("early_tau")= inter_tau,
                           Rcpp::Named("inter_B") = inter_B,
                           Rcpp::Named("inter_mu") = inter_mu,
-                          Rcpp::Named("elbo") = elbo_vec);
+                          Rcpp::Named("elbo") = elbo_vec,
+                          Rcpp::Named("lambda_vec") = lam_vec);
 }
 
 
@@ -1787,17 +1826,18 @@ Rcpp::List batch_estimator(
             Mu(k,l) = myrunif();
         }
     }
-    //B.fill(0.5), Mu.fill(0.5); 
-    
+    // B.fill(0.5), Mu.fill(0.5);
+    S.fill(1.0/K);
+    tau.fill(1.0/K);
     //B = B_start, Mu = Mu_start;
-    for (int i = 0; i < m; i++) {
-        arma::rowvec tt(K);
-        for (int k = 0; k < K; k++) {
-            tt(k) = myrunif();
-        }
-        tt = tt / sum(tt);
-        tau.row(i) = tt;
-    }
+    // for (int i = 0; i < m; i++) {
+    //     arma::rowvec tt(K);
+    //     for (int k = 0; k < K; k++) {
+    //         tt(k) = myrunif();
+    //     }
+    //     tt = tt / sum(tt);
+    //     tau.row(i) = tt;
+    // }
     //tau = tau_start;
 
     int nall = alltimes.n_rows;
@@ -1828,9 +1868,20 @@ Rcpp::List batch_estimator(
     double trunc_length = 5.0;
     for (int iter = 0; iter < itermax; iter++) {
         eta = 1.0/nall * (K * K) /(iter + 1.0);
-        S.fill(0.0);
-        paralist = update_lam_trunc(tau, Mu, B, Pi, S, datamap, t_start, Tn, m, K, A, lam, eta, trunc_length);
-        arma::mat tau_new = paralist["tau"], Mu_new = paralist["Mu"], B_new = paralist["B"], S_new = paralist["S"];
+        // S.fill(0.0);
+        paralist = update_lam_trunc(tau, Mu, B, Pi, S, datamap,
+                                    t_start,
+                                    Tn,
+                                    m,
+                                    K,
+                                    A,
+                                    lam,
+                                    eta,
+                                    trunc_length);
+        arma::mat tau_new = paralist["tau"];
+        arma::mat Mu_new = paralist["Mu"];
+        arma::mat B_new = paralist["B"];
+        arma::mat S_new = paralist["S"];
         arma::rowvec Pi_new = paralist["Pi"];
         double lam_new = paralist["lam"];
         gap = max(abs(Mu - Mu_new).max(), abs(B - B_new).max());
@@ -1838,9 +1889,9 @@ Rcpp::List batch_estimator(
         Mu = Mu_new, B = B_new, S = S_new, Pi = Pi_new;
         lam = lam_new;
         Rprintf("iter: %d \n", iter); 
-        B.print();
-        Mu.print();
-        Pi.print();
+        // B.print();
+        // Mu.print();
+        // Pi.print();
         Rprintf("lam: %2.3f", lam);
         Rprintf("gap: %2.3f", gap);
         Rprintf("=============\n");

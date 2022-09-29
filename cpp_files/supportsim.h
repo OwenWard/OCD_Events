@@ -163,9 +163,10 @@ arma::mat sampleBlockHak(
 			mu = Mu(z1, z2), b = B(z1, z2);
 			temp = sampleHak(T, mu, b, lam);
 			n_temp = temp.n_elem;
-			//printf("n_temp: %d", n_temp);
+			// printf("n_temp: %d \n", n_temp);
 			if(count + n_temp > size){
 				size = max(2*size, count + n_temp);
+				// size = count + n_temp;
 				alltimes.resize(size,3);
 			}
 			for (k = 0; k < n_temp; k++){

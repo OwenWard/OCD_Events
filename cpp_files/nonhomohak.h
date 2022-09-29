@@ -334,14 +334,14 @@ Rcpp::List update_nonhomo(
 
     arma::rowvec s;
     for (int i = 0; i < m; i++) {
-    	s = S.row(i) - S.row(i).max();
-    	s = s + log(Pi + 0.000001);
-    	s = exp(s)/sum(exp(s));
-    	tau_new.row(i) = s;
+      arma::rowvec s = arma::log(Pi) + S.row(i);
+      s = s - max(s);
+      s = exp(s)/sum(exp(s));
+      tau_new.row(i) = correct_tau(s);
     }
 
     for (k = 0; k < K; k++) {
-    	Pi(k) = sum(tau.col(k)) / (m + 0.0);
+    	Pi(k) = sum(tau_new.col(k)) / (m + 0.0);
     }	
 
 	return Rcpp::List::create(Rcpp::Named("tau") = tau_new,
@@ -572,14 +572,14 @@ Rcpp::List update_nonhomo_sparse(
 
     arma::rowvec s;
     for (int i = 0; i < m; i++) {
-    	s = S.row(i) - S.row(i).max();
-    	s = s + log(Pi + eps);
-    	s = exp(s)/sum(exp(s));
-    	tau_new.row(i) = s;
+      arma::rowvec s = arma::log(Pi) + S.row(i);
+      s = s - max(s);
+      s = exp(s)/sum(exp(s));
+      tau_new.row(i) = correct_tau(s);
     }
 
     for (k = 0; k < K; k++) {
-    	Pi(k) = sum(tau.col(k)) / (m + 0.0);
+    	Pi(k) = sum(tau_new.col(k)) / (m + 0.0);
     }	
 
 	return Rcpp::List::create(Rcpp::Named("tau") = tau_new,
@@ -615,14 +615,15 @@ Rcpp::List nonhomoHak_estimator(
 	arma::mat tau(m,K);
 	B.fill(0.5), MuA.fill(0.5), S.fill(0.0);
 	//B = B_start, Mu = Mu_start;
-	for (int i = 0; i < m; i++) {
-		arma::rowvec tt(K);
-		for (int k = 0; k < K; k++) {
-			tt(k) = myrunif();
-		}
-		tt = tt / sum(tt);
-		tau.row(i) = tt;
-	}
+	// for (int i = 0; i < m; i++) {
+	// 	arma::rowvec tt(K);
+	// 	for (int k = 0; k < K; k++) {
+	// 		tt(k) = myrunif();
+	// 	}
+	// 	tt = tt / sum(tt);
+	// 	tau.row(i) = tt;
+	// }
+	tau.fill(1.0/K);
 	//tau = tau_start;
 
 	int nall = alltimes.n_rows;
@@ -942,14 +943,14 @@ Rcpp::List update_nonhomo_eff(
 
     arma::rowvec s;
     for (int i = 0; i < m; i++) {
-    	s = S.row(i) - S.row(i).max();
-    	s = s + log(Pi + eps);
-    	s = exp(s)/sum(exp(s));
-    	tau_new.row(i) = s;
+      arma::rowvec s = arma::log(Pi) + S.row(i);
+      s = s - max(s);
+      s = exp(s)/sum(exp(s));
+      tau_new.row(i) = correct_tau(s);
     }
 
     for (k = 0; k < K; k++) {
-    	Pi(k) = sum(tau.col(k)) / (m + 0.0);
+    	Pi(k) = sum(tau_new.col(k)) / (m + 0.0);
     }	
 
 	return Rcpp::List::create(Rcpp::Named("tau") = tau_new,
@@ -1215,14 +1216,14 @@ Rcpp::List update_nonhomo_eff_revised(
 
     arma::rowvec s;
     for (int i = 0; i < m; i++) {
-    	s = S.row(i) - S.row(i).max();
-    	s = s + log(Pi + eps);
-    	s = exp(s)/sum(exp(s));
-    	tau_new.row(i) = s;
+      arma::rowvec s = arma::log(Pi) + S.row(i);
+      s = s - max(s);
+      s = exp(s)/sum(exp(s));
+      tau_new.row(i) = correct_tau(s);
     }
 
     for (k = 0; k < K; k++) {
-    	Pi(k) = sum(tau.col(k)) / (m + 0.0);
+    	Pi(k) = sum(tau_new.col(k)) / (m + 0.0);
     }	
 
 	return Rcpp::List::create(Rcpp::Named("tau") = tau_new,
@@ -1272,14 +1273,15 @@ Rcpp::List nonhomoHak_estimator_eff(
         }
     }
 	//B = B_start, Mu = Mu_start;
-	for (int i = 0; i < m; i++) {
-		arma::rowvec tt(K);
-		for (int k = 0; k < K; k++) {
-			tt(k) = myrunif();
-		}
-		tt = tt / sum(tt);
-		tau.row(i) = tt;
-	}
+	// for (int i = 0; i < m; i++) {
+	// 	arma::rowvec tt(K);
+	// 	for (int k = 0; k < K; k++) {
+	// 		tt(k) = myrunif();
+	// 	}
+	// 	tt = tt / sum(tt);
+	// 	tau.row(i) = tt;
+	// }
+	tau.fill(1.0/K);
 	//tau = tau_start;
 
 	int nall = alltimes.n_rows;
@@ -1390,29 +1392,26 @@ Rcpp::List nonhomoHak_estimator_eff_revised(
 	arma::mat B(K,K), S(m,K);
 	arma::cube MuA(K,K,H);
 	arma::mat tau(m,K);
-  // 	B.fill(0.5), MuA.fill(0.5), S.fill(0.0);
-  // 	for (int k = 0; k < K; k++) {
-  //         for (int l=0; l < K; l++) {
-  //             B(k,l) = myrunif();
-  //             for(int h = 0; h < H; h++) {
-  //             	MuA(k,l,h) = myrunif();
-  //             }            
-  //         }
-  //     }
-  // 	B = B_start, MuA = MuA_start;
-  // 	for (int i = 0; i < m; i++) {
-  // 		arma::rowvec tt(K);
-  // 		for (int k = 0; k < K; k++) {
-  // 			tt(k) = myrunif();
-  // 		}
-  // 		tt = tt / sum(tt);
-  // 		tau.row(i) = tt;
-  // 	}
-	tau = tau_start;
-	Pi = Pi_start;
-	S = S_start;
-	MuA = MuA_start;
-	B = B_start;
+	B.fill(0.5), MuA.fill(0.5), S.fill(0.0);
+	for (int k = 0; k < K; k++) {
+        for (int l=0; l < K; l++) {
+            B(k,l) = myrunif();
+            for(int h = 0; h < H; h++) {
+            	MuA(k,l,h) = myrunif();
+            }            
+        }
+    }
+	//B = B_start, Mu = Mu_start;
+	// for (int i = 0; i < m; i++) {
+	// 	arma::rowvec tt(K);
+	// 	for (int k = 0; k < K; k++) {
+	// 		tt(k) = myrunif();
+	// 	}
+	// 	tt = tt / sum(tt);
+	// 	tau.row(i) = tt;
+	// }
+	tau.fill(1.0/K);
+	//tau = tau_start;
 
 	int nall = alltimes.n_rows;
 	int start_pos = 0, curr_pos = 0, end_pos = 0, ln_prev = 0, ln_curr, n_t;
@@ -1705,26 +1704,27 @@ Rcpp::List update_nonhomo_sparse_trunc(
     	}
     }
 
-    double lam_new = lam + eta * grad_lam;
-    if (lam_new > 5*lam) {
-        lam_new = 5 * lam;
-    } else if (lam_new <= 0.0) {
-        lam_new = lam/2.0;
-    }
-
+    // double lam_new = lam + eta * grad_lam;
+    // if (lam_new > 1.5*lam) {
+    //     lam_new = 1.5 * lam;
+    // } else if (lam_new <= 0.0) {
+    //     lam_new = lam/2.0;
+    // }
+    double lam_new = 0.15;
+    
     arma::mat tau_new(m,K);
     tau_new.fill(0.0);
 
     arma::rowvec s;
     for (int i = 0; i < m; i++) {
-    	s = S.row(i) - S.row(i).max();
-    	s = s + log(Pi + eps);
-    	s = exp(s)/sum(exp(s));
-    	tau_new.row(i) = s;
+      arma::rowvec s = arma::log(Pi) + S.row(i);
+      s = s - max(s);
+      s = exp(s)/sum(exp(s));
+      tau_new.row(i) = correct_tau(s);
     }
 
     for (k = 0; k < K; k++) {
-    	Pi(k) = sum(tau.col(k)) / (m + 0.0);
+    	Pi(k) = sum(tau_new.col(k)) / (m + 0.0);
     }	
 
 	return Rcpp::List::create(Rcpp::Named("tau") = tau_new,
@@ -1768,14 +1768,15 @@ Rcpp::List batch_nonhomoHak_estimator(
     }
 
 	//B = B_start, Mu = Mu_start;
-	for (int i = 0; i < m; i++) {
-		arma::rowvec tt(K);
-		for (int k = 0; k < K; k++) {
-			tt(k) = myrunif();
-		}
-		tt = tt / sum(tt);
-		tau.row(i) = tt;
-	}
+	// for (int i = 0; i < m; i++) {
+	// 	arma::rowvec tt(K);
+	// 	for (int k = 0; k < K; k++) {
+	// 		tt(k) = myrunif();
+	// 	}
+	// 	tt = tt / sum(tt);
+	// 	tau.row(i) = tt;
+	// }
+	tau.fill(1.0/K);
 	//tau = tau_start;
 
 	int nall = alltimes.n_rows;
@@ -1793,14 +1794,14 @@ Rcpp::List batch_nonhomoHak_estimator(
     double eta = 1.0/nall * (K * K);
 
 	for (int iter = 0; iter < itermax; iter++) {
-        eta = 1.0/nall * (K * K) / sqrt(iter / H + 1.0);
+        eta = 1.0/nall * (K * K * 100) / sqrt(iter / H + 1.0);
         S.fill(0.0);
         paralist = update_nonhomo_sparse_trunc(tau, MuA, B, Pi, S, datamap, t_start, Tn, m, K, A, window, lam, eta, gravity, 5);
         // paralist = update_nonhomo_sparse(tau, MuA, B, Pi, S, datamap, t_start, Tn, m, K, A, window, lam, eta, gravity);
-		arma::mat tau_new = paralist["tau"], B_new = paralist["B"], S_new = paralist["S"];
-		arma::cube MuA_new = paralist["MuA"];
-		arma::rowvec Pi_new = paralist["Pi"];
-		double lam_new = paralist["lam"];
+		    arma::mat tau_new = paralist["tau"], B_new = paralist["B"], S_new = paralist["S"];
+		    arma::cube MuA_new = paralist["MuA"];
+		    arma::rowvec Pi_new = paralist["Pi"];
+		    double lam_new = paralist["lam"];
 
         gap = max(abs(MuA - MuA_new).max(), abs(B - B_new).max());
         tau = tau_new; 
@@ -2161,14 +2162,14 @@ Rcpp::List update_nonhomo_pois(
 
     arma::rowvec s;
     for (int i = 0; i < m; i++) {
-    	s = S.row(i) - S.row(i).max();
-    	s = s + log(Pi + eps);
-    	s = exp(s)/sum(exp(s));
-    	tau_new.row(i) = s;
+      arma::rowvec s = arma::log(Pi) + S.row(i);
+      s = s - max(s);
+      s = exp(s)/sum(exp(s));
+      tau_new.row(i) = correct_tau(s);
     }
 
     for (k = 0; k < K; k++) {
-    	Pi(k) = sum(tau.col(k)) / (m + 0.0);
+    	Pi(k) = sum(tau_new.col(k)) / (m + 0.0);
     }	
 
 	return Rcpp::List::create(Rcpp::Named("tau") = tau_new,
@@ -2390,14 +2391,14 @@ Rcpp::List update_nonhomo_pois_revised(
 
     arma::rowvec s;
     for (int i = 0; i < m; i++) {
-    	s = S.row(i) - S.row(i).max();
-    	s = s + log(Pi + eps);
-    	s = exp(s)/sum(exp(s));
-    	tau_new.row(i) = s;
+      arma::rowvec s = arma::log(Pi) + S.row(i);
+      s = s - max(s);
+      s = exp(s)/sum(exp(s));
+      tau_new.row(i) = correct_tau(s);
     }
 
     for (k = 0; k < K; k++) {
-    	Pi(k) = sum(tau.col(k)) / (m + 0.0);
+    	Pi(k) = sum(tau_new.col(k)) / (m + 0.0);
     }	
 
 	return Rcpp::List::create(Rcpp::Named("tau") = tau_new,
@@ -2440,14 +2441,15 @@ Rcpp::List nonhomoPois_estimator(
             }            
         }
     }
-	for (int i = 0; i < m; i++) {
-		arma::rowvec tt(K);
-		for (int k = 0; k < K; k++) {
-			tt(k) = myrunif();
-		}
-		tt = tt / sum(tt);
-		tau.row(i) = tt;
-	}
+	// for (int i = 0; i < m; i++) {
+	// 	arma::rowvec tt(K);
+	// 	for (int k = 0; k < K; k++) {
+	// 		tt(k) = myrunif();
+	// 	}
+	// 	tt = tt / sum(tt);
+	// 	tau.row(i) = tt;
+	// }
+	tau.fill(1.0/K);
 	//tau = tau_start;
 
 	int nall = alltimes.n_rows;
@@ -2467,6 +2469,7 @@ Rcpp::List nonhomoPois_estimator(
 	double R = dT;
 
 	for (int n = 0; n < N; n++ ){
+	  cout<<n<<endl;
 		Tn = (n + 1.0) * dT;
 		event = alltimes.row(start_pos);
 		t_current = event(2);
@@ -2624,6 +2627,7 @@ Rcpp::List nonhomoPois_estimator_update(
     Rprintf("iter: %d; number: %d \n", n, n_t); 
     //MuA.print();
     //S.print();
+    tau.print();
     
     if (is_elbo){
       prevdata = alltimes.rows(0, end_pos - 1); // head_rows()
@@ -2675,14 +2679,15 @@ Rcpp::List batch_nonhomoPois_estimator(
         }
     }
 	//B = B_start, Mu = Mu_start;
-	for (int i = 0; i < m; i++) {
-		arma::rowvec tt(K);
-		for (int k = 0; k < K; k++) {
-			tt(k) = myrunif();
-		}
-		tt = tt / sum(tt);
-		tau.row(i) = tt;
-	}
+	// for (int i = 0; i < m; i++) {
+	// 	arma::rowvec tt(K);
+	// 	for (int k = 0; k < K; k++) {
+	// 		tt(k) = myrunif();
+	// 	}
+	// 	tt = tt / sum(tt);
+	// 	tau.row(i) = tt;
+	// }
+	tau.fill(1.0/K);
 	//tau = tau_start;
 
 	int nall = alltimes.n_rows;
