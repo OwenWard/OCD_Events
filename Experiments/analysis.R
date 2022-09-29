@@ -595,10 +595,10 @@ exp_12_sparse <- list.files(path = here("Experiments/exp_results/"),
 exp_12_sparse %>% 
   map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>% 
   group_by(init, nodes, n0, m0, sparsity) %>% 
-  summarise(mean_ARI = mean(ARI), sd(ARI), median(ARI), n()) %>% 
+  # summarise(mean_ARI = mean(ARI), sd(ARI), median(ARI), n()) %>% 
   filter(nodes == 400) %>% 
   mutate(n0 = n0/2) %>% 
-  ggplot(aes(n0, mean_ARI, colour = init)) +
+  ggplot(aes(n0, ARI, colour = init)) +
   geom_point(aes()) +
   facet_wrap(vars(m0, sparsity)) +
   labs(x = "% time used for Initialization",
@@ -643,27 +643,107 @@ exp_12_m0 %>%
 ## this leads to a big big improvement, but still not
 ## as good as random init??!?!
 
-### Check for figure 1 ####
-fig_1_files <- list.files(path = here("Experiments/exp_results/"),
-                                      pattern = "fig_1_exp_1")
 
-fig_1_files %>% 
+### trying uneven group sizes ###
+exp_12_uneven <- list.files(path = here("Experiments/exp_results/"), 
+                           pattern = "exp_12_uneven")
+
+exp_12_uneven %>% 
   map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>% 
-  drop_na(ARI) %>% 
-  group_by(Method) %>% 
-  summarise(mean(ARI), sd(ARI), median(ARI))
+  group_by(init, m0, nodes) %>%
+  filter(m0 > nodes/4) %>%
+  # filter(n0 > 10) %>% 
+  summarise(mean(ARI), sd(ARI), n())
 
-## ok, so InPoisson works ok but no init here, which would
-## hopefully help?
-
-fig_1_files %>% 
+exp_12_uneven %>% 
   map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>% 
-  drop_na(ARI) %>% 
-  group_by(Method, window_size) |>
-  mutate(Method = as.factor(Method),
-         window_size = as.factor(window_size)) |> 
-  ggplot(aes(window_size, ARI)) +
+  group_by(init, n0, m0, nodes) %>% 
+  filter(init == "No Init") %>% 
+  summarise(mean(ARI), sd(ARI), n())
+
+exp_12_uneven %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  group_by(init, n0, m0, nodes) %>% 
+  filter(m0 == nodes) %>% 
+  summarise(mean(ARI), sd(ARI), n())
+
+
+### how is this better than some of the old simulations where
+### dense. compare to those?
+
+
+#### Scaling Sparse simulations to Large Networks
+
+#### 1000 nodes first
+
+large_sims <- list.files(path = here("Experiments/exp_results/"), 
+                         pattern = "exp_12_april_18")
+
+
+large_sims[1:5] %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  group_by(init, n0, m0) %>% 
+  ggplot(aes(init, ARI, fill = n0)) +
   geom_boxplot() +
-  facet_wrap(~Method, scales = "free")
+  facet_wrap(vars(m0), scales = "free_x") +
+  labs(title = "Number of Nodes used in Initialization Algorithm")
+
+large_sims[1:5] %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  group_by(init, n0, m0) %>% 
+  ggplot(aes(init, ARI, fill = m0)) +
+  geom_boxplot() +
+  facet_wrap(vars(n0), scales = "free_x") +
+  labs(title = "Length of Time used in Initialization Algorithm")
+
+large_sims[6] %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  group_by(init, n0, m0) %>% 
+  summarise(mean(ARI), sd(ARI))
+
+## this looks good too
 
 
+#### Exp 13 Varying K with init for Poisson
+
+K_sims <- list.files(path = here("Experiments/exp_results/"), 
+                     pattern = "exp_13_K")
+                     
+K_sims %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  group_by(init, K) %>% 
+  summarise(mean(ARI))
+
+K_sims %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  ggplot(aes(as.factor(init), ARI, fill = init)) +
+  geom_boxplot() +
+  facet_wrap(vars(K, nodes))
+
+## just look at K
+K_sims %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  filter(init == "Init") %>% 
+  filter(nodes == 200) %>% 
+  filter(m0 == nodes/2) %>% 
+  ggplot(aes(as.factor(K), ARI)) +
+  geom_boxplot()
+
+K_sims %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  group_by(K, sparsity, n0, m0) %>% 
+  tally()
+
+
+### Exp 14 vary sparsity with n
+
+exp_14_files <- list.files(path = here("Experiments/exp_results/"), 
+                           pattern = "exp_14")
+
+exp_14_data <- exp_14_files %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/", .x)))
+
+exp_14_data %>% 
+  ggplot(aes(as.factor(init), ARI, fill = init)) +
+  geom_boxplot() +
+  facet_wrap(vars(nodes, n0), scales = "free_x")

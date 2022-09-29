@@ -190,6 +190,32 @@ online_dat %>%
 
 ## Old Experiment 9 also has some interesting experiments
 ```
+```{r online-ari-slides, fig.width=7, fig.height=3.5}
+online_dat %>% 
+  filter(m0 == nodes/4) %>%
+  filter(nodes <= 500) %>% 
+  group_by(time, m0, nodes) %>% 
+  summarise(Mean_ARI = mean(ARI), sd = sd(ARI)) %>% 
+  mutate(nodes = paste0("n = ", nodes)) %>% 
+  mutate(nodes = factor(nodes, 
+                       levels = c("n = 100", "n = 200", "n = 500",
+                                  "n = 1000"))) %>% 
+  mutate(lower = max(Mean_ARI - sd, 0), upper = min(1, Mean_ARI + sd)) %>% 
+  ggplot(aes(time, Mean_ARI)) +
+  geom_point() +
+  geom_line(size = line_size) +
+  geom_errorbar(aes(ymin = lower, ymax = upper), alpha = 0.4) +
+  ylim(c(0, 1)) +
+  labs(colour = "Number of Nodes", y = "ARI", x = "Time", width = 0.2) +
+  facet_wrap(~nodes) +
+  theme(axis.text = element_text(size = axis_text_size),
+        axis.title = element_text(size = axis_title),
+        legend.title = element_text(size = axis_title),
+        legend.text = element_text(size = legend_text))
+
+
+```
+
 
 ```{r check-this}
 online_dat %>% 
@@ -726,6 +752,34 @@ loss_data %>%
 
 ```
 
+```{r loss-plot-slides,fig.width=7, fig.height=3.5}
+
+batch_loss_slides <- batch_loss[1:3, ] 
+
+loss_data %>% 
+  filter(Time <= 200) %>% 
+  # filter(Sim == 1) %>% 
+  filter(Z == "Est_Z") %>% 
+  # filter(Time == 200) %>% 
+  mutate(Time = paste0("Time = ", Time)) %>% 
+  mutate(Time = factor(Time, 
+                       levels = c("Time = 50",
+                                  "Time = 100",
+                                  "Time = 200"))) %>% 
+  ggplot(aes(dT, Loss)) +
+  geom_line(aes(group = interaction(Sim, Z)), alpha = 0.2) +
+  geom_hline(data = batch_loss_slides, aes(yintercept =  batch), colour = "red") +
+  facet_wrap(~Time, scales = "free_x") +
+  labs(x = "Time") +
+  theme(legend.position = "null",
+        axis.text = element_text(size = axis_text_size),
+        axis.title = element_text(size = axis_title),
+        strip.text.x = element_text(size = axis_title),,
+        legend.text = element_text(size = legend_text))
+
+
+```
+
 
 # Real Data Experiments
 
@@ -782,6 +836,19 @@ pred_data %>%
 
 ```
 
+
+```{r ubuntu-link-pred}
+exps <- list.files(path = here("Experiments/thesis_output"),
+                   pattern = "Ubuntu_Link_pred")
+
+pred_data <- exps %>% 
+  map_dfr(~readRDS(here("Experiments/thesis_output/", .x)))
+
+pred_data %>% 
+  group_by(model) %>% 
+  summarise(median(RMSE), median(time), sd(time)) 
+
+```
 
 
 # Additional Material

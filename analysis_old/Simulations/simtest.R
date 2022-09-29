@@ -5,10 +5,12 @@ sourceCpp("onlineblock.cpp")
 # test case 1
 T <- 100
 K <- 3
-Mu <- matrix(c(0.6,0.2,0.3,0.1,1.0,0.4,0.5,0.2,0.75),K,K,byrow = TRUE)
-B <- matrix(c(0.5,0.1,0.3,0.4,0.4,0.4,0.2,0.6,0.2),K,K,byrow = TRUE)
+Mu <- matrix(c(0.6, 0.2, 0.3, 0.1, 1.0, 0.4, 
+               0.5, 0.2, 0.75), K, K, byrow = TRUE)
+B <- matrix(c(0.5, 0.1, 0.3, 0.4, 0.4, 0.4,
+              0.2, 0.6, 0.2), K, K, byrow = TRUE)
 m <- 100
-Pi <- matrix(c(0.4,0.3,0.3),1,3)
+Pi <- matrix(c(0.4, 0.3, 0.3), 1, 3)
 Z <- c(rep(0,m*Pi[1]),rep(1,m*Pi[2]),rep(2,m*Pi[3]))
 
 A <- list()

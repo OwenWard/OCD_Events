@@ -5,3 +5,5 @@
 Experiments/routput*
 Experiments/slurm*
 analysis_old/
+Job_Talk_Plots
+*.png

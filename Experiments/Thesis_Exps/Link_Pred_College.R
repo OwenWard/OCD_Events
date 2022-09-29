@@ -91,7 +91,8 @@ S <- matrix(0, nrow = m, ncol = K)
 
 # online estimate
 a <- bench::mark(
-  results_pois_train <- estimate_Poisson(full_data = as.matrix(college_train),
+  results_pois_train <- estimate_Poisson_minimal(full_data = 
+                                                   as.matrix(college_train),
                                                         A_test,
                                                         m,
                                                         K,
@@ -138,7 +139,7 @@ pred_test_set$Mean <- mu
 
 online_poss_pred <- pred_test_set %>% 
   mutate(mean_events = Mean*(test_time-train_time)) %>%
-  mutate(diff_mean = n -mean_events) %>%
+  mutate(diff_mean = n - mean_events) %>%
   mutate(diff_zero = n - 0) %>%
   ungroup() %>%
   summarise(RMSE = sqrt(mean(diff_mean^2)),

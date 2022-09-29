@@ -151,8 +151,8 @@ saveRDS(results, file = here("Experiments",
 ### for a given dataset, draw new B and plot the loss each time.
 
 
-tidy_loss %>% 
-  ggplot(aes(dT, Loss, colour = Z)) +
-  geom_line() +
-  geom_hline(aes(yintercept = batch_average, linetype = "Batch Average")) +
-  labs(linetype = "", colour = "Labels Used")
+# tidy_loss %>% 
+#   ggplot(aes(dT, Loss, colour = Z)) +
+#   geom_line() +
+#   geom_hline(aes(yintercept = batch_average, linetype = "Batch Average")) +
+#   labs(linetype = "", colour = "Labels Used")
