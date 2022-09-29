@@ -1656,6 +1656,7 @@ Rcpp::List online_estimator_eff_revised(
     arma::mat B_start,
     arma::mat Mu_start,
     arma::mat tau_start,
+    arma::mat S_start,
     int inter_T,
     bool is_elbo = false
     ){
@@ -1670,14 +1671,15 @@ Rcpp::List online_estimator_eff_revised(
     arma::mat B(K,K), Mu(K,K), S(m,K);
     arma::mat tau(m,K);
     for (int k = 0; k < K; k++) {
-        for (int l=0; l < K; l++) {
-            B(k,l) = myrunif();
-            Mu(k,l) = myrunif();
-        }
-    }
+         for (int l=0; l < K; l++) {
+             B(k,l) = myrunif();
+             Mu(k,l) = myrunif();
+         }
+     }
     //B.fill(0.5), Mu.fill(0.5); 
     S.fill(1.0/K);
     tau.fill(1.0/K);
+
     //B = B_start, Mu = Mu_start;
     // for (int i = 0; i < m; i++) {
     //     arma::rowvec tt(K);
@@ -1687,7 +1689,11 @@ Rcpp::List online_estimator_eff_revised(
     //     tt = tt / sum(tt);
     //     tau.row(i) = tt;
     // }
-    //tau = tau_start;
+
+    // tau = tau_start;
+    //B = B_start;
+    // Mu = Mu_start;
+    // S = S_start;
 
     int nall = alltimes.n_rows;
     int start_pos = 0, curr_pos = 0, end_pos = 0, ln_prev = 0, ln_curr, n_t;
@@ -1783,6 +1789,7 @@ Rcpp::List online_estimator_eff_revised(
                           Rcpp::Named("Pi") = Pi,
                           Rcpp::Named("lam") = lam,
                           Rcpp::Named("tau") = tau,
+                          Rcpp::Named("S") = S,
                           Rcpp::Named("early_tau")= inter_tau,
                           Rcpp::Named("inter_B") = inter_B,
                           Rcpp::Named("inter_mu") = inter_mu,

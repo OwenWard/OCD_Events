@@ -1378,6 +1378,8 @@ Rcpp::List nonhomoHak_estimator_eff_revised(
 	arma::mat B_start,
 	arma::cube MuA_start,
 	arma::mat tau_start,
+	arma::mat S_start,
+	arma::rowvec Pi_start,
 	bool is_elbo = false
 	){
 
@@ -1386,7 +1388,7 @@ Rcpp::List nonhomoHak_estimator_eff_revised(
 
 	// initialization
 	arma::rowvec Pi(K);
-	Pi.fill(1.0 / K);
+	// Pi.fill(1.0 / K);
 	arma::mat B(K,K), S(m,K);
 	arma::cube MuA(K,K,H);
 	arma::mat tau(m,K);
@@ -1486,6 +1488,7 @@ Rcpp::List nonhomoHak_estimator_eff_revised(
                           Rcpp::Named("Pi") = Pi,
                           Rcpp::Named("lam") = lam,
                           Rcpp::Named("tau") = tau,
+                          Rcpp::Named("S") = S,
                           Rcpp::Named("elbo") = elbo_vec);
 }
 

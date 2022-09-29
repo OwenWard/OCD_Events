@@ -272,6 +272,7 @@ Rcpp::List estimate_Poisson(
     int K,
     double T,
     double dT,
+    double step_size,
     arma::mat B,
     int inter_T,
     bool is_elbo = false
@@ -327,7 +328,7 @@ Rcpp::List estimate_Poisson(
     cum_events += sub_data.n_rows;
     elbo_dat = full_data.rows(0,end_pos); 
     start_pos = curr_pos;
-    eta = 1/pow(1 + n, .5)/sub_data.n_rows*(K*K);
+    eta = 1/pow(1+n, step_size)/sub_data.n_rows*(K*K);
     S = updateS(sub_data, tau, B, A, S, K, m, dT);
     tau = updateTau(S,Pi,m,K); 
     B = updateB(sub_data, tau, B, K, A, m, dT, eta);
@@ -341,14 +342,22 @@ Rcpp::List estimate_Poisson(
       ave_ll(n) = curr_ll(n)/cum_events;
       full_elbo(n) = computeELBO(full_data, tau, B, Pi, A, m, K, T);
     }
-    if(inter_T != 0){
-      if(n % inter_T == 0 ){
-        inter_tau.slice(ind) = tau;
-        ind = ind + 1;
-      }
+    
+    //cout<<B<<endl;
+    //Rprintf("iter: %d; \n", n); 
+    //B.print();
+    //Pi.print();
+    //S.print();
+    //Rprintf("=============\n");
+    //Rcout << Pi << endl;
+    if(n % inter_T == 0 ){
+      inter_tau.slice(ind) = tau;
+      ind = ind + 1;
+      //Rprintf("iter: %d; \n", n);
+      //Rprintf("=============\n");
     }
   }
-  
+  Rprintf("Step Size: %f \n", step_size);
   return Rcpp::List::create(Named("S")= S,
                             Named("tau")=tau,
                             // Named("early_tau")= inter_tau,
