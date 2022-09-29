@@ -1,4 +1,5 @@
-#### helper functions
+#### helper functions for cleaning data and loading 
+#### required functions, packages
 
 library(here)
 library(tidyverse)

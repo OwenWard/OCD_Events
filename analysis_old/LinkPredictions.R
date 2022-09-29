@@ -721,3 +721,6 @@ system.time(results.batch <- batch_nonhomoHak_estimator(as.matrix(train_set),A,m
 
 est_Z = apply(results.online$tau,1,which.max)-1
 est_Z_full = apply(results.batch$tau,1,which.max)-1
+
+
+### put everything together in a tibble and save it

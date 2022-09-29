@@ -1,0 +1,168 @@
+---
+title: "Updates April 11"
+author: "Owen G. Ward"
+date: "4/11/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(here)
+library(tidyverse)
+source(here("Experiments/utils.R"))
+```
+
+# Poisson Initialization
+
+## Dense Setting
+
+This is a quite easy simulation setting but the initialization procedure 
+still leads to a slight improvement.
+Here `no_init` corresponds to the random initialization, which shows a lot 
+more variance.
+
+```{r dense-sims, echo=FALSE, message=FALSE}
+K <- 2
+true_Mu <- matrix(0.05, 
+                    nrow = K, ncol = K, byrow = T)
+  diag(true_Mu) <- c(rep(0.5, K-1), 1)
+
+print("Rate Matrix")
+print(true_Mu)
+
+exp_12_dense <- list.files(path = here("Experiments/exp_results/"), 
+                           pattern = "exp_12_n0_dense")
+
+exp_12_dense %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  group_by(init, n0) %>% 
+  summarise(mean_ARI = mean(ARI), sd_ARI = sd(ARI))
+
+exp_12_dense %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>%
+  mutate(n0 = n0/2) %>% 
+  ggplot(aes(as.factor(n0), ARI, fill = init)) +
+  geom_boxplot() +
+  geom_point(alpha = 0.25) +
+  facet_wrap(vars(nodes, init)) +
+  labs(x = "% training", fill = "Method") +
+  scale_x_discrete(breaks = c(5, 10, 15, 20, 25))
+```
+
+We also consider a setting with $K=3$ which is harder for the random
+starting point to recover the communities.
+
+```{r k=3, echo=TRUE}
+K <- 3
+true_Mu <- matrix(0.05, 
+                    nrow = K, ncol = K, byrow = T)
+diag(true_Mu) <- 0.5:K + 1.2
+print(true_Mu)  
+
+exp_12_sim_2 <- list.files(path = here("Experiments/exp_results/"), 
+                           pattern = "exp_12_n0_dense_apr_13")
+
+exp_12_sim_2 %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  group_by(n0) %>% 
+  summarise(mean(ARI), sd(ARI))
+
+exp_12_sim_2 %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  ggplot(aes(as.factor(n0), ARI)) +
+  geom_boxplot()
+
+```
+
+
+## Sparse Setting
+
+Here $\rho=0.1,0.05,0.02$ and  `no_init` corresponds to the random initialization, which shows a lot 
+more variance and doesn't recover the clusters as well.
+
+Here for the small sparse network our initialization
+procedure still struggles but as the number of nodes increases 
+we can reliably recover the network structure well.
+
+```{r sparse-plots, echo=FALSE, fig.height=12, fig.width=8}
+true_Mu <- matrix(c(2, 0.05, 0.4, 1.5), 
+                    nrow = K, ncol = K, byrow = T)
+print("Rate Matrix")
+print(true_Mu)
+
+exp_12_sparse <- list.files(path = here("Experiments/exp_results/"), 
+                           pattern = "exp_12_april_12")
+
+exp_12_sparse %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  group_by(init, n0) %>% 
+  summarise(mean_ARI = mean(ARI), sd_ARI = sd(ARI))
+
+exp_12_sparse %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  group_by(init, nodes, n0, m0) %>% 
+  # summarise(mean_ARI = mean(ARI), sd(ARI), median(ARI), n()) %>% 
+  filter(nodes == 100) %>% 
+  mutate(n0 = n0/2) %>% 
+  mutate(n0 = as.factor(n0)) %>% 
+  ggplot(aes(n0, ARI, fill = init)) +
+  # geom_point(aes()) +
+  geom_boxplot() +
+  facet_wrap(vars(m0, sparsity), scales = "free") +
+  labs(x = "% time used for Initialization",
+       y = "Mean ARI",
+       fill = "Scheme",
+       title = "Total Nodes = 100",
+       subtitle = "Top Number is number of nodes used in Init,
+       Bottom is Level of Sparsity") +
+  scale_x_discrete(breaks = c(5, 10, 15, 20, 25)) +
+  ylim(c(-0.1, 1))
+
+
+exp_12_sparse %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  group_by(init, nodes, n0, m0) %>% 
+  # summarise(mean_ARI = mean(ARI), sd(ARI), median(ARI), n()) %>% 
+  filter(nodes == 400) %>% 
+  mutate(n0 = n0/2) %>% 
+  mutate(n0 = as.factor(n0)) %>% 
+  ggplot(aes(n0, ARI, fill = init)) +
+  # geom_point(aes()) +
+  geom_boxplot() +
+  facet_wrap(vars(m0, sparsity), scales = "free") +
+  labs(x = "% time used for Initialization",
+       y = "Mean ARI",
+       fill = "Scheme",
+       title = "Total Nodes = 400",
+       subtitle = "Top Number is number of nodes used in Init,
+       Bottom is Level of Sparsity") +
+  scale_x_discrete(breaks = c(5, 10, 15, 20, 25)) +
+  ylim(c(-0.1, 1))
+
+```
+
+# Experiment for Figure 1 
+
+```{r fig1, echo=TRUE}
+fig1 <- list.files(path = here("Experiments/exp_results/"), 
+                           pattern = "fig_1_exp_1_apr_13")
+
+fig1 %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  mutate(window_size = as.factor(window_size)) %>% 
+  drop_na(ARI) %>%
+  group_by(Method) %>% 
+  summarise(mean_ari = mean(ARI), sd_ari = sd(ARI))
+
+fig1 %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/", .x))) %>% 
+  mutate(window_size = as.factor(window_size)) %>% 
+  drop_na(ARI) %>% 
+  ggplot(aes(window_size, ARI, fill = Method)) +
+  geom_boxplot() +
+  facet_wrap(~Method, scales = "free") +
+  ylim(c(-0.1, 1)) +
+  labs(x = "Aggregation Window Size",
+       title = "Aggregation Unable to Recover Communities")
+```

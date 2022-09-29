@@ -1,4 +1,6 @@
 // full online estimation procedure
+// minimal implementation of online poisson
+// procedure, to quickly compare and implement
 // [[Rcpp::export]]
 Rcpp::List estimate_Poisson_minimal(
   arma::mat full_data, 
