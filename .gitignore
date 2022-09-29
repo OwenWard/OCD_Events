@@ -10,4 +10,5 @@ Job_Talk_Plots
 Experiments/data_thesis_output/
 Experiments/data_exp_results/
 *.gz
-
+Thesis_Output
+*.tsv
