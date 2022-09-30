@@ -1375,11 +1375,6 @@ Rcpp::List nonhomoHak_estimator_eff_revised(
 	double dT,
 	double lam,
 	double gravity,
-	arma::mat B_start,
-	arma::cube MuA_start,
-	arma::mat tau_start,
-	arma::mat S_start,
-	arma::rowvec Pi_start,
 	bool is_elbo = false
 	){
 
@@ -1388,28 +1383,18 @@ Rcpp::List nonhomoHak_estimator_eff_revised(
 
 	// initialization
 	arma::rowvec Pi(K);
-	// Pi.fill(1.0 / K);
+	Pi.fill(1.0 / K);
 	arma::mat B(K,K), S(m,K);
 	arma::cube MuA(K,K,H);
-	arma::mat tau(m,K);
-	B.fill(0.5), MuA.fill(0.5), S.fill(0.0);
 	for (int k = 0; k < K; k++) {
-        for (int l=0; l < K; l++) {
-            B(k,l) = myrunif();
-            for(int h = 0; h < H; h++) {
-            	MuA(k,l,h) = myrunif();
-            }            
-        }
-    }
-	//B = B_start, Mu = Mu_start;
-	// for (int i = 0; i < m; i++) {
-	// 	arma::rowvec tt(K);
-	// 	for (int k = 0; k < K; k++) {
-	// 		tt(k) = myrunif();
-	// 	}
-	// 	tt = tt / sum(tt);
-	// 	tau.row(i) = tt;
-	// }
+	  for (int l=0; l < K; l++) {
+	    for (int h=0; h <H ; h++)
+	      MuA(k,l,h) = myrunif();
+	  }
+	}
+	
+	arma::mat tau(m,K);
+	B.fill(0.5), S.fill(1.0/K);
 	tau.fill(1.0/K);
 	//tau = tau_start;
 
@@ -1456,10 +1441,20 @@ Rcpp::List nonhomoHak_estimator_eff_revised(
 		t_start = Tn - dT;
 		ln_curr = end_pos;
 		n_t = ln_curr - ln_prev;
-		eta = 1.0/sqrt(1 + n/10.0)/n_t * (K * K);
+		eta = 1.0/sqrt(1 + n/100.0)/n_t * (K * K);
 		// paralist = update_nonhomo_eff(tau, MuA, B, Pi, S, datamap, t_start, Tn, m, K, A, window, lam, eta, gravity);
-		paralist = update_nonhomo_eff_revised(tau, MuA, B, Pi, S, datamap, t_start, Tn, m, K, A, window, lam, eta, gravity);
-		arma::mat tau_new = paralist["tau"], B_new = paralist["B"], S_new = paralist["S"];
+		paralist = update_nonhomo_eff_revised(tau, 
+                                        MuA,
+                                        B,
+                                        Pi,
+                                        S,
+                                        datamap,
+                                        t_start,
+                                        Tn, m, K, A, window,
+                                        lam, eta, gravity);
+		arma::mat tau_new = paralist["tau"];
+		arma::mat B_new = paralist["B"];
+		arma::mat S_new = paralist["S"];
 		arma::cube MuA_new = paralist["MuA"];
 		arma::rowvec Pi_new = paralist["Pi"];
 		double lam_new = paralist["lam"];
@@ -1476,7 +1471,8 @@ Rcpp::List nonhomoHak_estimator_eff_revised(
 
   		if (is_elbo){
   			prevdata = alltimes.rows(0, end_pos - 1); // head_rows()
-        	elbo = get_elbo_nonhomoHak(prevdata, 0, T, tau, MuA, B, Pi, A, lam, m, K, H, window);
+        	elbo = get_elbo_nonhomoHak(prevdata, 0, T, tau, MuA,
+                                     B, Pi, A, lam, m, K, H, window);
         	elbo_vec(n) = elbo / ln_curr;
   		}
   		Rprintf("=============\n");
@@ -2430,25 +2426,18 @@ Rcpp::List nonhomoPois_estimator(
 	// initialization
 	arma::rowvec Pi(K);
 	Pi.fill(1.0 / K);
+	// Pi = {0.2, 0.8};
 	arma::mat S(m,K);
 	arma::cube MuA(K,K,H);
 	arma::mat tau(m,K);
-	MuA.fill(0.5), S.fill(0.0);
+	MuA.fill(0.5), S.fill(1.0/K);
 	for (int k = 0; k < K; k++) {
         for (int l=0; l < K; l++) {
             for(int h = 0; h < H; h++) {
             	MuA(k,l,h) = myrunif();
-            }            
+            }
         }
     }
-	// for (int i = 0; i < m; i++) {
-	// 	arma::rowvec tt(K);
-	// 	for (int k = 0; k < K; k++) {
-	// 		tt(k) = myrunif();
-	// 	}
-	// 	tt = tt / sum(tt);
-	// 	tau.row(i) = tt;
-	// }
 	tau.fill(1.0/K);
 	//tau = tau_start;
 
@@ -2458,8 +2447,8 @@ Rcpp::List nonhomoPois_estimator(
 
 
 	arma::vec elbo_vec(N);
-    double elbo = 0;
-    arma::mat prevdata;
+  double elbo = 0;
+  arma::mat prevdata;
 
 	double Tn, t_current, t_start, eta;
 	arma::rowvec event; 
@@ -2506,8 +2495,8 @@ Rcpp::List nonhomoPois_estimator(
   	start_pos = curr_pos;
   	ln_prev = ln_curr;
   	Rprintf("iter: %d; number: %d \n", n, n_t); 
-  		//MuA.print();
-  		//S.print();
+  		// MuA.print();
+  	Pi.print();
 
 		if (is_elbo){
 		  prevdata = alltimes.rows(0, end_pos - 1); // head_rows()

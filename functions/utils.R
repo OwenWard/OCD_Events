@@ -1,12 +1,12 @@
 #### helper functions for cleaning data and loading 
 #### required functions, packages
 
-library(here)
 library(tidyverse)
 library(Rcpp)
+library(ppsbm)
+library(kernlab)
 library(RcppArmadillo)
 sourceCpp(here("cpp_files", "onlineblock.cpp"))
-# library(ppsbm)
 theme_set(theme_bw())
 
 #### function to process output from ppsbm

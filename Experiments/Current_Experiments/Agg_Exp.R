@@ -1,19 +1,26 @@
+#### Aggregation Experiment Sept 29th 2022 ####
+## simple experiment to demonstrate that there 
+## are scenarios where aggregating data with 
+## clear temporal structure leads to a loss of information
+## inability to recover the correct communities
+
+
+
 ### attempting to run some simple exp to see how well we 
 ### can do in some simple scenarios here
 
 .libPaths("/moto/stats/users/ogw2103/rpackages")
+## to run on the cluster
 
 library(here)
 
-library(kernlab)
-library(ppsbm)
-source(here("Experiments/", "utils.R"))
+source(here("functions/", "utils.R"))
 source(here("functions/", "df_to_adj.R"))
 source(here("functions", "pensky_fcns.R"))
 
 print(here("Experiments", "exp_results", "fig_1_exp_1.RDS"))
 
-no_sims <- 50
+no_sims <- 5
 Time <- 100
 all_results <- tibble()
 K <- 2
@@ -74,6 +81,7 @@ for(sim in 1:no_sims){
   ### this works
   
   possible_windows <- seq(from = 1, to = 10, by = 1)
+  print("Windows ----")
   for(wind in possible_windows){
     print(wind)
     print("-----")
@@ -101,7 +109,7 @@ for(sim in 1:no_sims){
     ## put a try here?
     a <- "Error"
     attempt <- 0
-    while(a == "Error" & attempt < 10){
+    while(a[1] == "Error" & attempt < 10){
       ## the warning here is when specc actually works
       a <- tryCatch(error = function(cnd) "Error",
                     specc(A_pz, centers = K)
@@ -122,7 +130,7 @@ for(sim in 1:no_sims){
     K <- 2
     m <- n
     B <- matrix(runif(K * K), K, K)
-    dT <- wind
+    dT <- wind ## do want this to vary also
     inter_T <- 1
     # capture output to not print out
     results_online <- estimate_Poisson(full_data = events,
@@ -131,6 +139,7 @@ for(sim in 1:no_sims){
                                        K,
                                        Time,
                                        dT,
+                                       step_size = 0.5,
                                        B,
                                        inter_T,
                                        is_elbo = TRUE)
@@ -146,16 +155,21 @@ for(sim in 1:no_sims){
     Mu <- matrix(runif(K * K), K, K)
     B <- matrix(runif(K * K), K, K)
     tau <- matrix(1/K, nrow = m, ncol = K)
-    invisible(results_online_hawkes <- online_estimator_eff_revised(alltimes = events, 
-                                                                    A = A_test,
-                                                                    m,
-                                                                    K,
-                                                                    Time,
-                                                                    dT = dT,
-                                                                    lam = 1,
-                                                                    B, Mu, tau,
-                                                                    inter_T, 
-                                                                    is_elbo = FALSE))
+    S_init <- matrix(1/K, nrow = m, ncol = K)
+    invisible(results_online_hawkes <- 
+                online_estimator_eff_revised(alltimes = events, 
+                                             A = A_test,
+                                             m,
+                                             K,
+                                             Time,
+                                             dT = dT,
+                                             lam = 1,
+                                             B,
+                                             Mu,
+                                             tau,
+                                             S_init,
+                                             inter_T, 
+                                             is_elbo = FALSE))
     
     z_est_haw <- apply(results_online_hawkes$tau, 1, which.max)
     (haw_clust_est <- aricode::ARI(z_true, z_est_haw))
@@ -185,26 +199,25 @@ for(sim in 1:no_sims){
     window <- 1/2
     K <- 2 # 4 for email, 2 for college, 3 for math
     H <- 2
-    #### this was the bug#####
     dT <- wind # 2 for email, 0.5 for college, 6 for math
     MuA_start <- array(runif(K * K * H), c(K, K, H))
     tau_start <- matrix(1/K, m, K)
+    S_start <- matrix(1/K, m, K)
+    Pi_start <- rep(1/K, K)
     B_start <- matrix(runif(K * K), nrow = K, ncol = K)
     
-    invisible(result_inHaw <- nonhomoHak_estimator_eff_revised(alltimes = events,
-                                                               A = A_test,
-                                                               m,
-                                                               K,
-                                                               H,
-                                                               window,
-                                                               T = Time,
-                                                               dT,
-                                                               lam = 0.1,
-                                                               gravity = 0.0,
-                                                               B_start = B_start,
-                                                               MuA = MuA_start,
-                                                               tau = tau_start))
-    
+    invisible(result_inHaw 
+              <- nonhomoHak_estimator_eff_revised(alltimes = events,
+                                                  A = A_test,
+                                                  m,
+                                                  K,
+                                                  H,
+                                                  window,
+                                                  T = Time,
+                                                  dT,
+                                                  lam = 0.5,
+                                                  gravity = 0.0))
+
     
     (ari_in_haw <- aricode::ARI(z_true, apply(result_inHaw$tau, 1, which.max)))
     
