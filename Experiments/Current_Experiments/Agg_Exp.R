@@ -18,7 +18,7 @@ source(here("functions/", "utils.R"))
 source(here("functions/", "df_to_adj.R"))
 source(here("functions", "pensky_fcns.R"))
 
-print(here("Experiments", "exp_results", "fig_1_exp_1.RDS"))
+print(here("Experiments", "data_exp_results", "Agg_Exp.RDS"))
 
 no_sims <- 5
 Time <- 100
@@ -51,7 +51,8 @@ for(sim in 1:no_sims){
   
   ###
   # hist(dynppsbm$data$time.seq)
-  proc_sim <- format_sims(sim_data = dynppsbm, n = n,
+  proc_sim <- format_sims(sim_data = dynppsbm,
+                          n = n,
                           directed = TRUE)
   
   
@@ -197,9 +198,9 @@ for(sim in 1:no_sims){
     ## Fitting inhomogeneous Hawkes
     
     window <- 1/2
-    K <- 2 # 4 for email, 2 for college, 3 for math
+    K <- 2 #
     H <- 2
-    dT <- wind # 2 for email, 0.5 for college, 6 for math
+    dT <- wind #
     MuA_start <- array(runif(K * K * H), c(K, K, H))
     tau_start <- matrix(1/K, m, K)
     S_start <- matrix(1/K, m, K)
@@ -244,5 +245,5 @@ for(sim in 1:no_sims){
 
 saveRDS(all_results, file = here("Experiments",
                                  "exp_results",
-                                 "fig_1_exp_1.RDS"))
+                                 "Agg_Exp.RDS"))
 

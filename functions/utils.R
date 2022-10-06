@@ -6,7 +6,7 @@ library(Rcpp)
 library(ppsbm)
 library(kernlab)
 library(RcppArmadillo)
-sourceCpp(here("cpp_files", "onlineblock.cpp"))
+sourceCpp(here("cpp_files", "minimal_cpp","minimal_functions.cpp"))
 theme_set(theme_bw())
 
 #### function to process output from ppsbm
