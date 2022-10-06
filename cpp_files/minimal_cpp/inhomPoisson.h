@@ -819,3 +819,91 @@ Rcpp::List nonhomoPois_estimator(
 // }
 // 
 
+
+// [[Rcpp::export]]
+Rcpp::List batch_nonhomoPois_estimator(
+    arma::mat alltimes,
+    Rcpp::List A,
+    int m,
+    int K,
+    int H,
+    double window,
+    double T,
+    double dT,
+    double gravity,
+    arma::cube MuA_start,
+    arma::mat tau_start,
+    int itermax,
+    double stop_eps
+){
+  // initialization
+  arma::rowvec Pi(K);
+  Pi.fill(1.0 / K);
+  arma::mat S(m,K);
+  arma::cube MuA(K,K,H);
+  arma::mat tau(m,K);
+  MuA.fill(0.5), S.fill(0.0);
+  
+  for (int k = 0; k < K; k++) {
+    for (int l=0; l < K; l++) {
+      for (int h=0; h <H ; h++)
+        MuA(k,l,h) = myrunif();
+    }
+  }
+  //B = B_start, Mu = Mu_start;
+  // for (int i = 0; i < m; i++) {
+  // 	arma::rowvec tt(K);
+  // 	for (int k = 0; k < K; k++) {
+  // 		tt(k) = myrunif();
+  // 	}
+  // 	tt = tt / sum(tt);
+  // 	tau.row(i) = tt;
+  // }
+  tau.fill(1.0/K);
+  //tau = tau_start;
+  
+  int nall = alltimes.n_rows;
+  int ncol = alltimes.n_cols;
+  
+  Rcpp::List paralist;
+  
+  unordered_map<string, std::deque<double>> datamap;
+  datamap = transfer_create(A,m);
+  double R = T;
+  // datamap = transfer_eff(datamap, alltimes, R);
+  transfer_eff(datamap, alltimes, R);
+  
+  double t_start = 0.0, Tn;
+  Tn = alltimes(nall - 1, ncol - 1);
+  
+  double gap = 2147483647;
+  double eta = 1.0/nall * (K * K);
+  
+  for (int iter = 0; iter < itermax; iter++) {
+    eta = 1.0/nall * (K * K) / sqrt(iter / H + 1.0);
+    S.fill(0.0);        
+    paralist = update_nonhomo_pois(tau, MuA, Pi, S, datamap, t_start, Tn, m, K, A, window, eta, gravity);
+    // paralist = update_nonhomo_sparse(tau, MuA, B, Pi, S, datamap, t_start, Tn, m, K, A, window, lam, eta, gravity);
+    arma::mat tau_new = paralist["tau"], S_new = paralist["S"];
+    arma::cube MuA_new = paralist["MuA"];
+    arma::rowvec Pi_new = paralist["Pi"];
+    
+    gap = abs(MuA - MuA_new).max();
+    tau = tau_new; 
+    MuA = MuA_new, S = S_new, Pi = Pi_new;
+    Rprintf("iter: %d \n", iter); 
+    // B.print();
+    // Mu.print();
+    Pi.print();
+    Rprintf("gap: %2.3f", gap);
+    Rprintf("=============\n");
+    if (gap < stop_eps){
+      break;
+    }
+  }
+  
+  return Rcpp::List::create(
+    Rcpp::Named("MuA") = MuA,
+    Rcpp::Named("Pi") = Pi,
+    Rcpp::Named("tau") = tau);
+}

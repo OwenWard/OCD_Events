@@ -357,7 +357,7 @@ Rcpp::List estimate_Poisson(
       //Rprintf("=============\n");
     }
   }
-  Rprintf("Step Size: %f \n", step_size);
+  // Rprintf("Step Size: %f \n", step_size);
   return Rcpp::List::create(Named("S")= S,
                             Named("tau")=tau,
                             // Named("early_tau")= inter_tau,
@@ -512,13 +512,7 @@ Rcpp::List estimate_Poisson_minimal(
         t_curr = event(2);
       }
     }
-    ////
-    // arma::vec times = full_data.col(2);
-    // arma::uvec valid = find(times < Tn && times > T0);
-    // arma::mat sub_data = full_data.rows(valid);
-    // cout<<curr_times.n_rows<<endl;
-    // then just need to get the start of the indexing also, use that
-    // to get the whole subset
+    
     //
     end_pos = curr_pos;
     arma::mat sub_data, elbo_dat;
