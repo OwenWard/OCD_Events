@@ -8,7 +8,7 @@
 
 
 #include "blockPoisson.h"
-#include "blockhawkes.h"
+#include "blockHawkes.h"
 #include "inhomPoisson.h" 
 #include "inhomHawkes.h"
 // #include "link_predict.h"
