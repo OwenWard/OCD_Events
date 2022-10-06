@@ -12,3 +12,4 @@ Experiments/data_exp_results/
 *.gz
 Thesis_Output
 *.tsv
+*.html
