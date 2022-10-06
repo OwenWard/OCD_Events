@@ -2430,7 +2430,7 @@ Rcpp::List nonhomoPois_estimator(
 	arma::mat S(m,K);
 	arma::cube MuA(K,K,H);
 	arma::mat tau(m,K);
-	MuA.fill(0.5), S.fill(1.0/K);
+	S.fill(1.0/K);
 	for (int k = 0; k < K; k++) {
         for (int l=0; l < K; l++) {
             for(int h = 0; h < H; h++) {
@@ -2500,8 +2500,12 @@ Rcpp::List nonhomoPois_estimator(
 
 		if (is_elbo){
 		  prevdata = alltimes.rows(0, end_pos - 1); // head_rows()
-		  // elbo = get_elbo_nonhomoHak(prevdata, 0, T, tau, MuA, B, Pi, A, lam, m, K, H, window);
-		  elbo = 0;
+		  // need to declare B and lam as 0 in here
+		  arma::mat B(K, K);
+		  B.fill(0);
+		  double lam = 0;
+		  elbo = get_elbo_nonhomoHak(prevdata, 0, T, tau, MuA, B, Pi, A, lam, m, K, H, window);
+		  // elbo = 0;
 		  elbo_vec(n) = elbo / ln_curr;
 		}
   	Rprintf("=============\n");
