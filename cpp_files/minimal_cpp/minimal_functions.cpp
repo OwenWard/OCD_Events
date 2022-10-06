@@ -8,7 +8,7 @@
 
 
 #include "blockPoisson.h"
-// #include "blockhawkes.h"
+#include "blockhawkes.h"
 #include "inhomPoisson.h" 
 // #include "blockhawkes.h"
 // #include "nonhomohak.h"
