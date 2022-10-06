@@ -13,3 +13,4 @@ Experiments/data_exp_results/
 Thesis_Output
 *.tsv
 *.html
+analysis_old/*
