@@ -8,8 +8,8 @@
 
 
 #include "blockPoisson.h"
-#include "blockhawkes.h"
-#include "inhomPoisson.h" //this one causing the issue, must need more
+// #include "blockhawkes.h"
+#include "inhomPoisson.h" 
 // #include "blockhawkes.h"
 // #include "nonhomohak.h"
 // #include "link_predict.h"

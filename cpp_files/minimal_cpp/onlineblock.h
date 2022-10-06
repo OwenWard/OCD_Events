@@ -21,6 +21,22 @@ using namespace Rcpp;
 
 const double eps = 0.000001;
 
+double integral(double t, double T, double lam){
+  return 1 - exp( - lam * (T - t));
+}
+
+double integral2(double t, double T1, double T2, double lam){
+  return exp(- lam * (T1 - t)) - exp(- lam * (T2 - t));
+}
+
+double trigger(double t, double T, double lam){
+  return lam * exp( - lam * (T - t));
+}
+
+double trigger_lam(double t, double T, double lam){
+  return exp( - lam * (T - t));
+}
+
 // ===============================
 // miscellaneous functions
 // ===============================
