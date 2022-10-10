@@ -678,6 +678,7 @@ Rcpp::List nonhomoPois_estimator(
     Pi.print();
     
     if (is_elbo){
+      // cumulative elbo for all previous data
       prevdata = alltimes.rows(0, end_pos - 1); // head_rows()
       // need to declare B and lam as 0 in here
       arma::mat B(K, K);

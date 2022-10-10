@@ -178,7 +178,7 @@ for(sim in 1:no_sims){
     ## Fitting Inhomogeneous Poisson
     H <- 2
     MuA <- array(runif(K * K * H), c(K, K, H))
-    window <- 0.5
+    window <- 33
     tau <- matrix(1/K, nrow = m, ncol = K)
     invisible(results_online_inpois <- nonhomoPois_estimator(alltimes = events,
                                                              A = A_test,

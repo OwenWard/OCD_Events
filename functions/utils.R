@@ -20,7 +20,7 @@ format_sims <- function(sim_data, n, directed = TRUE) {
   # zero index for Rcpp
   
   # construct edge list
-  tidy_sim <- as_tibble(sim_trip) %>% 
+  tidy_sim <- as_tibble(sim_trip, .name_repair = ~ c("V1", "V2", "V3")) %>% 
     rename(send = V1, rec = V2, time = V3)
   A_new <- list()
   for(i in 1:n){
