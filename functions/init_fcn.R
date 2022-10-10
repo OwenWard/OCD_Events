@@ -2,13 +2,20 @@
 options(dplyr.summarise.inform = FALSE)
 ### hide the message from summarise
 
+
+
+## for a dense point process network, where data believed to 
+## follow block homogeneous Poisson process, provide initial 
+## estimates of the community structure, rate matrix
+
 dense_poisson <- function(alltimes, K, n0, m) {
   
   ### select n0
   ### find node with largest degree, and its neighbours
   ###
   
-  tidy_events <- as_tibble(alltimes) %>% 
+  tidy_events <- as_tibble(alltimes, 
+                           .name_repair = ~ c("V1", "V2", "V3")) %>% 
     rename(send = V1, rec = V2, time = V3)
   N <- nrow(tidy_events)
   C <- 1
@@ -182,7 +189,8 @@ sparse_poisson <- function(alltimes, K, n0, m, m0){
   ### first get the event data to be used
   ###
   
-  tidy_events <- as_tibble(alltimes) %>% 
+  tidy_events <- as_tibble(alltimes, 
+                           .name_repair = ~ c("V1", "V2", "V3")) %>% 
     rename(send = V1, rec = V2, time = V3)
   N <- nrow(tidy_events)
   C <- 1
@@ -354,3 +362,45 @@ sparse_poisson <- function(alltimes, K, n0, m, m0){
 }
 
 
+
+dense_inhom_Poisson <- function(alltimes, K, H, window, n0, m) {
+  
+  ## given a choice of H, window,
+  ## estimate the individual rates for each node in each window
+  ## then do K-mean on those H-dimensional vectors
+  ## to get cluster assignments, corresponding updated estimates 
+  ## of rates
+  
+  tidy_events <- as_tibble(alltimes,
+                           .name_repair = ~ c("V1", "V2", "V3")) %>% 
+    rename(send = V1, rec = V2, time = V3)
+  N <- nrow(tidy_events)
+  C <- 1
+  
+  init_events <- tidy_events %>% 
+    filter(time <= n0)
+  remaining_events <- alltimes[alltimes[,3]> n0, ]
+  
+  out_events <- init_events %>% 
+    group_by(send) %>% 
+    count() %>% 
+    ungroup() %>% 
+    rename(out = n)
+  
+  max_degree <- out_events %>% 
+    slice_max(out, n = 1) %>% 
+    pull(send)
+  
+  ## need to change this below
+  ## want to fit based on the window
+  
+  est_int <- init_events %>% 
+    filter(send == max_degree) %>% 
+    group_by(rec) %>% 
+    count() %>% 
+    mutate(est_lam = n/n0) %>% 
+    select(rec, est_lam)
+  
+  
+  
+}
