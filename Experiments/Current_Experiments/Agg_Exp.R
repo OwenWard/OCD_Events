@@ -17,10 +17,11 @@ library(here)
 source(here("functions/", "utils.R"))
 source(here("functions/", "df_to_adj.R"))
 source(here("functions", "pensky_fcns.R"))
+source(here("functions", "init_fcn.R"))
 
 print(here("Experiments", "data_exp_results", "Agg_Exp.RDS"))
 
-no_sims <- 5
+no_sims <- 50
 Time <- 100
 all_results <- tibble()
 K <- 2
@@ -64,7 +65,8 @@ for(sim in 1:no_sims){
   events <- proc_sim$events
   
   ### Fit SBM to count matrix ###
-  df <- as_tibble(proc_sim$events) %>% 
+  df <- as_tibble(proc_sim$events, 
+                  .name_repair = ~c("V1", "V2", "V3")) %>% 
     rename(Send = V1,
            Rec = V2,
            Time = V3) %>% 
@@ -124,121 +126,158 @@ for(sim in 1:no_sims){
       ## so don't have to run it again
       (pz_ari <- aricode::ARI(z_true, est_labels@.Data))
     }
-    
-    
-    #### then our methods, for a given window size
-    #### Fit our method to this data
-    K <- 2
-    m <- n
-    B <- matrix(runif(K * K), K, K)
-    dT <- wind ## do want this to vary also
-    inter_T <- 1
-    # capture output to not print out
-    results_online <- estimate_Poisson(full_data = events,
-                                       A = A_test,
-                                       m,
-                                       K,
-                                       Time,
-                                       dT,
-                                       step_size = 0.5,
-                                       B,
-                                       inter_T,
-                                       is_elbo = TRUE)
-    
-    # z_true <- apply(obs$z, 2, which.max)
-    z_est <- apply(results_online$tau, 1, which.max)
-    (clust_est <- aricode::ARI(z_true, z_est))
-    
-    ### makes sense Poisson not that good here.
-    
-    
-    ## Block Hawkes
-    Mu <- matrix(runif(K * K), K, K)
-    B <- matrix(runif(K * K), K, K)
-    tau <- matrix(1/K, nrow = m, ncol = K)
-    S_init <- matrix(1/K, nrow = m, ncol = K)
-    invisible(results_online_hawkes <- 
-                online_estimator_eff_revised(alltimes = events, 
-                                             A = A_test,
-                                             m,
-                                             K,
-                                             Time,
-                                             dT = dT,
-                                             lam = 1,
-                                             B,
-                                             Mu,
-                                             tau,
-                                             S_init,
-                                             inter_T, 
-                                             is_elbo = FALSE))
-    
-    z_est_haw <- apply(results_online_hawkes$tau, 1, which.max)
-    (haw_clust_est <- aricode::ARI(z_true, z_est_haw))
-    
-    ## Fitting Inhomogeneous Poisson
-    H <- 2
-    MuA <- array(runif(K * K * H), c(K, K, H))
-    window <- 33
-    tau <- matrix(1/K, nrow = m, ncol = K)
-    invisible(results_online_inpois <- nonhomoPois_estimator(alltimes = events,
-                                                             A = A_test,
-                                                             m,
-                                                             K,
-                                                             H,
-                                                             window,
-                                                             Time,
-                                                             dT,
-                                                             gravity = 0.001,
-                                                             MuA, tau))
-    
-    
-    (ari_in_pois <- aricode::ARI(apply(results_online_inpois$tau, 1, which.max),
-                                 z_true))
-    
-    ## Fitting inhomogeneous Hawkes
-    
-    window <- 1/2
-    K <- 2 #
-    H <- 2
-    dT <- wind #
-    MuA_start <- array(runif(K * K * H), c(K, K, H))
-    tau_start <- matrix(1/K, m, K)
-    S_start <- matrix(1/K, m, K)
-    Pi_start <- rep(1/K, K)
-    B_start <- matrix(runif(K * K), nrow = K, ncol = K)
-    
-    invisible(result_inHaw 
-              <- nonhomoHak_estimator_eff_revised(alltimes = events,
-                                                  A = A_test,
-                                                  m,
-                                                  K,
-                                                  H,
-                                                  window,
-                                                  T = Time,
-                                                  dT,
-                                                  lam = 0.5,
-                                                  gravity = 0.0))
-
-    
-    (ari_in_haw <- aricode::ARI(z_true, apply(result_inHaw$tau, 1, which.max)))
-    
     ### then store all this
-    curr_sim_result <- tibble(ARI = c(pz_ari,
-                                      clust_est,
-                                      haw_clust_est,
-                                      ari_in_pois,
-                                      ari_in_haw),
-                              Method = c("PZ", "Poisson",
-                                         "Hawkes", "InPois", "InHawkes"),
-                              window_size = wind)
+    curr_sim_result <- tibble(ARI = pz_ari,
+                              Method = "PZ",
+                              window_size = wind,
+                              sim = sim)
     
     all_results <- all_results %>% bind_rows(curr_sim_result)
   }
+    
+    # #### then our methods, for a given window size
+    # #### Fit our method to this data
+    # ## need to initialise tau here
+    # 
+    # ####
+    # K <- 2
+    # m <- n
+    # B <- matrix(runif(K * K), K, K)
+    # dT <- wind ## do want this to vary also
+    # inter_T <- 1
+    # # capture output to not print out
+    # results_online <- estimate_Poisson(full_data = events,
+    #                                    A = A_test,
+    #                                    m,
+    #                                    K,
+    #                                    Time,
+    #                                    dT,
+    #                                    step_size = 0.5,
+    #                                    B,
+    #                                    inter_T,
+    #                                    is_elbo = TRUE)
+    # 
+    # # z_true <- apply(obs$z, 2, which.max)
+    # z_est <- apply(results_online$tau, 1, which.max)
+    # (clust_est <- aricode::ARI(z_true, z_est))
+    # 
+    # ### makes sense Poisson not that good here.
+    # 
+    # 
+    # ## Block Hawkes
+    # Mu <- matrix(runif(K * K), K, K)
+    # B <- matrix(runif(K * K), K, K)
+    # tau <- matrix(1/K, nrow = m, ncol = K)
+    # S_init <- matrix(1/K, nrow = m, ncol = K)
+    # invisible(results_online_hawkes <- 
+    #             online_estimator_eff_revised(alltimes = events, 
+    #                                          A = A_test,
+    #                                          m,
+    #                                          K,
+    #                                          Time,
+    #                                          dT = dT,
+    #                                          lam = 1,
+    #                                          B,
+    #                                          Mu,
+    #                                          tau,
+    #                                          S_init,
+    #                                          inter_T, 
+    #                                          is_elbo = FALSE))
+    # 
+    # z_est_haw <- apply(results_online_hawkes$tau, 1, which.max)
+    # (haw_clust_est <- aricode::ARI(z_true, z_est_haw))
+    # 
+    # ## Fitting Inhomogeneous Poisson
+    # H <- 2
+    # MuA <- array(runif(K * K * H), c(K, K, H))
+    # window <- 33
+    # tau <- matrix(1/K, nrow = m, ncol = K)
+    # invisible(results_online_inpois <- nonhomoPois_estimator(alltimes = events,
+    #                                                          A = A_test,
+    #                                                          m,
+    #                                                          K,
+    #                                                          H,
+    #                                                          window,
+    #                                                          Time,
+    #                                                          dT,
+    #                                                          gravity = 0.001,
+    #                                                          MuA, tau))
+    # 
+    # 
+    # (ari_in_pois <- aricode::ARI(apply(results_online_inpois$tau, 1, which.max),
+    #                              z_true))
+    # 
+    # ## Fitting inhomogeneous Hawkes
+    # 
+    # window <- 1/2
+    # K <- 2 #
+    # H <- 2
+    # dT <- wind #
+    # MuA_start <- array(runif(K * K * H), c(K, K, H))
+    # tau_start <- matrix(1/K, m, K)
+    # S_start <- matrix(1/K, m, K)
+    # Pi_start <- rep(1/K, K)
+    # B_start <- matrix(runif(K * K), nrow = K, ncol = K)
+    # 
+    # invisible(result_inHaw 
+    #           <- nonhomoHak_estimator_eff_revised(alltimes = events,
+    #                                               A = A_test,
+    #                                               m,
+    #                                               K,
+    #                                               H,
+    #                                               window,
+    #                                               T = Time,
+    #                                               dT,
+    #                                               lam = 0.5,
+    #                                               gravity = 0.0))
+    # 
+    # 
+    # (ari_in_haw <- aricode::ARI(z_true, apply(result_inHaw$tau, 1, which.max)))
+    # 
+    # ### then store all this
+    # curr_sim_result <- tibble(ARI = c(pz_ari,
+    #                                   clust_est,
+    #                                   haw_clust_est,
+    #                                   ari_in_pois,
+    #                                   ari_in_haw),
+    #                           Method = c("PZ", "Poisson",
+    #                                      "Hawkes", "InPois", "InHawkes"),
+    #                           window_size = wind)
+    # 
+  curr_n0 <- 5
+  m <- n
+  result <- dense_poisson(alltimes = events, K, n0 = curr_n0, m)
   
-  ### add in the count ARI just here
-  count_sim <- tibble(ARI = sc_ari,
-                      Method = "Count",
-                      window_size = NA)
+  ## Fitting Inhomogeneous Poisson
+  dT <- 1
+  H <- 2
+  MuA <- array(runif(K * K * H), c(K, K, H))
+  window <- 0.5
+  ### construct tau
+  init_tau <- matrix(0, nrow = m, ncol = K)
+  for(i in seq_along(result$est_clust)){
+    init_tau[i, result$est_clust[i]] <- 1
+  }
+  invisible(results_online_inpois <- nonhomoPois_est_init(alltimes = events,
+                                                          A = A_test,
+                                                          m,
+                                                          K,
+                                                          H,
+                                                          window,
+                                                          Time,
+                                                          dT,
+                                                          gravity = 0.001,
+                                                          MuA, 
+                                                          init_tau,
+                                                          start = result$cut_off))
+  
+  
+  (ari_in_pois <- aricode::ARI(apply(results_online_inpois$tau, 1, which.max),
+                               z_true))
+  count_sim <- tibble(ARI = c(sc_ari, ari_in_pois),
+                      Method = c("Count", "Point Process"),
+                      window_size = NA,
+                      sim = sim)
   all_results <- all_results %>% bind_rows(count_sim)
 }
 
