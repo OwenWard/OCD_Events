@@ -673,9 +673,9 @@ Rcpp::List nonhomoPois_estimator(
     MuA = MuA_new, S = S_new, Pi = Pi_new;
     start_pos = curr_pos;
     ln_prev = ln_curr;
-    Rprintf("iter: %d; number: %d \n", n, n_t); 
+    // Rprintf("iter: %d; number: %d \n", n, n_t); 
     // MuA.print();
-    Pi.print();
+    // Pi.print();
     
     if (is_elbo){
       // cumulative elbo for all previous data

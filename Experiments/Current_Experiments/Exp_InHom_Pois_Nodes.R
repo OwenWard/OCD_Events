@@ -135,7 +135,7 @@ for(sim in 1:no_sims){
     MuA_init <- array(runif(K * K * H), dim = c(K, K, H) )
     tau_init <- matrix(1/K, nrow = m, ncol = K)
     
-    norm_online <- nonhomoPois_estimator(alltimes, 
+    a <- capture.output(norm_online <- nonhomoPois_estimator(alltimes, 
                                          A,
                                          m,
                                          K,
@@ -145,7 +145,7 @@ for(sim in 1:no_sims){
                                          dT,
                                          gravity = 0.01,
                                          MuA_start = MuA_init,
-                                         tau_start = tau_init)
+                                         tau_start = tau_init))
     
     
     stan_est <- apply(norm_online$tau, 1, which.max)
