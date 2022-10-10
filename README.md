@@ -1,3 +1,3 @@
-# Online_Point_Process
+# Online Point Process Community Detection
 
-Code for our models to support submitted JMLR paper.
+Code for our paper [Online Community Detection for Event Steams on Networks](https://arxiv.org/abs/2009.01742)
