@@ -13,7 +13,7 @@ source(here("functions/init_fcn.R"))
 
 
 Time <- 200
-no_sims <- 1
+no_sims <- 50
 dT <- 1
 inter_T <- 1
 K <- 2
@@ -158,7 +158,7 @@ for(sim in 1:no_sims){
                             wind_size = curr_wind,
                             # n0 = NA,
                             # m0 = NA,
-                            init_num = rand_init,
+                            init_num = sim_id,
                             sparsity = sparsity,
                             sim = sim)
     curr_dt_sims <- curr_dt_sims %>% 
