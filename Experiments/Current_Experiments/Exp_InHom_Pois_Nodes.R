@@ -13,7 +13,7 @@ source(here("functions/init_fcn.R"))
 
 
 Time <- 200
-no_sims <- 1
+no_sims <- 50
 dT <- 1
 inter_T <- 1
 K <- 2
