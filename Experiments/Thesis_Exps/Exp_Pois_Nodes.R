@@ -138,6 +138,7 @@ for(sim in 1:no_sims){
                                   K,
                                   Time,
                                   dT = 1,
+                                  step_size = 0.5,
                                   B,
                                   inter_T = 1,
                                   is_elbo = FALSE)
