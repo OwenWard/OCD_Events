@@ -259,13 +259,16 @@ sparse_poisson <- function(alltimes, K, n0, m, m0){
   
   for(k1 in 1:K){
     for(k2 in 1:K){
-      curr_est <- init_clust_events %>% 
-        filter(send_clust == k1) %>% 
-        filter(rec_clust == k2) %>% 
-        ungroup() %>% 
-        slice_sample(n = 1) %>% 
-        mutate(rate = n/n0) %>% 
-        pull(rate)
+      curr_est <- tryCatch(
+        error = function(cnd) runif(n = 1),
+        init_clust_events %>% 
+          filter(send_clust == k1) %>% 
+          filter(rec_clust == k2) %>% 
+          ungroup() %>% 
+          slice_sample(n = 1) %>% 
+          mutate(rate = n/n0) %>% 
+          pull(rate)
+      )
       
       if(length(curr_est) > 0) {
         init_B[k1, k2] <- curr_est
