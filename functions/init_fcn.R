@@ -364,6 +364,77 @@ sparse_poisson <- function(alltimes, K, n0, m, m0){
               cut_off = n0))
 }
 
+## helper functions for inhom Poisson
+
+#' Count the number of events in a given windowed point process
+#'
+#' @param events 
+#' @param jumps 
+#' @param which_h 
+#' @param window 
+#'
+#' @return list, containing the number of events in each window, number for a
+#' given basis function and the time each basis function is observed for
+#' @export
+#'
+#' @examples
+num_in_wind <- function(events, jumps, which_h, window){
+  ## given the breakpoints (here right is upper limit,)
+  ## return vector of length length(jumps)-1,
+  ## giving how many events in a specific window 
+  counts <- rep(0, length(jumps) - 1)
+  time_H <- rep(0,H)
+  counts_H <- rep(0, H)
+  for(i in seq_along(jumps[-length(jumps)])){
+    lower <- jumps[i]
+    upper <- jumps[i+1]
+    counts[i] <- length(which(events < upper & events > lower))
+    counts_H[which_h[i]] <- counts_H[which_h[i]] + counts[i]  
+    time_H[which_h[i]] <- time_H[which_h[i]] + window 
+  }
+  list(counts = counts, time = time_H, counts_H = counts_H)
+  ## only change to make this more general
+  ## would to instead have each entry be a vector of 
+  ## the event times in a window rather than
+  ## just the count
+}
+
+#' Estimate the rate functions of an inhomogeneous Poisson Process
+#'
+#' @param t_start 
+#' @param t_end 
+#' @param events 
+#' @param window 
+#' @param H 
+#' 
+#' @description This rounds down to windows which are fully observed 
+#' based on the inputs
+#'
+#' @return the estimated rates
+#' @export
+#'
+#' @examples
+fit_inpois <- function(events, t_start, t_end, window, H){
+  
+  ## bin the data based on windows, then just concatenate
+  ## it and fit separately?
+  ## this won't work for hawkes because history is common,
+  ## or would that just be an additional step then?
+  ## return the estimated rates for each of the corresponding windows
+  
+  num_events <- rep(0, H)
+  # obs_time <- rep(0, H)
+  h1 <- floor(t_start/window) # start closest and to the left 
+  h2 <- floor(t_end/window) # this will throw out incomplete intervals
+  jumps <- h1:h2 * window # to get the actual jumps
+  which_h <- rep(1:H, length.out = length(jumps) - 1)
+  ## then bin the data based on these jumps
+  count_data <- num_in_wind(events, jumps, which_h, window)
+  obs_time <- count_data$time
+  H_counts <- count_data$counts_H
+  est_rates <- H_counts / obs_time
+  est_rates
+}
 
 
 dense_inhom_Poisson <- function(alltimes, K, H, window, n0, m) {
@@ -397,13 +468,15 @@ dense_inhom_Poisson <- function(alltimes, K, H, window, n0, m) {
   ## need to change this below
   ## want to fit based on the window
   
-  est_int <- init_events %>% 
+  max_events <- init_events %>% 
     filter(send == max_degree) %>% 
-    group_by(rec) %>% 
-    count() %>% 
-    mutate(est_lam = n/n0) %>% 
-    select(rec, est_lam)
-  
-  
+    group_by(rec) %>%
+    summarise(events = list(time)) 
+  names(max_events$events) <- max_events$rec
+  ests <- map_dfr(max_events$events, fit_inpois, t_start = 0,
+                  t_end = n0, window, H)
+  est_names <- paste0("H", 1:H)
+  ests <- as_tibble(t(ests), .name_repair = ~ c(paste0("V", 1:H)))
+    
   
 }

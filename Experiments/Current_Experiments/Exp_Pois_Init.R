@@ -48,9 +48,14 @@ num_in_wind <- function(events, jumps, which_h, window){
     lower <- jumps[i]
     upper <- jumps[i+1]
     counts[i] <- length(which(events < upper & events > lower))
+    counts_H[which_h[i]] <- counts_H[which_h[i]] + counts[i]  
     time_H[which_h[i]] <- time_H[which_h[i]] + window 
   }
-  list(counts = counts, time = time_H)
+  list(counts = counts, time = time_H, counts_H = counts_H)
+  ## only change to make this more general
+  ## would to instead have each entry be a vector of 
+  ## the event times in a window rather than
+  ## just the count
 }
 
 fit_inpois <- function(t_start, t_end, events, window, H){
@@ -59,6 +64,7 @@ fit_inpois <- function(t_start, t_end, events, window, H){
   ## it and fit separately?
   ## this won't work for hawkes because history is common,
   ## or would that just be an additional step then?
+  ## return the estimated rates for each of the corresponding windows
   
   num_events <- rep(0, H)
   # obs_time <- rep(0, H)
@@ -68,6 +74,8 @@ fit_inpois <- function(t_start, t_end, events, window, H){
   which_h <- rep(1:H, length.out = length(jumps) - 1)
   ## then bin the data based on these jumps
   count_data <- num_in_wind(events, jumps, which_h, window)
-  obs_time <- 
-  
+  obs_time <- count_data$time
+  H_counts <- count_data$counts_H
+  est_rates <- H_counts / obs_time
+  est_rates
 }
