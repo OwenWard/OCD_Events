@@ -1,6 +1,9 @@
 #### Exp varying the number of Nodes, April 25th 2022
 #### Investigate whether the initialization function 
 #### leads to an improved clustering performance
+
+#### Modify this for large simulation with m = 5000, run 10 sims 5 times
+
 .libPaths("/moto/stats/users/ogw2103/rpackages")
 library(here)
 
@@ -13,7 +16,7 @@ source(here("functions/init_fcn.R"))
 
 
 Time <- 200
-no_sims <- 50
+no_sims <- 10
 dT <- 1
 inter_T <- 1
 K <- 2
@@ -33,7 +36,8 @@ model <- "Poisson"
 # }
 
 results <- list()
-m <- m_vec[sim_id]
+# m <- m_vec[sim_id]
+m <- 5000
 m0_vec <- c( 100*c(1/10, 1/4, 1/2),
              200*c(1/10, 1/4, 1/2),
              500*c(1/10, 1/4, 1/2),
@@ -164,7 +168,7 @@ results <- curr_dt_sims
 ### then save these somewhere
 saveRDS(results, file = here("Experiments",
                              "data_thesis_output",
-                             paste0("exp_pois_nodes_fixed_oct_18_rho_",
+                             paste0("exp_pois_nodes_fixed_oct_18_rho_large",
                                     100*sparsity, "_", sim_id, ".RDS")))
 
 ## fixed here meaning fixed n0, m0
