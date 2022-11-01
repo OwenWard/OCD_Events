@@ -477,6 +477,176 @@ dense_inhom_Poisson <- function(alltimes, K, H, window, n0, m) {
                   t_end = n0, window, H)
   est_names <- paste0("H", 1:H)
   ests <- as_tibble(t(ests), .name_repair = ~ c(paste0("V", 1:H)))
+  ## then do clustering here
+  
+  ## below pulled from hom poisson dense
+  if(nrow(unique(ests)) < K){
+    ### give random estimates
+    est <- sample(1:K, size = nrow(ests), replace = TRUE)
+  }else if(length(unique(ests)) == K){
+    est <- kmeans(ests, centers = K, algorithm = "Lloyd")
+  }else{
+    est <- kmeans(ests, centers = K) 
+  }
+  clust_ests <- tibble(node = max_events$rec, clust = est$cluster)
+  
+  neighbours <- init_events %>% 
+    filter(send == max_degree) %>% 
+    distinct(rec) %>% 
+    arrange(rec) %>% 
+    pull(rec)
+  
+  ### then get all events between these pairs
+  
+  neighbour_events <- init_events %>% 
+    filter(send %in% neighbours) %>% 
+    filter(rec %in% neighbours) %>% 
+    group_by(send, rec) %>% 
+    summarise(events = list(time)) %>% 
+    ## then join the cluster assignments here
+    left_join(clust_ests, by = c("send" = "node")) %>% 
+    rename(send_clust = clust) %>% 
+    left_join(clust_ests, by = c("rec" = "node")) %>% 
+    rename(rec_clust = clust)
+  
+  init_MuA <- array(NA, dim = c(K, K, H))
+  
+  for(k1 in 1:K){
+    for(k2 in 1:K){
+      curr_est <- neighbour_events %>% 
+        filter(send_clust == k1) %>% 
+        filter(rec_clust == k2) %>% 
+        ungroup() %>% 
+        slice_sample(n = 1) %>%
+        ## change this bit here based on the function being used
+        mutate(ests = list(fit_inpois(events[[1]], t_start = 0,
+                              t_end = n0, window, H))) %>% 
+        pull(ests) 
+      ### check if empty here
+      if(identical(unlist(curr_est), numeric(0))){
+        ## update this to update the array entry
+        init_MuA[k1, k2, ] <- 0
+      }
+      else{
+        ## same here
+        init_MuA[k1, k2, ] <- unlist(curr_est) 
+      }
+    }
+  }
+  ord <- order(init_MuA[1, , 1])
+  sorted_MuA <- apply(init_MuA, c(1, 3), function(x) x[ord])
+  # works but bad example here because same values 
+  ## could find first which not tied?
+  init_group <- rep(NA, m)
+  
+  ## stack into K *(H*K) matrix
+  Mu_matrix <- matrix(as.vector(aperm(sorted_MuA, c(3, 2, 1))),
+                      nrow = 2, ncol = 4, byrow = T)
+  
+  
+  for(i in (1:m)-1){
+    curr_neigh <- init_events %>% 
+      filter(send == i) %>% 
+      group_by(send, rec) %>% 
+      summarise(events = list(time)) 
+    ## same as above
+    names(curr_neigh$events) <- curr_neigh$rec
+    ests <- map_dfr(curr_neigh$events, fit_inpois, t_start = 0,
+                    t_end = n0, window, H)
+    ests <- as_tibble(t(ests), .name_repair = ~ c(paste0("V", 1:H)))
     
+    ## TO DO do I need to sort in here?
+    ## deal with length(curr_neigh) <= K
+    if(nrow(unique(ests)) < K){
+      # print("Need to consider this case")
+      curr_est <- c(rep(0, K-length(unique(ests))), 
+                    unique(ests))
+      curr_center <- as.vector(t(curr_est))
+      ### pad with zeros to have length K and then sort?
+    } else if(nrow(unique(ests)) == K){
+      curr_est <- kmeans(ests, centers = K, algorithm = "Lloyd")
+      curr_center <- as.vector(t(curr_est$centers))
+    } else{
+      curr_est <- kmeans(ests, centers = K)
+      ## here each row is a basis function, want to 
+      ## stretch this out to a vector, putting rows side by side
+      curr_center <- as.vector(t(curr_est$centers))
+    }
+    
+    ## then see which row of init_B this is closest to
+    dists <- apply(Mu_matrix, 1, function(x) 
+      dist(rbind(x, curr_center)))
+    init_group[i + 1] <- which.min(dists)
+    ## to deal with the zero indexing of the raw data
+    ## dist from init_MuA[i, j, ] to curr_center
+  }
+  
+  ### then the final part, the final estimate of B
+  ## add clust assignment to tidy events
+  
+  clust_info <- tibble(nodes = 0:(m-1), clust = init_group)
+  
+  clust_events <- init_events %>% 
+    left_join(clust_info, by = c("send" = "nodes")) %>% 
+    rename(clust_send = clust) %>% 
+    left_join(clust_info, by = c("rec" = "nodes")) %>% 
+    rename(clust_rec = clust)
+  
+  updated_Mu <- sorted_MuA
+  t_end <- n0
+  h1 <- floor(t_start/window) # start closest and to the left 
+  h2 <- floor(t_end/window) # this will throw out incomplete intervals
+  jumps <- h1:h2 * window # to get the actual jumps
+  which_h <- rep(1:H, length.out = length(jumps) - 1)
+  
+  for(k1 in 1:K){
+    for(k2 in 1:K){
+      curr_data <- clust_events %>% 
+        filter(clust_send == k1) %>% 
+        filter(clust_rec == k2) %>% 
+        group_by(send, rec) %>% 
+        ## TO DO update this also
+        summarise(events = list(time)) %>%
+        rowwise() %>% 
+        mutate(counts = list(num_in_wind(unlist(events),
+                                         jumps, which_h, window))) %>% 
+        ungroup() %>% 
+        unnest_wider(col = counts) %>% 
+        unnest_wider(col = c(counts_H, time), names_sep = "_")
+        ## then sum across counts and divide by all the time
+      total_counts <- curr_data %>% select(starts_with("counts_H")) %>% 
+        summarise_all(sum) %>% 
+        as.numeric()
+      
+      total_time <- curr_data %>% select(starts_with("time_")) %>% 
+        summarise_all(sum) %>% 
+        as.numeric()
+      
+      new_est <- total_counts/total_time
+      
+      if(identical(new_est, numeric(0))){
+        updated_Mu[k1, k2, ] <- 0
+      }
+      # else if(is.nan(new_est)){
+      #   updated_Mu[k1, k2, ] <- runif(1)
+      # }
+      else{
+        updated_Mu[k1, k2, ] <- new_est 
+      }
+      
+      # updated_B[k1, k2] <- new_est
+      # ### debug this
+      # if(is.na(new_est)) {
+      #   print("You should check the data")
+      #   return(alltimes)
+      # }
+    }
+  }
+  # cat(updated_B, "\n------\n")
+  # print(updated_B)
+  return(list(est_clust = init_group,
+              est_Mu = updated_Mu,
+              rest_events = remaining_events,
+              cut_off = n0))
   
 }
