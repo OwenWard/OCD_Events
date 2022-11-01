@@ -91,6 +91,7 @@ for(sim in 1:no_sims){
     result <- dense_inhom_Poisson(alltimes, K,
                                   H = H,
                                   window = curr_wind,
+                                  t_start = 0,
                                   n0 = n0, m)
     Mu_est <- result$est_Mu
     ## need to pass the estimated clustering also

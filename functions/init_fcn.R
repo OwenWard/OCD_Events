@@ -437,7 +437,7 @@ fit_inpois <- function(events, t_start, t_end, window, H){
 }
 
 
-dense_inhom_Poisson <- function(alltimes, K, H, window, n0, m) {
+dense_inhom_Poisson <- function(alltimes, K, H, window, t_start, n0, m) {
   
   ## given a choice of H, window,
   ## estimate the individual rates for each node in each window
@@ -473,7 +473,7 @@ dense_inhom_Poisson <- function(alltimes, K, H, window, n0, m) {
     group_by(rec) %>%
     summarise(events = list(time)) 
   names(max_events$events) <- max_events$rec
-  ests <- map_dfr(max_events$events, fit_inpois, t_start = 0,
+  ests <- map_dfr(max_events$events, fit_inpois, t_start = t_start,
                   t_end = n0, window, H)
   est_names <- paste0("H", 1:H)
   ests <- as_tibble(t(ests), .name_repair = ~ c(paste0("V", 1:H)))
@@ -519,7 +519,7 @@ dense_inhom_Poisson <- function(alltimes, K, H, window, n0, m) {
         ungroup() %>% 
         slice_sample(n = 1) %>%
         ## change this bit here based on the function being used
-        mutate(ests = list(fit_inpois(events[[1]], t_start = 0,
+        mutate(ests = list(fit_inpois(events[[1]], t_start = t_start,
                               t_end = n0, window, H))) %>% 
         pull(ests) 
       ### check if empty here
@@ -551,7 +551,7 @@ dense_inhom_Poisson <- function(alltimes, K, H, window, n0, m) {
       summarise(events = list(time)) 
     ## same as above
     names(curr_neigh$events) <- curr_neigh$rec
-    ests <- map_dfr(curr_neigh$events, fit_inpois, t_start = 0,
+    ests <- map_dfr(curr_neigh$events, fit_inpois, t_start = t_start,
                     t_end = n0, window, H)
     ests <- as_tibble(t(ests), .name_repair = ~ c(paste0("V", 1:H)))
     
@@ -605,7 +605,6 @@ dense_inhom_Poisson <- function(alltimes, K, H, window, n0, m) {
         filter(clust_send == k1) %>% 
         filter(clust_rec == k2) %>% 
         group_by(send, rec) %>% 
-        ## TO DO update this also
         summarise(events = list(time)) %>%
         rowwise() %>% 
         mutate(counts = list(num_in_wind(unlist(events),
