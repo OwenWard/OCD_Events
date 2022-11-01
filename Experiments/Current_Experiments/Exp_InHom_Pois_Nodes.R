@@ -20,7 +20,7 @@ K <- 2
 
 m_vec <- c(100, 200, 500, 1000, 5000)
 
-sparsity <- 0.05 # prop of edges which can have events
+sparsity <- 0.25 # prop of edges which can have events
 
 jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
 jobid <- as.numeric(jobid)
@@ -75,63 +75,63 @@ for(sim in 1:no_sims){
     edge <- sort(edge[edge!= i-1]) ## remove self edges
     A[[i]] <- edge
   }
-  alltimes <- sampleBlockHak_nonhomo(Time, A, Z, MuA = MuA,
-                                     B = true_B, window = window,
+  alltimes <- sampleBlockHak_nonhomo(Time,
+                                     A,
+                                     Z,
+                                     MuA = MuA,
+                                     B = true_B, 
+                                     window = curr_wind,
                                      lam = 1)
   print("Simulated Data")
   ### then estimate the fits here in each case
-  # if(model == "Poisson") {
-  #   
-  #   for(curr_n0 in n0_vals){
-  #     ### run init algorithm
-  #     # result <- dense_poisson(alltimes, K, n0 = curr_n0, m)
-  #     # m0_curr <- m
-  #     result <- sparse_poisson(alltimes, K, n0 = curr_n0, m, m0 = m0_curr)
-  #     # while(sum(is.nan(result$est_B)) > 0) {
-  #     #   result <- dense_poisson(alltimes, K, n0 = curr_n0)
-  #     #   ## just run again to avoid this issue
-  #     # }
-  #     Mu_est <- result$est_B
-  #     ## need to pass the estimated clustering also
-  #     init_tau <- matrix(0, nrow = m, ncol = K)
-  #     for(i in seq_along(result$est_clust)){
-  #       init_tau[i, result$est_clust[i]] <- 1
-  #     }
-  #     ### check the initial ARI
-  #     # aricode::ARI(result$est_clust, Z)
-  #     
-  #     ### will need to modify to account for the decreased number
-  #     ### of events also...
-  #     results_online_init <- estimate_Poisson_init(full_data = 
-  #                                                    result$rest_events,
-  #                                                  A,
-  #                                                  m,
-  #                                                  K,
-  #                                                  Time,
-  #                                                  dT = dT,
-  #                                                  B = Mu_est,
-  #                                                  inter_T,
-  #                                                  init_tau,
-  #                                                  start = result$cut_off,
-  #                                                  is_elbo = FALSE)
-  #     z_est <- apply(results_online_init$tau, 1, which.max)
-  #     clust_est_init <- aricode::ARI(Z, z_est)
-  #     # print("Init Worked")
-  #     ### then save dT, clust_est, m, model
-  #     curr_sim <- tibble(ARI = clust_est_init,
-  #                        K = K, 
-  #                        nodes = m,
-  #                        model = model,
-  #                        init = "Init",
-  #                        n0 = curr_n0,
-  #                        m0 = m0_curr,
-  #                        sparsity = sparsity)
-  #     curr_dt_sims <- curr_dt_sims %>% 
-  #       bind_rows(curr_sim)
-  #   }
-  # }
+  
+  
   ### then do random init down here, bind it to curr_dt_sims
   for(curr_wind in 1:10) {
+    result <- dense_inhom_Poisson(alltimes, K,
+                                  H = H,
+                                  window = curr_wind,
+                                  n0 = n0, m)
+    Mu_est <- result$est_Mu
+    ## need to pass the estimated clustering also
+    init_tau <- matrix(0, nrow = m, ncol = K)
+    for(i in seq_along(result$est_clust)){
+      init_tau[i, result$est_clust[i]] <- 1
+    }
+    ### check the initial ARI
+    aricode::ARI(result$est_clust, Z)
+    #     
+    #     ### will need to modify to account for the decreased number
+    #     ### of events also...
+    results_online_init <- nonhomoPois_est_init(alltimes = result$rest_events,
+                                                A,
+                                                m,
+                                                K,
+                                                H,
+                                                curr_wind,
+                                                Time,
+                                                dT = dT,
+                                                gravity = 0.01,
+                                                MuA_start = Mu_est,
+                                                init_tau,
+                                                start = result$cut_off,
+                                                is_elbo = FALSE)
+    z_est <- apply(results_online_init$tau, 1, which.max)
+    clust_est_init <- aricode::ARI(Z, z_est)
+    # print("Init Worked")
+    ### then save dT, clust_est, m, model
+    curr_sim <- tibble(ARI = clust_est_init,
+                       K = K,
+                       nodes = m,
+                       # model = model,
+                       init = "Init",
+                       n0 = n0,
+                       window = curr_wind,
+                       # m0 = m0_curr,
+                       sparsity = sparsity,
+                       sim = sim)
+    curr_dt_sims <- curr_dt_sims %>%
+      bind_rows(curr_sim)
     MuA_init <- array(runif(K * K * H), dim = c(K, K, H) )
     tau_init <- matrix(1/K, nrow = m, ncol = K)
     
@@ -155,10 +155,10 @@ for(sim in 1:no_sims){
                             K = K, 
                             nodes = m,
                             init = "No Init",
-                            wind_size = curr_wind,
-                            # n0 = NA,
+                            n0 = NA,
+                            window = curr_wind,
                             # m0 = NA,
-                            init_num = sim_id,
+                            # init_num = sim_id,
                             sparsity = sparsity,
                             sim = sim)
     curr_dt_sims <- curr_dt_sims %>% 
@@ -170,6 +170,6 @@ results <- curr_dt_sims
 
 ### then save these somewhere
 saveRDS(results, file = here("Experiments",
-                             "exp_results", "October",
-                             paste0("exp_inpois_nodes_fixed_oct_10_rho_",
+                             "exp_results", "November",
+                             paste0("exp_inpois_nodes_fixed_nov_1_rho_",
                                     100 * sparsity, "_", sim_id, ".RDS")))

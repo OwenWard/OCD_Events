@@ -126,7 +126,7 @@ Rcpp::List estimate_Poisson_init(
 
 
 //// modify inhomogeneous Poisson to take initial values also
-//// only pass in the community assignments, learn the
+//// pass in the community assignments and initial rates, learn the
 //// rates from random initialization
 // [[Rcpp::export]]
 Rcpp::List nonhomoPois_est_init(
@@ -153,16 +153,10 @@ Rcpp::List nonhomoPois_est_init(
   arma::mat S(m,K);
   arma::cube MuA(K,K,H);
   arma::mat tau(m,K);
-  MuA.fill(0.5), S.fill(0.0);
-  for (int k = 0; k < K; k++) {
-    for (int l=0; l < K; l++) {
-      for(int h = 0; h < H; h++) {
-        MuA(k,l,h) = myrunif();
-      }            
-    }
-  }
+  
   // tau.fill(1.0/K);
   tau = tau_init;
+  MuA = MuA_start;
   
   int nall = alltimes.n_rows;
   int start_pos = 0, curr_pos = 0, end_pos = 0, ln_prev = 0, ln_curr, n_t;
