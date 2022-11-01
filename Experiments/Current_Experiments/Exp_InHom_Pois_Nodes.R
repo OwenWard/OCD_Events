@@ -18,7 +18,7 @@ dT <- 1
 inter_T <- 1
 K <- 2
 
-m_vec <- c(100, 200, 500, 1000, 5000)
+m_vec <- c(100, 200, 500)
 
 sparsity <- 0.25 # prop of edges which can have events
 
@@ -38,7 +38,7 @@ m <- m_vec[sim_id]
 # 
 # 
 # m0_curr <- m/4
-# n0_vals <- 20
+n0 <- 20
 
 # for(exp_num in seq_along(m_vec)) {
 #   dT <- 1
