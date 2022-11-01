@@ -80,7 +80,7 @@ for(sim in 1:no_sims){
                                      Z,
                                      MuA = MuA,
                                      B = true_B, 
-                                     window = curr_wind,
+                                     window = window,
                                      lam = 1)
   print("Simulated Data")
   ### then estimate the fits here in each case
