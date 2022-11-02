@@ -632,8 +632,8 @@ dense_inhom_Poisson <- function(alltimes, K, H, window, t_start, n0, m) {
         ####
         saveRDS(curr_data,
                 file = here("Experiments",
-                            "exp_results", "November",
-                            "debug.RDS"))
+                            "Current_Experiments",
+                            "debug.RDS")) 
         ####
         curr_data %>% 
           unnest_wider(col = counts) %>% 
