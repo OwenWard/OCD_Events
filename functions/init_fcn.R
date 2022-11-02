@@ -623,7 +623,7 @@ dense_inhom_Poisson <- function(alltimes, K, H, window, t_start, n0, m) {
         ungroup() 
       
       if(nrow(curr_data) > 0) {
-        print(head(curr_data))
+        print(curr_data$counts[[1]])
         cat("----------\n")
         curr_data %>% 
           unnest_wider(col = counts) %>% 
