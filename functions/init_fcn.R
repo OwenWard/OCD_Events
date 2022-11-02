@@ -612,6 +612,9 @@ dense_inhom_Poisson <- function(alltimes, K, H, window, t_start, n0, m) {
   
   for(k1 in 1:K){
     for(k2 in 1:K){
+      cat("k1 is ", k1, "\n")
+      cat("k2 is ", k2, "\n")
+      cat("window is ", window, "\n")
       curr_data <- clust_events %>% 
         filter(clust_send == k1) %>% 
         filter(clust_rec == k2) %>% 
