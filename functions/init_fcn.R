@@ -513,15 +513,23 @@ dense_inhom_Poisson <- function(alltimes, K, H, window, t_start, n0, m) {
   
   for(k1 in 1:K){
     for(k2 in 1:K){
-      curr_est <- neighbour_events %>% 
+      curr_data <- neighbour_events %>% 
         filter(send_clust == k1) %>% 
         filter(rec_clust == k2) %>% 
-        ungroup() %>% 
-        slice_sample(n = 1) %>%
-        ## change this bit here based on the function being used
-        mutate(ests = list(fit_inpois(events[[1]], t_start = t_start,
-                              t_end = n0, window, H))) %>% 
-        pull(ests) 
+        ungroup() 
+      if(nrow(curr_data) > 0){
+        curr_est <- curr_data %>% 
+          slice_sample(n = 1) %>%
+          ## change this bit here based on the function being used
+          mutate(ests = list(fit_inpois(events[[1]], t_start = t_start,
+                                        t_end = n0, window, H))) %>% 
+          pull(ests)
+          
+      }
+      else{
+        curr_est <- runif(H)
+      }
+        ## deal with empty here also
       ### check if empty here
       if(identical(unlist(curr_est), numeric(0))){
         ## update this to update the array entry
@@ -599,6 +607,9 @@ dense_inhom_Poisson <- function(alltimes, K, H, window, t_start, n0, m) {
   jumps <- h1:h2 * window # to get the actual jumps
   which_h <- rep(1:H, length.out = length(jumps) - 1)
   
+  ## occasional bug here, think if one group empty?
+  print(table(init_group))
+  
   for(k1 in 1:K){
     for(k2 in 1:K){
       curr_data <- clust_events %>% 
@@ -609,19 +620,25 @@ dense_inhom_Poisson <- function(alltimes, K, H, window, t_start, n0, m) {
         rowwise() %>% 
         mutate(counts = list(num_in_wind(unlist(events),
                                          jumps, which_h, window))) %>% 
-        ungroup() %>% 
-        unnest_wider(col = counts) %>% 
-        unnest_wider(col = c(counts_H, time), names_sep = "_")
+        ungroup() 
+      
+      if(nrow(curr_data) > 0) {
+        curr_data %>% 
+          unnest_wider(col = counts) %>% 
+          unnest_wider(col = c(counts_H, time), names_sep = "_")
         ## then sum across counts and divide by all the time
-      total_counts <- curr_data %>% select(starts_with("counts_H")) %>% 
-        summarise_all(sum) %>% 
-        as.numeric()
-      
-      total_time <- curr_data %>% select(starts_with("time_")) %>% 
-        summarise_all(sum) %>% 
-        as.numeric()
-      
-      new_est <- total_counts/total_time
+        total_counts <- curr_data %>% select(starts_with("counts_H")) %>% 
+          summarise_all(sum) %>% 
+          as.numeric()
+        
+        total_time <- curr_data %>% select(starts_with("time_")) %>% 
+          summarise_all(sum) %>% 
+          as.numeric()
+        new_est <- total_counts/total_time
+      }
+      else{
+        new_est <- runif(H)
+      }
       
       if(identical(new_est, numeric(0))){
         updated_Mu[k1, k2, ] <- 0
