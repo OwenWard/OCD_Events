@@ -628,6 +628,13 @@ dense_inhom_Poisson <- function(alltimes, K, H, window, t_start, n0, m) {
       if(nrow(curr_data) > 0) {
         print(curr_data$counts[[1]])
         cat("----------\n")
+        
+        ####
+        saveRDS(curr_data,
+                file = here("Experiments",
+                            "exp_results", "November",
+                            "debug.RDS"))
+        ####
         curr_data %>% 
           unnest_wider(col = counts) %>% 
           unnest_wider(col = c(counts_H, time), names_sep = "_")
