@@ -601,6 +601,7 @@ dense_inhom_Poisson <- function(alltimes, K, H, window, t_start, n0, m) {
     rename(clust_rec = clust)
   
   updated_Mu <- sorted_MuA
+  print(updated_Mu)
   t_end <- n0
   h1 <- floor(t_start/window) # start closest and to the left 
   h2 <- floor(t_end/window) # this will throw out incomplete intervals
@@ -608,7 +609,7 @@ dense_inhom_Poisson <- function(alltimes, K, H, window, t_start, n0, m) {
   which_h <- rep(1:H, length.out = length(jumps) - 1)
   
   ## occasional bug here, think if one group empty?
-  print(table(init_group))
+  # print(table(init_group))
   
   for(k1 in 1:K){
     for(k2 in 1:K){
@@ -621,25 +622,33 @@ dense_inhom_Poisson <- function(alltimes, K, H, window, t_start, n0, m) {
         mutate(counts = list(num_in_wind(unlist(events),
                                          jumps, which_h, window))) %>% 
         ungroup() 
-      
+      # print(curr_data)
       if(nrow(curr_data) > 0) {
-        curr_data %>% 
+        new_data <- curr_data %>% 
           unnest_wider(col = counts) %>% 
           unnest_wider(col = c("counts_H", "time"), names_sep = "_")
         ## then sum across counts and divide by all the time
-        total_counts <- curr_data %>% select(starts_with("counts_H")) %>% 
-          summarise_all(sum) %>% 
-          as.numeric()
+        # print(curr_data)
+        ## something happening here
         
-        total_time <- curr_data %>% select(starts_with("time_")) %>% 
+        total_counts <- new_data %>% 
+          select(starts_with("counts_H")) %>% 
           summarise_all(sum) %>% 
           as.numeric()
+        cat("total counts \n")
+        print(total_counts)
+        cat("----\n")
+        total_time <- new_data %>% select(starts_with("time_")) %>% 
+          summarise_all(sum) %>% 
+          as.numeric()
+        # print(total_time)
         new_est <- total_counts/total_time
-      }
-      else{
+        # print("now here")
+        print(new_est)
+      }else{
         new_est <- runif(H)
       }
-      
+      print(new_est)
       if(identical(new_est, numeric(0))){
         updated_Mu[k1, k2, ] <- 0
       }
