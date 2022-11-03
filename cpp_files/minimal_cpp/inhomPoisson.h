@@ -637,7 +637,7 @@ Rcpp::List nonhomoPois_estimator(
   double R = dT;
   
   for (int n = 0; n < N; n++ ){
-    cout<<n<<endl;
+    // cout<<n<<endl;
     Tn = (n + 1.0) * dT;
     event = alltimes.row(start_pos);
     t_current = event(2);

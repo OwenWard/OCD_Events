@@ -58,7 +58,9 @@ for(sim in 1:no_sims){
   MuA <- array(0, c(K, K, H))
   MuA[, , 1] <- matrix(c(0.8, 0.2, 0.6, 0.4), 2, 2)
   MuA[, , 2] <- matrix(c(0.4, 0.7, 0.2, 0.7), 2, 2)
-  
+  # 
+  # MuA[, , 1] <- matrix(c(0.08, 0.02, 0.06, 0.04)/2, 2, 2)
+  # MuA[, , 2] <- matrix(c(0.04, 0.07, 0.02, 0.07)/2, 2, 2)
   ####
   
   ## excitation, if used (for Hawkes)
@@ -87,7 +89,7 @@ for(sim in 1:no_sims){
   
   
   ### then do random init down here, bind it to curr_dt_sims
-  for(curr_wind in 1:10) {
+  for(curr_wind in 10:10) {
     result <- dense_inhom_Poisson(alltimes, K,
                                   H = H,
                                   window = curr_wind,
@@ -100,25 +102,31 @@ for(sim in 1:no_sims){
       init_tau[i, result$est_clust[i]] <- 1
     }
     ### check the initial ARI
-    aricode::ARI(result$est_clust, Z)
+    cat("Init Scheme \n")
+    print(aricode::ARI(result$est_clust, Z))
+    cat("-------\n")
     #     
     #     ### will need to modify to account for the decreased number
     #     ### of events also...
-    results_online_init <- nonhomoPois_est_init(alltimes = result$rest_events,
-                                                A,
-                                                m,
-                                                K,
-                                                H,
-                                                curr_wind,
-                                                Time,
-                                                dT = dT,
-                                                gravity = 0.01,
-                                                MuA_start = Mu_est,
-                                                init_tau,
-                                                start = result$cut_off,
-                                                is_elbo = FALSE)
+    a <- capture.output(results_online_init <- nonhomoPois_est_init(
+      alltimes = result$rest_events,
+      A,
+      m,
+      K,
+      H,
+      curr_wind,
+      Time,
+      dT = dT,
+      gravity = 0.01,
+      MuA_start = Mu_est,
+      init_tau,
+      start = result$cut_off,
+      is_elbo = FALSE))
     z_est <- apply(results_online_init$tau, 1, which.max)
     clust_est_init <- aricode::ARI(Z, z_est)
+    cat("Post Init \n")
+    print(clust_est_init)
+    cat("------\n")
     # print("Init Worked")
     ### then save dT, clust_est, m, model
     curr_sim <- tibble(ARI = clust_est_init,

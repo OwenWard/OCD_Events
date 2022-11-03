@@ -211,7 +211,7 @@ Rcpp::List nonhomoPois_est_init(
     MuA = MuA_new, S = S_new, Pi = Pi_new;
     start_pos = curr_pos;
     ln_prev = ln_curr;
-    Rprintf("iter: %d; number: %d \n", n, n_t); 
+    // Rprintf("iter: %d; number: %d \n", n, n_t); 
     //MuA.print();
     //S.print();
     
