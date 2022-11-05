@@ -18,9 +18,9 @@ dT <- 1
 inter_T <- 1
 K <- 2
 
-m_vec <- c(100, 200, 500)
+m_vec <- c(100, 200, 500, 1000)
 
-sparsity <- 0.25 # prop of edges which can have events
+sparsity <- 0.15 # prop of edges which can have events
 
 jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
 jobid <- as.numeric(jobid)
@@ -39,6 +39,7 @@ m <- m_vec[sim_id]
 # 
 # m0_curr <- m/4
 n0 <- 20
+m0 <- m/2
 
 # for(exp_num in seq_along(m_vec)) {
 #   dT <- 1
@@ -89,12 +90,18 @@ for(sim in 1:no_sims){
   
   
   ### then do random init down here, bind it to curr_dt_sims
-  for(curr_wind in 10:10) {
+  for(curr_wind in 1:10) {
     result <- dense_inhom_Poisson(alltimes, K,
                                   H = H,
                                   window = curr_wind,
                                   t_start = 0,
                                   n0 = n0, m)
+    ## to check with sparse also
+    result <- sparse_inhom_Poisson(alltimes, K,
+                                   H, window,
+                                   t_start = 0,
+                                   n0 = 20,
+                                   m, m0)
     Mu_est <- result$est_Mu
     ## need to pass the estimated clustering also
     init_tau <- matrix(0, nrow = m, ncol = K)
