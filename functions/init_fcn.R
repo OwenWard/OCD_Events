@@ -905,13 +905,13 @@ sparse_inhom_Poisson <- function(alltimes, K, H, window, t_start, n0, m, m0){
         new_est <- runif(H)
       }
       if(identical(new_est, numeric(0))){
-        updated_Mu[k1, k2, ] <- 0
+        updated_MuA[k1, k2, ] <- 0
       }
       # else if(is.nan(new_est)){
       #   updated_Mu[k1, k2, ] <- runif(1)
       # }
       else{
-        updated_Mu[k1, k2, ] <- new_est 
+        updated_MuA[k1, k2, ] <- new_est 
       }
     }
   }
@@ -919,7 +919,7 @@ sparse_inhom_Poisson <- function(alltimes, K, H, window, t_start, n0, m, m0){
   
   ### then return all this stuff in a list
   return(list(est_clust = init_group,
-              est_Mu = updated_Mu,
+              est_Mu = updated_MuA,
               rest_events = remaining_events,
               cut_off = n0))
 }
