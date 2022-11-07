@@ -27,7 +27,6 @@ sim_id <- jobid
 
 
 results <- list()
-m <- m_vec[sim_id]
 m <- 200 ## fix this
 # m0_vec <- c( 100*c(1/10, 1/4, 1/2),
 #              200*c(1/10, 1/4, 1/2),
