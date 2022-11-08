@@ -193,5 +193,5 @@ results <- curr_dt_sims
 ### then save these somewhere
 saveRDS(results, file = here("Experiments",
                              "exp_results", "November",
-                             paste0("exp_inpois_nodes_fixed_nov_1_rho_",
+                             paste0("exp_inpois_k_nov_1_rho_",
                                     100 * sparsity, "_", sim_id, ".RDS")))
