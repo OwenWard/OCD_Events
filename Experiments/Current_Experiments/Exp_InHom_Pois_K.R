@@ -104,7 +104,7 @@ for(sim in 1:no_sims){
                                    window = curr_wind,
                                    t_start = 0,
                                    n0 = n0,
-                                   m, m0)
+                                   m, m0_curr)
     Mu_est <- result$est_Mu
     ## need to pass the estimated clustering also
     ## maybe these is too strong here?
@@ -149,7 +149,7 @@ for(sim in 1:no_sims){
                        init = "Init",
                        n0 = n0,
                        window = curr_wind,
-                       # m0 = m0_curr,
+                       m0 = m0_curr,
                        sparsity = sparsity,
                        sim = sim)
     curr_dt_sims <- curr_dt_sims %>%
@@ -179,7 +179,7 @@ for(sim in 1:no_sims){
                             init = "No Init",
                             n0 = NA,
                             window = curr_wind,
-                            # m0 = NA,
+                            m0 = NA,
                             # init_num = sim_id,
                             sparsity = sparsity,
                             sim = sim)
