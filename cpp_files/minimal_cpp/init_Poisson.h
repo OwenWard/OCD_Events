@@ -156,6 +156,11 @@ Rcpp::List nonhomoPois_est_init(
   
   // tau.fill(1.0/K);
   tau = tau_init;
+  tau = update_init_Tau(tau, m, K);
+  for(int k=0; k<K; ++k){
+    arma::colvec temp = tau.col(k);
+    Pi(k) = mean(temp);
+  }
   MuA = MuA_start;
   
   int nall = alltimes.n_rows;
@@ -208,6 +213,10 @@ Rcpp::List nonhomoPois_est_init(
     arma::cube MuA_new = paralist["MuA"];
     arma::rowvec Pi_new = paralist["Pi"];
     tau = tau_new; 
+    // to prevent degenerate groups
+    for(int i =0; i < m; ++i){
+      tau.row(i) = correct_tau(tau.row(i));
+    }
     MuA = MuA_new, S = S_new, Pi = Pi_new;
     start_pos = curr_pos;
     ln_prev = ln_curr;

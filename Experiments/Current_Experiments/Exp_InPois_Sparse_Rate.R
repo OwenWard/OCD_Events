@@ -106,7 +106,7 @@ for(sim in 1:no_sims){
   ## this would compute the expected number of events 
   ## per unit of time for a node pair which have events
   events_per_time <- nrow(alltimes)/ (m * (m-1) * sparsity * Time)
-  ### then estimate the fits here in each case
+  ### these are the empirical rates rather than expected
   
   
   ### then do random init down here, bind it to curr_dt_sims
@@ -118,7 +118,8 @@ for(sim in 1:no_sims){
     #                               n0 = n0, m)
     ## to check with sparse also
     result <- sparse_inhom_Poisson(alltimes, K,
-                                   H, window,
+                                   H, 
+                                   window = curr_wind,
                                    t_start = 0,
                                    n0 = 20,
                                    m, m0)

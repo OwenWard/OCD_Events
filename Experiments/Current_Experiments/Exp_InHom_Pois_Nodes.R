@@ -38,8 +38,9 @@ m <- m_vec[sim_id]
 # 
 # 
 # m0_curr <- m/4
-n0 <- 20
+n0 <- 40
 m0 <- m/2
+
 
 # for(exp_num in seq_along(m_vec)) {
 #   dT <- 1
@@ -97,10 +98,12 @@ for(sim in 1:no_sims){
     #                               t_start = 0,
     #                               n0 = n0, m)
     ## to check with sparse also
-    result <- sparse_inhom_Poisson(alltimes, K,
-                                   H, window,
+    result <- sparse_inhom_Poisson(alltimes,
+                                   K,
+                                   H,
+                                   window = curr_wind,
                                    t_start = 0,
-                                   n0 = 20,
+                                   n0 = n0,
                                    m, m0)
     Mu_est <- result$est_Mu
     ## need to pass the estimated clustering also
@@ -133,6 +136,7 @@ for(sim in 1:no_sims){
     clust_est_init <- aricode::ARI(Z, z_est)
     cat("Post Init \n")
     print(clust_est_init)
+    print(table(z_est, Z))
     cat("------\n")
     # print("Init Worked")
     ### then save dT, clust_est, m, model

@@ -168,7 +168,7 @@ results <- curr_dt_sims
 ### then save these somewhere
 saveRDS(results, file = here("Experiments",
                              "data_thesis_output",
-                             paste0("exp_pois_nodes_fixed_oct_18_rho_large",
+                             paste0("exp_pois_nodes_fixed_oct_18_rho_large_",
                                     100*sparsity, "_", sim_id, ".RDS")))
 
 ## fixed here meaning fixed n0, m0
