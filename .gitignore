@@ -20,3 +20,5 @@ Experiments/Thesis_Exps/routput*
 analysis_old/*
 >>>>>>> 512c312b447744626722ee1bf8daf204b7c14d0a
 .DS_Store
+*.RDS
+*.pdf
