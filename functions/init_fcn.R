@@ -549,7 +549,7 @@ dense_inhom_Poisson <- function(alltimes, K, H, window, t_start, n0, m) {
   
   ## stack into K *(H*K) matrix
   Mu_matrix <- matrix(as.vector(aperm(sorted_MuA, c(3, 2, 1))),
-                      nrow = 2, ncol = 4, byrow = T)
+                      nrow = K, ncol = K * H, byrow = T)
   
   
   for(i in (1:m)-1){
@@ -817,7 +817,7 @@ sparse_inhom_Poisson <- function(alltimes, K, H, window, t_start, n0, m, m0){
   sorted_MuA <- apply(init_MuA, c(1, 3), function(x) x[ord])
   Mu_matrix <- matrix(as.vector(aperm(sorted_MuA,
                                       c(3, 2, 1))),
-                      nrow = 2, ncol = 4, byrow = T)
+                      nrow = K, ncol = K * H, byrow = T)
   
   rem_group <- rep(NA, length(rem_nodes))
   
