@@ -554,8 +554,11 @@ Rcpp::List update_nonhomo_pois_revised(
         else if (MuA_new(k,l,h) > 2 * MuA(k,l,h))
           MuA_new(k,l,h) = MuA(k,l,h) * 2.0;
         
-        if (MuA_new(k,l,h) <= gravity * MuA_count(k,l,h) / n_events)
-          MuA_new(k,l,h) = 0.0;
+        // if (MuA_new(k,l,h) <= gravity * MuA_count(k,l,h) / n_events)
+        //   // maybe this causes the issue?
+        //   cout<<"In Here"<<endl;
+        //   // MuA_new.print()
+        //   // MuA_new(k,l,h) = 0.0;
       }
     }
   }

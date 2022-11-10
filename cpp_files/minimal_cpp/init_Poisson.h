@@ -167,8 +167,7 @@ Rcpp::List nonhomoPois_est_init(
   int start_pos = 0, curr_pos = 0, end_pos = 0, ln_prev = 0, ln_curr, n_t;
   // int N = floor(T / dT);
   int N = int((T - start)/dT);
-  
-  
+  arma::cube inter_tau(m,K,N);
   arma::vec elbo_vec(N);
   double elbo = 0;
   arma::mat prevdata;
@@ -181,7 +180,7 @@ Rcpp::List nonhomoPois_est_init(
   double R = dT;
   
   for (int n = 0; n < N; n++ ){
-    Tn = (n + 1.0) * dT;
+    Tn = dT*(n+1) + start; //account for init
     event = alltimes.row(start_pos);
     t_current = event(2);
     while (t_current <= Tn ) {
@@ -218,6 +217,7 @@ Rcpp::List nonhomoPois_est_init(
       tau.row(i) = correct_tau(tau.row(i));
     }
     MuA = MuA_new, S = S_new, Pi = Pi_new;
+    inter_tau.slice(n) = tau;
     start_pos = curr_pos;
     ln_prev = ln_curr;
     // Rprintf("iter: %d; number: %d \n", n, n_t); 
@@ -237,5 +237,6 @@ Rcpp::List nonhomoPois_est_init(
     Rcpp::Named("MuA") = MuA,
     Rcpp::Named("Pi") = Pi,
     Rcpp::Named("tau") = tau,
+    Rcpp::Named("inter_tau") = inter_tau,
     Rcpp::Named("elbo") = elbo_vec);
 }
