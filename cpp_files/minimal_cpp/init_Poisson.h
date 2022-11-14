@@ -142,6 +142,7 @@ Rcpp::List nonhomoPois_est_init(
     arma::cube MuA_start,
     arma::mat tau_init,
     double start,
+    arma::mat full_data,
     bool is_elbo = false
 ){
   unordered_map<string, std::deque<double>> datamap;
@@ -162,6 +163,10 @@ Rcpp::List nonhomoPois_est_init(
     Pi(k) = mean(temp);
   }
   MuA = MuA_start;
+  arma::mat B(K, K);
+  B.fill(0.0);
+  double lam = 1.0;
+  int num_events = 0;
   
   int nall = alltimes.n_rows;
   int start_pos = 0, curr_pos = 0, end_pos = 0, ln_prev = 0, ln_curr, n_t;
@@ -169,6 +174,8 @@ Rcpp::List nonhomoPois_est_init(
   int N = int((T - start)/dT);
   arma::cube inter_tau(m,K,N);
   arma::vec elbo_vec(N);
+  arma::vec cum_events(N);
+  cum_events.fill(0);
   double elbo = 0;
   arma::mat prevdata;
   
@@ -198,6 +205,8 @@ Rcpp::List nonhomoPois_est_init(
       continue;
     
     truncdata = alltimes.rows(start_pos, end_pos - 1);
+    num_events += truncdata.n_rows;
+    cum_events(n) = num_events;
     
     // datamap = transfer_eff(datamap, truncdata, R);
     transfer_dynamic(datamap, truncdata, R, Tn);
@@ -225,10 +234,9 @@ Rcpp::List nonhomoPois_est_init(
     //S.print();
     
     if (is_elbo){
-      prevdata = alltimes.rows(0, end_pos - 1); // head_rows()
-      // elbo = get_elbo_nonhomoHak(prevdata, 0, T, tau, MuA, B, Pi, A, lam, m, K, H, window);
-      elbo = 0;
-      elbo_vec(n) = elbo / ln_curr;
+      elbo = get_elbo_nonhomoHak(full_data, 0, T, tau, MuA, B, Pi, A, lam, m, K, H, window);
+      // elbo = 0;
+      elbo_vec(n) = elbo;
     }
     Rprintf("=============\n");
   }
@@ -238,5 +246,6 @@ Rcpp::List nonhomoPois_est_init(
     Rcpp::Named("Pi") = Pi,
     Rcpp::Named("tau") = tau,
     Rcpp::Named("inter_tau") = inter_tau,
-    Rcpp::Named("elbo") = elbo_vec);
+    Rcpp::Named("elbo") = elbo_vec,
+    Rcpp::Named("cum_events") = cum_events);
 }

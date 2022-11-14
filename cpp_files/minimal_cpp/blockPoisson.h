@@ -433,7 +433,7 @@ Rcpp::List batch_estimator_hom_Poisson(
     arma::mat tau_new = updateTau(S_new,Pi,m,K); 
     arma::mat B_new = updateB(alltimes,tau_new,B,K,A,m,T,eta);
     arma::rowvec Pi_new = updatePi(tau_new,K);
-    // curr_elbo(iter) = computeELBO(alltimes,tau_new,B_new,Pi_new,A,m,K,T);
+    curr_elbo(iter) = computeELBO(alltimes,tau_new,B_new,Pi_new,A,m,K,T);
     ave_elbo(iter) = curr_elbo(iter)/ cum_events;
     //curr_ll(n) = computeLL(alltimes,tau,B,Pi,A,m,K,t_curr);
     // need to check this

@@ -143,6 +143,6 @@ results <- curr_dt_sims
 
 ### then save these somewhere
 saveRDS(results, file = here("Experiments",
-                             "thesis_output",
+                             "exp_results", "November",
                              paste0("exp_in_pois_online_nov_9_rho_",
                                     100*sparsity, sim_id, ".RDS")))
