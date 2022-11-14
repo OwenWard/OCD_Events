@@ -1,0 +1,238 @@
+---
+title: "Inhomogeneous Poisson"
+author: Owen G. Ward
+date: "November 2022"
+format: 
+  # html: default
+  pdf: default
+editor: source
+---
+
+```{r setup}
+#| echo: false
+#| message: false
+
+library(here)
+library(tidyverse)
+theme_set(theme_bw())
+```
+
+
+
+### Initialization Scheme
+
+We first investigate the performance of the 
+proposed initialization scheme. For these experiments we use the 
+initialization routine for the first 10% of data and 50% of the nodes.
+
+Here what happens quite regularly is that we will have a good estimate
+following the initialization scheme but the community structure after fitting
+to the rest of the data will be degenerate, leading to the long boxplots 
+going to zero. I'm trying to investigate this as I think it could be a bug.
+
+```{r}
+#| echo: false
+#| fig-cap: Initialization leads to an improvement, somewhat weak.
+data_path <- here("Experiments", "exp_results", "November")
+
+files <- list.files(data_path, pattern = "exp_inpois_nodes_fixed_nov_1_rho_15")
+
+## then read these in, look at them
+sim_data <- files %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/November", .x))) 
+
+
+sim_data %>% 
+  group_by(init, nodes) %>% 
+  # summarise(mean_ARI = mean(ARI), sd_ARI = sd(ARI)) %>% 
+  ggplot(aes(as.factor(nodes), ARI)) +
+  geom_boxplot(aes(fill = init)) +
+  labs(x = "Nodes", fill = "Init Scheme")
+
+```
+
+```{r}
+#| echo: false
+#| fig-cap: Impact of chosen window on recovery
+
+sim_data %>% 
+  group_by(init, nodes) %>% 
+  summarise(mean_ARI = mean(ARI), sd_ARI = sd(ARI))
+
+
+
+
+sim_data %>% 
+  group_by(init, window) %>% 
+  ggplot(aes(as.factor(window), ARI)) +
+  geom_boxplot(aes(fill = init)) +
+  facet_wrap(vars(init, nodes)) +
+  labs(x = "Fitted Window", fill = "Init Scheme")
+
+## better in terms of the final result, what about the initial performance?
+
+```
+
+
+## Increasing Nodes
+
+```{r}
+#| echo: false
+
+sim_data %>% 
+  filter(init == "Init") %>% 
+  group_by(nodes) %>% 
+  ggplot(aes(as.factor(nodes), ARI)) +
+  geom_boxplot() +
+  labs(x = "Nodes")
+
+```
+
+
+
+## Effect of Rate on Community Recovery
+
+Similarly, we can investigate the effect of changing
+the rate of the underlying point processes and 
+the performance in terms of community recovery.
+
+Here we look at the average rate, defined as the average number of 
+events per unit of time, for a pair of nodes which interact.
+
+Here the rate matrix is given by the following five settings.
+```{r}
+#| eval: false
+
+if(sim_id == 1){
+    MuA[, , 1] <- matrix(c(0.8, 0.2, 0.6, 0.4), 2, 2)
+    MuA[, , 2] <- matrix(c(0.4, 0.7, 0.2, 0.7), 2, 2)
+  }
+  if(sim_id == 2){
+    MuA[, , 1] <- matrix(c(0.8, 0.2, 0.6, 0.4)/2, 2, 2)
+    MuA[, , 2] <- matrix(c(0.4, 0.7, 0.2, 0.7)/2, 2, 2)
+  }
+  if(sim_id == 3){
+    MuA[, , 1] <- matrix(c(0.8, 0.2, 0.6, 0.4)/5, 2, 2)
+    MuA[, , 2] <- matrix(c(0.4, 0.7, 0.2, 0.7)/5, 2, 2)
+  }
+  if(sim_id == 4){
+    MuA[, , 1] <- matrix(c(0.8, 0.2, 0.6, 0.4)/10, 2, 2)
+    MuA[, , 2] <- matrix(c(0.4, 0.7, 0.2, 0.7)/10, 2, 2)
+  }
+  if(sim_id == 5){
+    MuA[, , 1] <- matrix(c(0.8, 0.2, 0.6, 0.4)/20, 2, 2)
+    MuA[, , 2] <- matrix(c(0.4, 0.7, 0.2, 0.7)/20, 2, 2)
+  }
+
+```
+
+
+```{r load-rate-data}
+#| message: false
+#| echo: false
+data_path <- here("Experiments", "exp_results", "November")
+
+exps <- list.files(path = data_path, pattern = "exp_inpois_nodes_vary_rate")
+
+sims <- exps  %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/November", .x))) 
+
+sims %>% 
+  # filter(window == 10) %>%
+  group_by(rate, init) %>% 
+  # summarise(avg = mean(ARI), sd = sd(ARI)) %>% 
+  ggplot(aes(rate, ARI, colour = init)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(~init) +
+  scale_x_reverse() +
+  labs(x = "Mean Rate", y = "ARI",
+       title = "Clustering Performance as we have sparser Events") +
+  theme(legend.position = "none")
+
+```
+
+This is for varying estimated step sizes, i.e the $h$ in
+$f_{h}(t)$, the step function
+of the inhomogeneous Poisson process. If we instead set the $h$
+used in estimation to be the true choice, then we have the 
+following result. The performance is more stable as 
+the average number of events decreases.
+
+```{r}
+#| echo: false
+#| message: false
+#| fig-cap: Performance with the true step kernel function used.
+
+sims %>% 
+  filter(window == 10) %>% 
+  ggplot(aes(rate, ARI, colour = init)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  facet_wrap(~init) +
+  scale_x_reverse() +
+  labs(x = "Mean Rate", y = "ARI",
+       title = "Clustering Performance as we have sparser Events") +
+  theme(legend.position = "none")
+```
+
+## Varying the number of Communities
+
+```{r}
+k_sims_path <- list.files(path = data_path, pattern = "exp_inpois_k")
+
+k_sims <- k_sims_path %>%
+  map_dfr(~readRDS(here("Experiments/exp_results/November", .x))) 
+
+k_sims %>% 
+  filter(init == "Init") %>% 
+  ggplot(aes(as.factor(K), ARI)) +
+  geom_boxplot() +
+  labs(x = "K, number of groups")
+
+## this looks fine, similar to homogeneous Poisson
+
+```
+
+
+
+
+
+
+## Online Community Recovery
+
+
+```{r}
+#| echo: false
+
+online_sim_path <- list.files(path = data_path, pattern = "exp_in_pois_online")
+
+online_sims <- online_sim_path %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/November", .x))) 
+
+online_sims %>% 
+  mutate(nodes = m0 * 2) %>% 
+  ggplot(aes(time, ARI)) +
+  geom_point() +
+  facet_wrap(~nodes) +
+  geom_smooth()
+
+
+online_sims %>% 
+  mutate(nodes = m0 * 2) %>% 
+  group_by(nodes, time) %>% 
+  summarise(avg = mean(ARI), sd = sd(ARI)) %>% 
+  rowwise() %>% 
+  mutate(min = max(avg - sd, 0), max = min(avg + sd, 1)) %>% 
+  ggplot(aes(time, avg)) +
+  geom_point() +
+  geom_line() +
+  geom_errorbar(aes(ymin = min, ymax = max), width = 5, alpha = 0.5) +
+  facet_wrap(~nodes) +
+  labs(x = "Time", y = "ARI")
+
+### need to tidy this up some more, but not a bad starting point
+
+## could probably start this at t = 20, just to see how it looks
+```
+
