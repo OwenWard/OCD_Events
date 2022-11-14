@@ -761,7 +761,7 @@ Rcpp::List batch_nonhomoPois_estimator(
   
   double gap = 2147483647;
   double eta = 1.0/nall * (K * K);
-  
+  arma::vec elbo_vec(itermax);
   for (int iter = 0; iter < itermax; iter++) {
     eta = 1.0/nall * (K * K) / sqrt(iter / H + 1.0);
     S.fill(0.0);        
@@ -774,6 +774,13 @@ Rcpp::List batch_nonhomoPois_estimator(
     gap = abs(MuA - MuA_new).max();
     tau = tau_new; 
     MuA = MuA_new, S = S_new, Pi = Pi_new;
+    
+    arma::mat B(K, K);
+    B.fill(0.0);
+    double lam = 0.0;
+    double elbo = get_elbo_nonhomoHak(alltimes, 0, T, tau, MuA, B, Pi, A, lam, m, K, H, window);
+    elbo_vec(iter) = elbo;
+    
     Rprintf("iter: %d \n", iter); 
     // B.print();
     // Mu.print();
@@ -788,5 +795,6 @@ Rcpp::List batch_nonhomoPois_estimator(
   return Rcpp::List::create(
     Rcpp::Named("MuA") = MuA,
     Rcpp::Named("Pi") = Pi,
-    Rcpp::Named("tau") = tau);
+    Rcpp::Named("tau") = tau,
+    Rcpp::Named("ELBO") = elbo_vec);
 }
