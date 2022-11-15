@@ -778,7 +778,9 @@ Rcpp::List batch_nonhomoPois_estimator(
     arma::mat B(K, K);
     B.fill(0.0);
     double lam = 0.0;
-    double elbo = get_elbo_nonhomoHak(alltimes, 0, T, tau, MuA, B, Pi, A, lam, m, K, H, window);
+    double elbo = get_elbo_nonhomoHak(alltimes, 0, T,
+                                      tau, MuA, B, Pi,
+                                      A, lam, m, K, H, window);
     elbo_vec(iter) = elbo;
     
     Rprintf("iter: %d \n", iter); 
