@@ -109,14 +109,15 @@ plot(results_batch$ELBO[results_batch$ELBO!= 0], type = "l")
 ### this looks fine and useable
 init_events <- alltimes[alltimes[,3]< n0, ]
 
-batch_data <- tibble(ELBO = as.numeric(results_batch$ELBO[results_batch$ELBO != 0]),
+batch_data <- tibble(ELBO = 
+                       as.numeric(results_batch$ELBO[results_batch$ELBO != 0]),
                      method = "BATCH") %>% 
   mutate(index = row_number(), events_seen = nrow(alltimes) * index)
 
 
 online_data <- tibble(ELBO = as.numeric(results_online_init$elbo),
                       method = "ONLINE",
-                      events_seen = as.numeric(results_online_init$cum_events)+
+                      events_seen = as.numeric(results_online_init$cum_events) +
                         nrow(init_events)) 
 
 
