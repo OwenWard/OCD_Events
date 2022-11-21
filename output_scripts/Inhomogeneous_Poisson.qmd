@@ -3,8 +3,8 @@ title: "Inhomogeneous Poisson"
 author: Owen G. Ward
 date: "November 2022"
 format: 
-  # html: default
-  pdf: default
+  html: default
+  # pdf: default
 editor: source
 ---
 
@@ -15,6 +15,17 @@ editor: source
 library(here)
 library(tidyverse)
 theme_set(theme_bw())
+
+knitr::opts_chunk$set(echo = TRUE,
+                      dev = "png",
+                      fig.height = 5,
+                      fig.width = 7, dpi = 300,
+                      message = FALSE)
+axis_title <- 16
+axis_text_size <- 14
+legend_text <- 14
+line_size <- 1
+
 ```
 
 
@@ -30,7 +41,7 @@ following the initialization scheme but the community structure after fitting
 to the rest of the data will be degenerate, leading to the long boxplots 
 going to zero. I'm trying to investigate this as I think it could be a bug.
 
-```{r}
+```{r init-scheme}
 #| echo: false
 #| fig-cap: Initialization leads to an improvement, somewhat weak.
 data_path <- here("Experiments", "exp_results", "November")
@@ -76,15 +87,19 @@ sim_data %>%
 
 ## Increasing Nodes
 
-```{r}
+```{r fig-inhom-pois-nodes, fig.path = "rev_figure/"}
 #| echo: false
+#| fig-cap: Community Recovery as we increase the number of nodes.
 
 sim_data %>% 
   filter(init == "Init") %>% 
   group_by(nodes) %>% 
   ggplot(aes(as.factor(nodes), ARI)) +
   geom_boxplot() +
-  labs(x = "Nodes")
+  labs(x = "Nodes") +
+  theme(axis.text = element_text(size = axis_text_size),
+        axis.title = element_text(size = axis_title),
+        legend.text = element_text(size = legend_text))
 
 ```
 
@@ -178,7 +193,8 @@ sims %>%
 
 ## Varying the number of Communities
 
-```{r}
+```{r fig-inhom-pois-K, fig.path = "rev_figure/"}
+#| fig-cap: Community Recovery as we vary the number of communities.
 k_sims_path <- list.files(path = data_path, pattern = "exp_inpois_k")
 
 k_sims <- k_sims_path %>%
@@ -188,7 +204,10 @@ k_sims %>%
   filter(init == "Init") %>% 
   ggplot(aes(as.factor(K), ARI)) +
   geom_boxplot() +
-  labs(x = "K, number of groups")
+  labs(x = "K") +
+  theme(axis.text = element_text(size = axis_text_size),
+        axis.title = element_text(size = axis_title),
+        legend.text = element_text(size = legend_text))
 
 ## this looks fine, similar to homogeneous Poisson
 
@@ -202,20 +221,21 @@ k_sims %>%
 ## Online Community Recovery
 
 
-```{r}
+```{r fig-inhom-pois-online, fig.path = "rev_figure/"}
 #| echo: false
+#| fig-cap: Community Recovery as events are observed over time.
 
 online_sim_path <- list.files(path = data_path, pattern = "exp_in_pois_online")
 
 online_sims <- online_sim_path %>% 
   map_dfr(~readRDS(here("Experiments/exp_results/November", .x))) 
 
-online_sims %>% 
-  mutate(nodes = m0 * 2) %>% 
-  ggplot(aes(time, ARI)) +
-  geom_point() +
-  facet_wrap(~nodes) +
-  geom_smooth()
+# online_sims %>% 
+#   mutate(nodes = m0 * 2) %>% 
+#   ggplot(aes(time, ARI)) +
+#   geom_point() +
+#   facet_wrap(~nodes) +
+#   geom_smooth()
 
 
 online_sims %>% 
@@ -229,10 +249,20 @@ online_sims %>%
   geom_line() +
   geom_errorbar(aes(ymin = min, ymax = max), width = 5, alpha = 0.5) +
   facet_wrap(~nodes) +
-  labs(x = "Time", y = "ARI")
+  labs(x = "Time", y = "ARI") +
+  theme(axis.text = element_text(size = axis_text_size),
+        axis.title = element_text(size = axis_title),
+        legend.text = element_text(size = legend_text))
 
 ### need to tidy this up some more, but not a bad starting point
 
 ## could probably start this at t = 20, just to see how it looks
 ```
+
+## Online Parameter Recovery
+
+
+## Online Regret
+
+## Online Loss
 

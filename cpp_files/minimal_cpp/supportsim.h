@@ -1,6 +1,24 @@
 #include "onlineblock.h"
 
 
+
+// [[Rcpp::export]]
+arma::cube to_cube(arma::vec values, int x, int y, int z) {
+  arma::vec v(values);
+  arma::cube res((const double*)v.begin(), x, y, z);
+  return res;
+}
+
+// not calling them correctly
+
+
+// [[Rcpp::export]]
+arma::rowvec to_vec(arma::cube Q){
+  // arma::rowvec A = Q(arma::span(0), arma::span(1), arma::span::all);
+  arma::vec A = vectorise(Q);
+  return A.as_row();
+}
+
 // [[Rcpp::export]]
 double myrexp(
 	double lam
@@ -34,21 +52,21 @@ double myrunif(
 	return sample;
 }
 
-// [[Rcpp::export]]
-arma::cube to_cube(arma::vec values, int x, int y, int z) {
-  arma::vec v(values);
-  // v.randn();
-  
-  arma::cube res((const double*)v.begin(), x, y, z);
-  return res;
-}
-
-// [[Rcpp::export]]
-arma::rowvec to_vec(arma::cube Q){
-  // arma::rowvec A = Q(arma::span(0), arma::span(1), arma::span::all);
-  arma::vec A = vectorise(Q);
-  return A.as_row();
-}
+// // [[Rcpp::export]]
+// arma::cube to_cube(arma::vec values, int x, int y, int z) {
+//   arma::vec v(values);
+//   // v.randn();
+//   
+//   arma::cube res((const double*)v.begin(), x, y, z);
+//   return res;
+// }
+// 
+// // [[Rcpp::export]]
+// arma::rowvec to_vec(arma::cube Q){
+//   // arma::rowvec A = Q(arma::span(0), arma::span(1), arma::span::all);
+//   arma::vec A = vectorise(Q);
+//   return A.as_row();
+// }
 
 
 // [[Rcpp::export]]

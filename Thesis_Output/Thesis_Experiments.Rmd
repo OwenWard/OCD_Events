@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE,
                       fig.path = "rev_figure/",
                       dev = "png",
                       fig.height = 5,
-                      fig.width = 7)
+                      fig.width = 7, dpi = 300)
 
 library(here)
 library(tidyverse)

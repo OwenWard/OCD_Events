@@ -3,6 +3,10 @@
 #include <RcppArmadillo.h>
 // [[Rcpp::depends(RcppArmadillo)]]
 
+
+#ifndef MY_UNIQUE_INCLUDE_NAME_H
+#define MY_UNIQUE_INCLUDE_NAME_H
+
 #include "onlineblock.h"
 #include "supportsim.h"
 
@@ -17,6 +21,12 @@
 // #include "test.h"
 #include "init_Poisson.h"
 #include "Poisson_loss.h"
+#include "inhomPois_loss.h"
+
+#endif
+
+
+
 
 // [[Rcpp::export]]
 arma::vec func(arma::vec X){
