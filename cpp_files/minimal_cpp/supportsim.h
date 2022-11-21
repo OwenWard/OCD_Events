@@ -1,6 +1,20 @@
 #include "onlineblock.h"
 
 
+// [[Rcpp::export]]
+arma::mat max_tau(arma::mat tau){
+  int n = tau.n_rows;
+  int m = tau.n_cols;
+  arma::mat tau_ind(n, m);
+  tau_ind.fill(0.0);
+  for(int i = 0; i < n; ++i){
+    arma::rowvec curr = tau.row(i);
+    int ind = curr.index_max();
+    tau_ind(i,ind) = 1;
+  }
+  return tau_ind;
+}
+
 
 // [[Rcpp::export]]
 arma::cube to_cube(arma::vec values, int x, int y, int z) {
@@ -8,8 +22,6 @@ arma::cube to_cube(arma::vec values, int x, int y, int z) {
   arma::cube res((const double*)v.begin(), x, y, z);
   return res;
 }
-
-// not calling them correctly
 
 
 // [[Rcpp::export]]

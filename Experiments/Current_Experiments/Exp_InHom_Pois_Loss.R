@@ -21,6 +21,9 @@ results <- list()
 ### modify to just use a single simulated dataset 
 ### and so common "batch optimum"
 n <- 100
+
+H <- 2
+
 intens1 <- c(2)
 intens2 <- c(1)
 
@@ -28,6 +31,8 @@ intens_c1 <- c(intens1, 0.05, 0.05, intens2)
 intens_c2 <- c(intens1/2, 0.05, 0.05, intens2/2)
 
 intens <- cbind(intens_c1, intens_c2, intens_c1, intens_c2)
+
+window <- Time/ncol(intens)
 
 # intens <- matrix(c(intens1, 0.05, 0.05, intens2), 4, 1)
 
@@ -62,6 +67,7 @@ sol.kernel <- mainVEM(list(Nijk = Nijk, Time = Time),
                       d_part = 0,
                       n_perturb = 0)
 
+## TO DO, update this part
 ## need to take all values not just at the start
 b <- exp(sol.kernel[[1]]$logintensities.ql[, 1])
 # these largely match the true intensities
@@ -82,36 +88,40 @@ batch_average <- mean(vem_loss$Batch_loss/1:Time)
 for(sim in 1:nsims) {
   cat("Sim:", sim, "\n")
   # Time <- 100
-  # K <- 2
-  # m <- n
-  # # B <- matrix(runif(K * K), K, K)
-  # dT <- 1
+  
   inter_T <- 1
-  # capture output to not print out
-  ### use initialization scheme here first also
-  result <- dense_poisson(alltimes = proc_sim$events,
+  
+  result <- dense_inhom_Poisson(alltimes = proc_sim$events,
                           K = K,
-                          n0 = 5,
+                          H = H, 
+                          window = window,
+                          t_start = 0, 
+                          n0 = 50,
                           m = m)
-  Mu_est <- result$est_B
+  Mu_est <- result$est_Mu
   init_tau <- matrix(0, nrow = m, ncol = K)
   for(i in seq_along(result$est_clust)){
     init_tau[i, result$est_clust[i]] <- 1
   }
   
-  ## modify this below then also
-  results_online_init <- estimate_Poisson_init(full_data = 
-                                                 result$rest_events,
-                                               A = proc_sim$edge,
-                                               m,
-                                               K,
-                                               Time,
-                                               dT = dT,
-                                               B = Mu_est,
-                                               inter_T,
-                                               init_tau,
-                                               start = result$cut_off,
-                                               is_elbo = TRUE)
+  
+  results_online_int <- nonhomoPois_est_init(alltimes = result$rest_events,
+                                             A = proc_sim$edge, 
+                                             m,
+                                             K,
+                                             H,
+                                             window,
+                                             Time,
+                                             dT = dT,
+                                             gravity = 0.01,
+                                             MuA_start = Mu_est,
+                                             tau_init = init_tau,
+                                             start = result$cut_off, 
+                                             full_data = proc_sim$events)
+  # this doesn't seem to be working right at the moment
+  # modify this below then also
+  
+  
   ###
   # results_online <- estimate_Poisson(full_data = proc_sim$events,
   #                                    A = proc_sim$edge,

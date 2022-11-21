@@ -83,7 +83,8 @@ Rcpp::List compute_regret_inhom(
       arma::cube prev_MuA(K, K, H);
       prev_MuA = to_cube(curr, K, K, H);
       arma::mat prev_tau = tau_ests.slice(n-1);
-      // TO DO: make these tau's exact, i.e 0 or 1
+      prev_tau = max_tau(prev_tau);
+      //make these tau's exact, i.e 0 or 1
       arma::rowvec prev_Pi;
       prev_Pi = sum(prev_tau, 0)/m;
 
@@ -99,12 +100,12 @@ Rcpp::List compute_regret_inhom(
     arma::cube curr_MuA(K, K, H);
     curr_MuA = to_cube(curr, K, K, H);
     arma::mat curr_tau = tau_ests.slice(n);
-    // TO DO, make these exact also
+    //make these exact also
+    curr_tau = max_tau(curr_tau);
     arma::rowvec curr_Pi;
     curr_Pi = sum(curr_tau, 0)/m;
     // likelihood using known tau
     cout<<sub_data.n_rows<<endl;
-    // TO DO, check tau for here
     curr_ll(n) = get_elbo_nonhomoHak(sub_data, t_prev,
                             t_curr, curr_tau, curr_MuA, B,
                             curr_Pi, A, lam, m, K, H, window);

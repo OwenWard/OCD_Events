@@ -129,7 +129,7 @@ Rcpp::List estimate_Poisson_init(
 //// pass in the community assignments and initial rates, learn the
 //// rates from random initialization
 // [[Rcpp::export]]
-Rcpp::List nonhomoPois_est_init(
+Rcpp::List nonhomo_Pois_est_init(
     arma::mat alltimes,
     Rcpp::List A,
     int m,
@@ -173,6 +173,7 @@ Rcpp::List nonhomoPois_est_init(
   // int N = floor(T / dT);
   int N = int((T - start)/dT);
   arma::cube inter_tau(m,K,N);
+  arma::mat store_MuA(N, K*K*H);
   arma::vec elbo_vec(N);
   arma::vec cum_events(N);
   cum_events.fill(0);
@@ -229,6 +230,11 @@ Rcpp::List nonhomoPois_est_init(
     inter_tau.slice(n) = tau;
     start_pos = curr_pos;
     ln_prev = ln_curr;
+    // vectorise MuA
+    arma::rowvec curr_MuA = to_vec(MuA);
+    store_MuA.row(n) = curr_MuA;
+    
+    
     // Rprintf("iter: %d; number: %d \n", n, n_t); 
     //MuA.print();
     //S.print();
@@ -246,6 +252,7 @@ Rcpp::List nonhomoPois_est_init(
     Rcpp::Named("Pi") = Pi,
     Rcpp::Named("tau") = tau,
     Rcpp::Named("inter_tau") = inter_tau,
+    Rcpp::Named("inter_MuA") = store_MuA,
     Rcpp::Named("elbo") = elbo_vec,
     Rcpp::Named("cum_events") = cum_events);
 }
