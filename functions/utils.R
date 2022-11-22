@@ -33,3 +33,60 @@ format_sims <- function(sim_data, n, directed = TRUE) {
   }
   list(events = sim_trip, edge = A_new)
 }
+
+
+#' Generate Network Point Process Data
+#' 
+#' Modified version of function `ppsbm::generateDynppsbmConst`, 
+#' allowing sparsity in the edges which interact
+#'
+#' @param intens 
+#' @param Time 
+#' @param n 
+#' @param prop.groups 
+#' @param directed 
+#' @param prob_edge 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+gen_ppsbm <- function(intens, Time, n, prop.groups, directed = TRUE, prob_edge = 1) 
+{
+  Q <- length(prop.groups)
+  N_Q <- if (directed) 
+    Q^2
+  else Q * (Q + 1)/2
+  if (nrow(intens) != N_Q) 
+    stop("not a correct number of intensities")
+  z <- rmultinom(n, 1, prop.groups)
+  group <- Rfast::colMaxs(z, FALSE)
+  time.seq <- NULL
+  type.seq <- NULL
+  vec_i <- if (directed) 
+    1:n
+  else 1:(n - 1)
+  for (i in vec_i) {
+    vec_j <- if (directed) 
+      (1:n)[-i]
+    else (i + 1):n
+    for (j in vec_j) {
+      edge <- rbernoulli(1, p = prob_edge)
+      if(edge){
+        type.ql <- convertGroupPair(group[i], group[j], Q, 
+                                    directed)
+        proc <- generatePPConst(intens[type.ql, ], Time)
+        if (length(proc) > 0) {
+          time.seq <- c(time.seq, proc)
+          type.seq <- c(type.seq, rep(convertNodePair(i, 
+                                                      j, n, directed), length(proc)))
+        }
+      }
+    }
+  }
+  ordre <- order(time.seq)
+  time.seq <- time.seq[ordre]
+  type.seq <- type.seq[ordre]
+  data <- list(time.seq = time.seq, type.seq = type.seq, Time = Time)
+  return(list(data = data, z = z, intens = intens))
+}

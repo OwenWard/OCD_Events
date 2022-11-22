@@ -42,10 +42,11 @@ window <- Time/ncol(intens)
 # true_B <- matrix(c(intens1, 0.05, 0.05, intens2), 
 #                  nrow = 2, ncol = 2, byrow = T)
 # this is essentially the K*K matrix stretched out as a single col
-system.time(sim1 <- generateDynppsbmConst(intens = intens,
-                                          Time = Time,
-                                          n = n, 
-                                          prop.groups = c(0.5, 0.5)))
+system.time(sim1 <- gen_ppsbm(intens = intens,
+                              Time = Time,
+                              n = n, 
+                              prop.groups = c(0.5, 0.5), 
+                              prob_edge = 0.50))
 
 proc_sim <- format_sims(sim_data = sim1, n = n)
 
@@ -76,6 +77,8 @@ b_est <- array(as.vector(b_used), dim = c(K, K, H))
 
 # these largely match the true intensities
 # sol.kernel[[1]]$tau
+true_z <- apply(sim1$z,2, which.max)
+
 z_vem <- apply(sol.kernel[[1]]$tau, 2, which.max)
 
 batch_b <- b_est
@@ -97,13 +100,13 @@ for(sim in 1:nsims) {
   inter_T <- 1
   
   result <- sparse_inhom_Poisson(alltimes = proc_sim$events,
-                          K = K,
-                          H = H, 
-                          window = window,
-                          t_start = 0, 
-                          n0 = 20,
-                          m,
-                          m0 = m/2)
+                                 K = K,
+                                 H = H, 
+                                 window = window,
+                                 t_start = 0, 
+                                 n0 = 20,
+                                 m,
+                                 m0 = m/2)
   Mu_est <- result$est_Mu
   init_tau <- matrix(0, nrow = m, ncol = K)
   for(i in seq_along(result$est_clust)){
@@ -112,20 +115,20 @@ for(sim in 1:nsims) {
   
   
   results_online_init <- nonhomo_Pois_est_init(alltimes = result$rest_events,
-                                             A = proc_sim$edge, 
-                                             m,
-                                             K,
-                                             H,
-                                             window,
-                                             Time,
-                                             dT = dT,
-                                             gravity = 0.01,
-                                             MuA_start = Mu_est,
-                                             tau_init = init_tau,
-                                             start = result$cut_off, 
-                                             full_data = proc_sim$events,
-                                             is_elbo = TRUE)
-
+                                               A = proc_sim$edge, 
+                                               m,
+                                               K,
+                                               H,
+                                               window,
+                                               Time,
+                                               dT = dT,
+                                               gravity = 0.01,
+                                               MuA_start = Mu_est,
+                                               tau_init = init_tau,
+                                               start = result$cut_off, 
+                                               full_data = proc_sim$events,
+                                               is_elbo = TRUE)
+  
   
   
   
@@ -138,18 +141,33 @@ for(sim in 1:nsims) {
   init_time = Time - result$cut_off
   ## need to modify the regret function also
   out <- compute_regret_inhom(full_data = 
-                          result$rest_events,
-                        A = proc_sim$edge, 
-                        m,
-                        K,
-                        H, 
-                        init_time,
-                        dT,
-                        window,
-                        true_z = z_true,
-                        MuA_ests = Mu_ests,
-                        tau_ests = results_online_init$inter_tau,
-                        true_MuA = true_MuA)
+                                result$rest_events,
+                              A = proc_sim$edge, 
+                              m,
+                              K,
+                              H, 
+                              init_time,
+                              dT,
+                              window,
+                              true_z = z_true,
+                              MuA_ests = Mu_ests,
+                              tau_ests = results_online_init$inter_tau,
+                              true_MuA = true_MuA)
+  
+  z_true_perm <- apply(sim1$z, 2, which.min)
+  out_perm <- compute_regret_inhom(full_data = 
+                               result$rest_events,
+                             A = proc_sim$edge, 
+                             m,
+                             K,
+                             H,
+                             init_time,
+                             dT,
+                             window,
+                             true_z = z_true_perm,
+                             MuA_ests = Mu_ests,
+                             tau_ests = results_online_init$inter_tau,
+                             true_MuA = true_MuA)
   
   colnames(proc_sim$events) <- c("V1", "V2", "V3")
   card_A <- as_tibble(proc_sim$events) %>% 
@@ -158,9 +176,10 @@ for(sim in 1:nsims) {
     nrow()
   ## is this regret function correct?
   est_loss <- -out$EstLLH/card_A
+  est_loss_perm <- -out_perm$EstLLH/card_A
   best_loss <- -out$TrueLLH/card_A
   regret <- cumsum(est_loss) - cumsum(best_loss)
-  
+  regret_perm <- cumsum(est_loss_perm) - cumsum(best_loss)
   ### compute batch estimates and online loss estimates here
   onl_loss <- tibble(cumsum(out$Online_Loss_True)/((Time - init_time + 1):Time),
                      cumsum(out$Online_Loss_Est)/((Time - init_time + 1):Time),
@@ -196,6 +215,7 @@ for(sim in 1:nsims) {
     est_elbo = results_online_init$elbo,
     clust = clust_est,
     regret = regret,
+    regret_perm = regret_perm,
     card_A = card_A,
     batch_ave_loss = batch_average,
     online_loss = tidy_loss,
@@ -207,7 +227,7 @@ for(sim in 1:nsims) {
 
 saveRDS(results, file = here("Experiments",
                              "thesis_output",
-                             paste0("exp_in_pois_online_loss_nov_22_",
+                             paste0("exp_in_pois_regret_nov_22_",
                                     Time, ".RDS")))
 
 
