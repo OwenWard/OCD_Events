@@ -1,85 +1,6 @@
 #include "onlineblock.h"
 // general function to compute log likelihood for inhomogeneous processes
 
-
-// [[Rcpp::export]]
-Rcpp::List inhom_batch_loss(
-    arma::mat full_data,
-    Rcpp::List A,
-    int m,
-    int K,
-    double T,
-    double dT,
-    arma::cube batch_B,
-    arma::vec true_z
-){
-  // compute the loss for each window
-  // using the estimated z and batch B each time
-  // along with batch predicted log likelihood also
-  int N = int(T/dT);
-  // double eta;
-  int start_pos = 0;
-  int curr_pos = 0;
-  int end_pos = 0;
-  // int ind = 0;
-  int nall = full_data.n_rows;
-  
-  arma::vec batch_loss, batch_pred_ll, batch_ave_pred_ll;
-  arma::mat tau(m,K); //used in pred llh
-  batch_loss.zeros(N);
-  batch_pred_ll.zeros(N-1);
-  batch_ave_pred_ll.zeros(N-1);
-  tau.fill(0);
-  // then iterate over z
-  for(int i=0; i<m; ++i){
-    int ind = true_z[i]-1;
-    tau(i,ind) = 1;
-  }
-  arma::rowvec Pi;
-  Pi = sum(tau, 0)/m;
-  // need to compute the length of the window each time here...
-  double t_prev, t_length;
-  t_prev = 0;
-  for(int n = 0; n < N; ++n){
-    double Tn = dT*(n+1);
-    arma::rowvec event = full_data.row(start_pos);
-    double t_curr = event(2);
-    while(t_curr <= Tn){
-      if(curr_pos >= nall-1){
-        break;
-      }
-      else{
-        curr_pos += 1;
-        event = full_data.row(curr_pos);
-        t_curr = event(2);
-      }
-    }
-    end_pos = curr_pos;
-    arma::mat sub_data, elbo_dat;
-    sub_data = full_data.rows(start_pos, end_pos);
-    start_pos = curr_pos;
-    // then compute the loss here
-    batch_loss(n) = curr_loss(sub_data,
-               batch_B,
-               true_z,
-               tau,
-               K, dT, m)["True_z"];
-    if(n > 0) {
-      // need to actually get the tau for this I guess
-      t_length = t_curr - t_prev;
-      batch_pred_ll(n-1) = computeLL(sub_data, tau, batch_B, Pi, A,
-                    m, K, t_length);
-      batch_ave_pred_ll(n-1) = batch_pred_ll(n-1)/sub_data.n_rows;
-      // cout<<sub_data.n_rows<<endl;
-    }
-    t_prev = t_curr;
-  }
-  return Rcpp::List::create(Named("Batch_loss") = batch_loss,
-                            Named("Batch_Pred_LL") = batch_pred_ll,
-                            Named("Batch_Ave_Pred_LL") = batch_ave_pred_ll);
-}
-
-
 // [[Rcpp::export]]
 Rcpp::List inhom_curr_loss(
     arma::mat curr_data,
@@ -178,6 +99,91 @@ Rcpp::List inhom_curr_loss(
 
 
 // [[Rcpp::export]]
+Rcpp::List inhom_batch_loss(
+    arma::mat full_data,
+    Rcpp::List A,
+    int m,
+    int K,
+    double T,
+    double dT,
+    arma::cube batch_B,
+    arma::vec true_z,
+    double window,
+    int H
+){
+  // compute the loss for each window
+  // using the estimated z and batch B each time
+  // along with batch predicted log likelihood also
+  int N = int(T/dT);
+  // double eta;
+  int start_pos = 0;
+  int curr_pos = 0;
+  int end_pos = 0;
+  // int ind = 0;
+  int nall = full_data.n_rows;
+  
+  arma::vec batch_loss, batch_pred_ll, batch_ave_pred_ll;
+  arma::mat tau(m,K); //used in pred llh
+  batch_loss.zeros(N);
+  batch_pred_ll.zeros(N-1);
+  batch_ave_pred_ll.zeros(N-1);
+  tau.fill(0);
+  // then iterate over z
+  for(int i=0; i<m; ++i){
+    int ind = true_z[i]-1;
+    tau(i,ind) = 1;
+  }
+  arma::rowvec Pi;
+  Pi = sum(tau, 0)/m;
+  // need to compute the length of the window each time here...
+  double t_prev;
+  t_prev = 0;
+  for(int n = 0; n < N; ++n){
+    double Tn = dT*(n+1);
+    arma::rowvec event = full_data.row(start_pos);
+    double t_curr = event(2);
+    while(t_curr <= Tn){
+      if(curr_pos >= nall-1){
+        break;
+      }
+      else{
+        curr_pos += 1;
+        event = full_data.row(curr_pos);
+        t_curr = event(2);
+      }
+    }
+    end_pos = curr_pos;
+    arma::mat sub_data, elbo_dat;
+    sub_data = full_data.rows(start_pos, end_pos);
+    start_pos = curr_pos;
+    // then compute the loss here
+    batch_loss(n) = inhom_curr_loss(sub_data,
+               batch_B,
+               true_z,
+               tau,
+               K, dT, t_prev, t_curr, window, H, m)["True_z"];
+    if(n > 0) {
+      // need to actually get the tau for this I guess
+      double lam = 0.0;
+      arma::mat B(K, K);
+      B.fill(0.0);
+      // TO DO, update this?
+      batch_pred_ll(n-1) = get_elbo_nonhomoHak(sub_data, t_prev,
+                          t_curr, tau, batch_B, B,
+                          Pi, A, lam, m, K, H, window);
+      batch_ave_pred_ll(n-1) = batch_pred_ll(n-1)/sub_data.n_rows;
+      // cout<<sub_data.n_rows<<endl;
+    }
+    t_prev = t_curr;
+  }
+  return Rcpp::List::create(Named("Batch_loss") = batch_loss,
+                            Named("Batch_Pred_LL") = batch_pred_ll,
+                            Named("Batch_Ave_Pred_LL") = batch_ave_pred_ll);
+}
+
+
+
+// [[Rcpp::export]]
 Rcpp::List compute_regret_inhom(arma::mat full_data,
     Rcpp::List A, //arma::mat A,
     int m,
@@ -267,7 +273,6 @@ Rcpp::List compute_regret_inhom(arma::mat full_data,
       // compute same for batch estimator...
 
     }
-    cout<<n<<endl;
     // this is causing the problem here
     arma::rowvec curr = MuA_ests.row(n);
     arma::cube curr_MuA(K, K, H);
@@ -277,7 +282,7 @@ Rcpp::List compute_regret_inhom(arma::mat full_data,
     arma::rowvec curr_Pi;
     curr_Pi = sum(curr_tau, 0)/m;
     // likelihood using known tau
-    cout<<sub_data.n_rows<<endl;
+    // cout<<sub_data.n_rows<<endl;
     curr_ll(n) = get_elbo_nonhomoHak(sub_data, t_prev,
                             t_curr, curr_tau, curr_MuA, B,
                             curr_Pi, A, lam, m, K, H, window);
