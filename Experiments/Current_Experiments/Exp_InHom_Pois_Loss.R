@@ -13,7 +13,7 @@ nsims <- 100
 jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
 jobid <- as.numeric(jobid)
 sim_id <- jobid
-Times <- c(50, 100, 200, 500)
+Times <- c(100, 200, 500)
 Time <- Times[sim_id]
 
 results <- list()
@@ -68,9 +68,8 @@ sol.kernel <- mainVEM(list(Nijk = Nijk, Time = Time),
                       d_part = 0,
                       n_perturb = 0)
 
-## TO DO, update this part
-## need to take all values not just at the start
 b <- exp(sol.kernel[[1]]$logintensities.ql)
+## assuming that H = 2, starts and finishes in different bases
 b_used <- b[, c(1, ncol(b))]
 
 b_est <- array(as.vector(b_used), dim = c(K, K, H))
@@ -81,13 +80,13 @@ z_vem <- apply(sol.kernel[[1]]$tau, 2, which.max)
 
 batch_b <- b_est
 
-vem_loss <- batch_loss(full_data = proc_sim$events,
+vem_loss <- inhom_batch_loss(full_data = proc_sim$events,
                              A = proc_sim$edge, m,
                              K,
                              Time,
                              dT, 
                              batch_B = batch_b,
-                             true_z = z_vem)
+                             true_z = z_vem, window, H)
 batch_average <- mean(vem_loss$Batch_loss/1:Time)
 
 
@@ -97,13 +96,14 @@ for(sim in 1:nsims) {
   
   inter_T <- 1
   
-  result <- dense_inhom_Poisson(alltimes = proc_sim$events,
+  result <- sparse_inhom_Poisson(alltimes = proc_sim$events,
                           K = K,
                           H = H, 
                           window = window,
                           t_start = 0, 
                           n0 = 20,
-                          m = m)
+                          m,
+                          m0 = m/2)
   Mu_est <- result$est_Mu
   init_tau <- matrix(0, nrow = m, ncol = K)
   for(i in seq_along(result$est_clust)){
@@ -123,7 +123,8 @@ for(sim in 1:nsims) {
                                              MuA_start = Mu_est,
                                              tau_init = init_tau,
                                              start = result$cut_off, 
-                                             full_data = proc_sim$events)
+                                             full_data = proc_sim$events,
+                                             is_elbo = TRUE)
 
   
   
@@ -188,11 +189,11 @@ for(sim in 1:nsims) {
                  values_to = "loglik")
   
   sim_pars <- list(
-    B = Mu_est,
+    Mu_est = Mu_est,
     z_true = z_true,
     z_est = z_est,
-    B_ests = B_ests,
-    est_elbo = results_online_init$AveELBO,
+    Mu_ests = Mu_ests,
+    est_elbo = results_online_init$elbo,
     clust = clust_est,
     regret = regret,
     card_A = card_A,
@@ -206,7 +207,7 @@ for(sim in 1:nsims) {
 
 saveRDS(results, file = here("Experiments",
                              "thesis_output",
-                             paste0("exp_pois_online_loss_april_29_",
+                             paste0("exp_in_pois_online_loss_nov_22_",
                                     Time, ".RDS")))
 
 
