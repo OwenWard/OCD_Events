@@ -43,5 +43,3 @@ void test(){
   X.print();
 }
 
-
-

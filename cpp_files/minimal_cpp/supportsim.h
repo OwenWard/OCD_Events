@@ -17,8 +17,8 @@ arma::mat max_tau(arma::mat tau){
 
 
 // [[Rcpp::export]]
-arma::cube to_cube(arma::vec values, int x, int y, int z) {
-  arma::vec v(values);
+arma::cube to_cube(arma::rowvec values, int x, int y, int z) {
+  arma::rowvec v(values);
   arma::cube res((const double*)v.begin(), x, y, z);
   return res;
 }

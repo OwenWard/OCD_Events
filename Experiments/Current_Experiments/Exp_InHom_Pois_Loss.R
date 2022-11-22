@@ -31,6 +31,7 @@ intens_c1 <- c(intens1, 0.05, 0.05, intens2)
 intens_c2 <- c(intens1/2, 0.05, 0.05, intens2/2)
 
 intens <- cbind(intens_c1, intens_c2, intens_c1, intens_c2)
+intens <- matrix(cbind(intens_c1, intens_c2), nrow = 4, ncol = 10)
 
 window <- Time/ncol(intens)
 
@@ -69,19 +70,24 @@ sol.kernel <- mainVEM(list(Nijk = Nijk, Time = Time),
 
 ## TO DO, update this part
 ## need to take all values not just at the start
-b <- exp(sol.kernel[[1]]$logintensities.ql[, 1])
+b <- exp(sol.kernel[[1]]$logintensities.ql)
+b_used <- b[, c(1, ncol(b))]
+
+b_est <- array(as.vector(b_used), dim = c(K, K, H))
+
 # these largely match the true intensities
 # sol.kernel[[1]]$tau
 z_vem <- apply(sol.kernel[[1]]$tau, 2, which.max)
 
-batch_b <- matrix(b, nrow = 2, ncol = 2, byrow = TRUE)
+batch_b <- b_est
 
 vem_loss <- batch_loss(full_data = proc_sim$events,
-                       A = proc_sim$edge, m,
-                       K,
-                       Time,
-                       dT, 
-                       batch_B = batch_b, true_z = z_vem)
+                             A = proc_sim$edge, m,
+                             K,
+                             Time,
+                             dT, 
+                             batch_B = batch_b,
+                             true_z = z_vem)
 batch_average <- mean(vem_loss$Batch_loss/1:Time)
 
 
@@ -96,7 +102,7 @@ for(sim in 1:nsims) {
                           H = H, 
                           window = window,
                           t_start = 0, 
-                          n0 = 50,
+                          n0 = 20,
                           m = m)
   Mu_est <- result$est_Mu
   init_tau <- matrix(0, nrow = m, ncol = K)
@@ -105,7 +111,7 @@ for(sim in 1:nsims) {
   }
   
   
-  results_online_int <- nonhomoPois_est_init(alltimes = result$rest_events,
+  results_online_init <- nonhomo_Pois_est_init(alltimes = result$rest_events,
                                              A = proc_sim$edge, 
                                              m,
                                              K,
@@ -118,37 +124,33 @@ for(sim in 1:nsims) {
                                              tau_init = init_tau,
                                              start = result$cut_off, 
                                              full_data = proc_sim$events)
-  # this doesn't seem to be working right at the moment
-  # modify this below then also
+
   
   
-  ###
-  # results_online <- estimate_Poisson(full_data = proc_sim$events,
-  #                                    A = proc_sim$edge,
-  #                                    m,
-  #                                    K,
-  #                                    Time,
-  #                                    dT,
-  #                                    B,
-  #                                    inter_T,
-  #                                    is_elbo = TRUE)
   
-  B_ests <- results_online_init$inter_B
+  
+  Mu_ests <- results_online_init$inter_MuA
+  true_MuA <- true_MuA <- array(NA, dim = c(K, K, H))
+  true_MuA[, , 1] <- matrix(intens[, 1], K, K, byrow = T)
+  true_MuA[, , 2] <- matrix(intens[, 2], K, K, byrow = T)
   z_true <- apply(sim1$z, 2, which.max)
-  ## need to modify the regret function also
   init_time = Time - result$cut_off
-  out <- compute_regret(full_data = 
+  ## need to modify the regret function also
+  out <- compute_regret_inhom(full_data = 
                           result$rest_events,
                         A = proc_sim$edge, 
                         m,
                         K,
+                        H, 
                         init_time,
                         dT,
+                        window,
                         true_z = z_true,
-                        B_ests = B_ests,
-                        tau_ests = results_online_init$early_tau,
-                        true_B = true_B)
+                        MuA_ests = Mu_ests,
+                        tau_ests = results_online_init$inter_tau,
+                        true_MuA = true_MuA)
   
+  colnames(proc_sim$events) <- c("V1", "V2", "V3")
   card_A <- as_tibble(proc_sim$events) %>% 
     select(V1, V2) %>% 
     distinct() %>% 
