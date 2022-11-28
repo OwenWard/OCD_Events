@@ -46,7 +46,7 @@ system.time(sim1 <- gen_ppsbm(intens = intens,
                               Time = Time,
                               n = n, 
                               prop.groups = c(0.5, 0.5), 
-                              prob_edge = 0.50))
+                              prob_edge = 0.5))
 
 proc_sim <- format_sims(sim_data = sim1, n = n)
 
@@ -140,8 +140,7 @@ for(sim in 1:nsims) {
   z_true <- apply(sim1$z, 2, which.max)
   init_time = Time - result$cut_off
   ## need to modify the regret function also
-  out <- compute_regret_inhom(full_data = 
-                                result$rest_events,
+  out <- compute_regret_inhom(full_data = result$rest_events,
                               A = proc_sim$edge, 
                               m,
                               K,
@@ -155,26 +154,25 @@ for(sim in 1:nsims) {
                               true_MuA = true_MuA)
   
   z_true_perm <- apply(sim1$z, 2, which.min)
-  out_perm <- compute_regret_inhom(full_data = 
-                               result$rest_events,
-                             A = proc_sim$edge, 
-                             m,
-                             K,
-                             H,
-                             init_time,
-                             dT,
-                             window,
-                             true_z = z_true_perm,
-                             MuA_ests = Mu_ests,
-                             tau_ests = results_online_init$inter_tau,
-                             true_MuA = true_MuA)
+  out_perm <- compute_regret_inhom(full_data = result$rest_events,
+                                   A = proc_sim$edge, 
+                                   m,
+                                   K,
+                                   H,
+                                   init_time,
+                                   dT,
+                                   window,
+                                   true_z = z_true_perm,
+                                   MuA_ests = Mu_ests,
+                                   tau_ests = results_online_init$inter_tau,
+                                   true_MuA = true_MuA)
   
   colnames(proc_sim$events) <- c("V1", "V2", "V3")
   card_A <- as_tibble(proc_sim$events) %>% 
     select(V1, V2) %>% 
     distinct() %>% 
     nrow()
-  ## is this regret function correct?
+
   est_loss <- -out$EstLLH/card_A
   est_loss_perm <- -out_perm$EstLLH/card_A
   best_loss <- -out$TrueLLH/card_A
@@ -203,6 +201,8 @@ for(sim in 1:nsims) {
                         ### to compare the batch
                         batch = as.vector(na.omit(batch_pred_ll))) %>% 
     mutate(dT = row_number()) %>%
+    ## should this be dT here rather than starting at the end of the init
+    ## period?
     pivot_longer(cols = online:batch,
                  names_to = "method",
                  values_to = "loglik")
@@ -226,7 +226,7 @@ for(sim in 1:nsims) {
 }
 
 saveRDS(results, file = here("Experiments",
-                             "thesis_output",
+                             "exp_results", "November",
                              paste0("exp_in_pois_regret_nov_22_",
                                     Time, ".RDS")))
 
