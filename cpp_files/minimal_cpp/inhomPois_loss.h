@@ -273,7 +273,6 @@ Rcpp::List compute_regret_inhom(arma::mat full_data,
       // compute same for batch estimator...
 
     }
-    // this is causing the problem here
     arma::rowvec curr = MuA_ests.row(n);
     arma::cube curr_MuA(K, K, H);
     curr_MuA = to_cube(curr, K, K, H);
@@ -281,10 +280,10 @@ Rcpp::List compute_regret_inhom(arma::mat full_data,
     curr_tau = max_tau(curr_tau);
     arma::rowvec curr_Pi;
     curr_Pi = sum(curr_tau, 0)/m;
-    // likelihood using known tau
+    // likelihood should be using known z not tau
     // cout<<sub_data.n_rows<<endl;
     curr_ll(n) = get_elbo_nonhomoHak(sub_data, t_prev,
-                            t_curr, curr_tau, curr_MuA, B,
+                            t_curr, tau_true, curr_MuA, B,
                             curr_Pi, A, lam, m, K, H, window);
     ave_ll(n) = curr_ll(n)/cum_events;
 
