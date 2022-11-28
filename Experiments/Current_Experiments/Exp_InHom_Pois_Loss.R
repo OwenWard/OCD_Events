@@ -10,6 +10,8 @@ source(here("functions", "init_fcn.R"))
 
 nsims <- 100
 
+prob_edge <- 0.5
+
 jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
 jobid <- as.numeric(jobid)
 sim_id <- jobid
@@ -42,11 +44,11 @@ window <- Time/ncol(intens)
 # true_B <- matrix(c(intens1, 0.05, 0.05, intens2), 
 #                  nrow = 2, ncol = 2, byrow = T)
 # this is essentially the K*K matrix stretched out as a single col
-system.time(sim1 <- generateDynppsbmConst(intens = intens,
-                                          Time = Time,
-                                          n = n, 
-                                          prop.groups = c(0.5, 0.5)))
-
+system.time(sim1 <- gen_ppsbm(intens = intens,
+                              Time = Time,
+                              n = n, 
+                              prop.groups = c(0.5, 0.5), 
+                              prob_edge = prob_edge))
 proc_sim <- format_sims(sim_data = sim1, n = n)
 
 Dmax <- 2^3
@@ -200,7 +202,8 @@ for(sim in 1:nsims) {
     batch_ave_loss = batch_average,
     online_loss = tidy_loss,
     pred_llh = ave_pred_ll,
-    Time = Time
+    Time = Time,
+    sparsity = prob_edge
   )
   results[[sim]] <- sim_pars
 }
