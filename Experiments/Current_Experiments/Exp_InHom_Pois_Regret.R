@@ -209,6 +209,10 @@ for(sim in 1:nsims) {
                  names_to = "method",
                  values_to = "loglik")
   
+  emp_loss <- -out$EmpLLH/card_A
+  
+  emp_regret <- cumsum(emp_loss) - cumsum(best_loss)
+  
   sim_pars <- list(
     Mu_est = Mu_est,
     z_true = z_true,
@@ -218,6 +222,7 @@ for(sim in 1:nsims) {
     clust = clust_est,
     regret = regret,
     regret_perm = regret_perm,
+    emp_regret = emp_regret,
     card_A = card_A,
     batch_ave_loss = batch_average,
     online_loss = tidy_loss,
