@@ -16,7 +16,12 @@ jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
 jobid <- as.numeric(jobid)
 sim_id <- jobid
 Times <- c(100, 200, 500)
-Time <- Times[sim_id]
+Time <- 500
+# Time <- Times[sim_id]
+
+if(Time == 500){
+  nsims <- 10
+}
 
 results <- list()
 
@@ -208,10 +213,19 @@ for(sim in 1:nsims) {
   results[[sim]] <- sim_pars
 }
 
-saveRDS(results, file = here("Experiments",
-                             "exp_results", "November",
-                             paste0("exp_in_pois_online_loss_nov_22_",
-                                    Time, ".RDS")))
+
+
+# saveRDS(results, file = here("Experiments",
+#                              "exp_results", "November",
+#                              paste0("exp_in_pois_online_loss_nov_22_",
+#                                     Time, ".RDS")))
+
+if(Time == 500){
+  saveRDS(results, file = here("Experiments",
+                               "exp_results", "November",
+                               paste0("exp_in_pois_online_loss_nov_22_",
+                                      Time, "_", sim_id, ".RDS")))
+}
 
 
 ### create some nicer plots for these regret functions
