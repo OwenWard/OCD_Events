@@ -58,7 +58,7 @@ for(i in seq_along(results$est_clust)){
 aricode::ARI(results$est_clust, Z)
 
 
-results_online_init <- nonhomoPois_est_init(alltimes = results$rest_events,
+results_online_init <- nonhomo_Pois_est_init(alltimes = results$rest_events,
                                             A, 
                                             m,
                                             K, 
@@ -110,7 +110,7 @@ plot(results_batch$ELBO[results_batch$ELBO!= 0], type = "l")
 init_events <- alltimes[alltimes[,3]< n0, ]
 
 batch_data <- tibble(ELBO = 
-                       as.numeric(results_batch$ELBO[results_batch$ELBO != 0]),
+                       as.numeric(results_batch$ELBO[1:5]),
                      method = "BATCH") %>% 
   mutate(index = row_number(), events_seen = nrow(alltimes) * index)
 
@@ -146,6 +146,31 @@ events_plot
 
 ggsave("elbo_events.png",
        events_plot,
+       path = here("output_scripts/rev_figure/"),
+       dev = "png",
+       height = 5,
+       width = 7, dpi = 300)
+
+
+## make this plot in terms of events used instead
+
+new_events_plot <- bind_rows(batch_data, online_data) %>% 
+  mutate(perc_events = events_seen/nrow(alltimes)) %>% 
+  ggplot(aes(perc_events, ELBO, colour = method)) +
+  geom_line() +
+  scale_x_continuous(labels = scales::percent, 
+                     breaks = scales::pretty_breaks(n = 3)) +
+  labs(x = "Events Seen", colour = "Method") +
+  theme(legend.title = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text = element_text(size = axis_text_size),
+        axis.title = element_text(size = axis_title),
+        strip.text.x = element_text(size = axis_title),
+        legend.text = element_text(size = legend_text)) 
+
+ggsave("elbo_events_2.png",
+       new_events_plot,
        path = here("output_scripts/rev_figure/"),
        dev = "png",
        height = 5,
