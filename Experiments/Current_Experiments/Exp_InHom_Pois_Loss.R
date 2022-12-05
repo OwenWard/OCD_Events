@@ -15,9 +15,9 @@ prob_edge <- 0.5
 jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
 jobid <- as.numeric(jobid)
 sim_id <- jobid
-Times <- c(100, 200, 500)
-Time <- 500
-# Time <- Times[sim_id]
+Times <- c(50, 100, 200, 500)
+# Time <- 500
+Time <- Times[sim_id]
 
 if(Time == 500){
   nsims <- 10
@@ -225,6 +225,11 @@ if(Time == 500){
                                "exp_results", "November",
                                paste0("exp_in_pois_online_loss_nov_22_",
                                       Time, "_", sim_id, ".RDS")))
+}else{
+  saveRDS(results, file = here("Experiments",
+                               "exp_results", "November",
+                               paste0("exp_in_pois_online_loss_nov_22_",
+                                      Time, ".RDS")))
 }
 
 
