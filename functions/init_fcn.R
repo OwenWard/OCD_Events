@@ -832,7 +832,13 @@ sparse_inhom_Poisson <- function(alltimes, K, H, window, t_start, n0, m, m0){
                     t_start = t_start,
                     t_end = n0, window, H)
     est_names <- paste0("H", 1:H)
-    ests <- as_tibble(t(ests), .name_repair = ~ c(paste0("V", 1:H)))
+    
+    ## put a try in here
+    # ests <- as_tibble(t(ests), .name_repair = ~ c(paste0("V", 1:H)))
+    ests <- tryCatch(
+      error = function(cnd) tibble(),
+      as_tibble(t(ests), .name_repair = ~ c(paste0("V", 1:H)))
+    )
     
     ####
     if(length(nrow(unique(ests))) < K){
