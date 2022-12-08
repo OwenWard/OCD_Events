@@ -298,6 +298,20 @@ We have some results from this now.
 regret_files <- list.files(path = here("Experiments/exp_results/November/"),
                           pattern = "exp_in_pois_regret")
 
+sim_50 <- read_rds(here("Experiments",
+                             "exp_results", "November",
+                             regret_files[3])) %>% 
+  tibble(
+  sim = 1:100,
+  ARI = map_dbl(., "clust"),
+  regret = map(., "regret"),
+  perm_regret = map(., "regret_perm"),
+  emp_regret = map(., "emp_regret"),
+  dT = list(21:50)) %>% 
+  unnest(cols = c(regret, perm_regret, emp_regret, dT)) %>% 
+  select(sim, ARI, regret, perm_regret, emp_regret, dT) %>% 
+  mutate(Time = 50) 
+
 
 sim_100 <- read_rds(here("Experiments",
                              "exp_results", "November",
@@ -327,15 +341,14 @@ sim_200 <- read_rds(here("Experiments",
   select(sim, ARI, regret, perm_regret, emp_regret, dT) %>% 
   mutate(Time = 200) 
 
-regret_files[3:12] %>% 
-  map(~readRDS(here("Experiments", 
+
+
+
+sim_500 <- regret_files[4:13] %>%
+  map(~readRDS(here("Experiments",
                     "exp_results",
-                    "November", .x)))   
-
-
-sim_500 <- read_rds(here("Experiments",
-                             "exp_results", "November",
-                             regret_files[3:12])) %>% 
+                    "November", .x))) %>% 
+  flatten() %>% 
   tibble(
   sim = 1:100,
   ARI = map_dbl(., "clust"),
@@ -346,6 +359,18 @@ sim_500 <- read_rds(here("Experiments",
   unnest(cols = c(regret, perm_regret, emp_regret, dT)) %>% 
   select(sim, ARI, regret, perm_regret, emp_regret, dT) %>% 
   mutate(Time = 500) 
+
+min_perm <- sim_50 %>% 
+  group_by(sim) %>% 
+  summarise(s1 = sum(regret), s2 = sum(perm_regret)) %>%
+  mutate(min = ifelse(s1 < s2, "regret", "perm_regret"))
+
+new_sim_50 <- sim_50 %>% 
+  left_join(min_perm %>% select(sim, min), by = "sim") %>% 
+  pivot_longer(cols = regret:emp_regret, names_to = "form",
+               values_to = "regret") %>% 
+  filter((min == form)| form == "emp_regret") %>% 
+  mutate(form = ifelse(form == "perm_regret", "regret", form))
 
 
 min_perm <- sim_100 %>% 
@@ -372,6 +397,18 @@ new_sim_200 <- sim_200 %>%
   filter((min == form)| form == "emp_regret") %>% 
   mutate(form = ifelse(form == "perm_regret", "regret", form))
 
+min_perm <- sim_500 %>% 
+  group_by(sim) %>% 
+  summarise(s1 = sum(regret), s2 = sum(perm_regret)) %>%
+  mutate(min = ifelse(s1 < s2, "regret", "perm_regret"))
+
+new_sim_500 <- sim_500 %>% 
+  left_join(min_perm %>% select(sim, min), by = "sim") %>% 
+  pivot_longer(cols = regret:emp_regret, names_to = "form",
+               values_to = "regret") %>% 
+  filter((min == form)| form == "emp_regret") %>% 
+  mutate(form = ifelse(form == "perm_regret", "regret", form))
+
 equal_breaks <- function(n = 3, s = 0.05, ...){
   function(x){
     # rescaling
@@ -383,7 +420,7 @@ equal_breaks <- function(n = 3, s = 0.05, ...){
 dT <- 1
 
 
-bind_rows(new_sim_100, new_sim_200) %>% 
+bind_rows(new_sim_50, new_sim_100, new_sim_200, new_sim_500) %>% 
   mutate(form = ifelse(form == "regret", "True Membership", form)) %>% 
   mutate(form = ifelse(form == "emp_regret", "Estimated Membership", form)) %>%
   mutate(Time = paste0("Time = ", Time)) %>% 
@@ -392,8 +429,8 @@ bind_rows(new_sim_100, new_sim_200) %>%
                                   "Time = 100",
                                   "Time = 200",
                                   "Time = 500"))) %>% 
-  filter(ARI == 1) %>%
-  # filter(form == "Estimated Membership") %>%
+  # filter(ARI == 1) %>%
+  filter(form == "Estimated Membership") %>%
   group_by(Time, dT, form) %>% 
   ggplot(aes(dT, regret, colour = form)) +
   # geom_line(alpha = 0.5) +
@@ -405,7 +442,8 @@ bind_rows(new_sim_100, new_sim_200) %>%
   theme(axis.text = element_text(size = axis_text_size),
         axis.title = element_text(size = axis_title),
         strip.text.x = element_text(size = axis_title),
-        legend.text = element_text(size = legend_text))
+        legend.text = element_text(size = legend_text),
+        legend.position = "none")
 
 ```
 
