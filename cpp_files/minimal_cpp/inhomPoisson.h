@@ -725,7 +725,7 @@ Rcpp::List batch_nonhomoPois_estimator(
   arma::mat S(m,K);
   arma::cube MuA(K,K,H);
   arma::mat tau(m,K);
-  MuA.fill(0.5), S.fill(0.0);
+  MuA.fill(0.5), S.fill(1.0/K);
   
   for (int k = 0; k < K; k++) {
     for (int l=0; l < K; l++) {
@@ -760,18 +760,21 @@ Rcpp::List batch_nonhomoPois_estimator(
   Tn = alltimes(nall - 1, ncol - 1);
   
   double gap = 2147483647;
+  double prev_gap_Mu = 0.0;
+  double gap_Mu = 0.0;
   double eta = 1.0/nall * (K * K);
+  double prev_elbo = 0.0;
   arma::vec elbo_vec(itermax);
   for (int iter = 0; iter < itermax; iter++) {
     eta = 1.0/nall * (K * K) / sqrt(iter / H + 1.0);
-    S.fill(0.0);        
+    S.fill(1.0/K);    
     paralist = update_nonhomo_pois(tau, MuA, Pi, S, datamap, t_start, Tn, m, K, A, window, eta, gravity);
     // paralist = update_nonhomo_sparse(tau, MuA, B, Pi, S, datamap, t_start, Tn, m, K, A, window, lam, eta, gravity);
     arma::mat tau_new = paralist["tau"], S_new = paralist["S"];
     arma::cube MuA_new = paralist["MuA"];
     arma::rowvec Pi_new = paralist["Pi"];
     
-    gap = abs(MuA - MuA_new).max();
+    gap_Mu = abs(MuA - MuA_new).max();
     tau = tau_new; 
     MuA = MuA_new, S = S_new, Pi = Pi_new;
     
@@ -782,16 +785,24 @@ Rcpp::List batch_nonhomoPois_estimator(
                                       tau, MuA, B, Pi,
                                       A, lam, m, K, H, window);
     elbo_vec(iter) = elbo;
-    
+    gap = abs(elbo - prev_elbo);
+    prev_elbo = elbo;
+    Rprintf("ELBO: %d \n", elbo);
+    Rprintf("Gap Mu: %d \n", gap_Mu);
     Rprintf("iter: %d \n", iter); 
     // B.print();
-    // Mu.print();
-    Pi.print();
-    Rprintf("gap: %2.3f", gap);
+    // Rprintf("Mu: %d \n", MuA);
+    // Pi.print();
+    Rprintf("gap: %2.3f \n", gap_Mu);
     Rprintf("=============\n");
-    if (gap < stop_eps){
+    Rprintf("new gap: %2.3f \n", prev_gap_Mu);
+    if (gap_Mu < stop_eps){
       break;
     }
+    if(prev_gap_Mu == gap_Mu){
+      break;
+    }
+    prev_gap_Mu = gap_Mu;
   }
   
   return Rcpp::List::create(
