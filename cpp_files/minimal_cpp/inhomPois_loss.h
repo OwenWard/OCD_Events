@@ -167,7 +167,7 @@ Rcpp::List inhom_batch_loss(
       double lam = 0.0;
       arma::mat B(K, K);
       B.fill(0.0);
-      // TO DO, update this?
+     
       batch_pred_ll(n-1) = get_elbo_nonhomoHak(sub_data, t_prev,
                           t_curr, tau, batch_B, B,
                           Pi, A, lam, m, K, H, window);

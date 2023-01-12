@@ -96,6 +96,7 @@ vem_loss <- inhom_batch_loss(full_data = proc_sim$events,
                              true_z = z_vem, window, H)
 batch_average <- mean(vem_loss$Batch_loss/1:Time)
 
+new_batch <- cumsum(vem_loss$Batch_loss)/1:Time
 
 for(sim in 1:nsims) {
   cat("Sim:", sim, "\n")
@@ -205,6 +206,7 @@ for(sim in 1:nsims) {
     regret = regret,
     card_A = card_A,
     batch_ave_loss = batch_average,
+    new_batch_loss = new_batch,
     online_loss = tidy_loss,
     pred_llh = ave_pred_ll,
     Time = Time,
@@ -223,12 +225,12 @@ for(sim in 1:nsims) {
 if(Time == 500){
   saveRDS(results, file = here("Experiments",
                                "exp_results", "November",
-                               paste0("exp_in_pois_online_loss_nov_22_",
+                               paste0("exp_in_pois_online_loss_jan_12_",
                                       Time, "_", sim_id, ".RDS")))
 }else{
   saveRDS(results, file = here("Experiments",
                                "exp_results", "November",
-                               paste0("exp_in_pois_online_loss_nov_22_",
+                               paste0("exp_in_pois_online_loss_jan_12_",
                                       Time, ".RDS")))
 }
 
