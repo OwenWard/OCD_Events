@@ -3,9 +3,9 @@
 ### to do this, fix the number of batch iterations to 10?
 .libPaths("/moto/stats/users/ogw2103/rpackages")
 
-num_sims <- 100
+num_sims <- 50
 
-results <- list()
+elbo_results <- tibble()
 
 library(here)
 source(here("functions", "utils.R"))
@@ -30,7 +30,7 @@ true_B <- matrix(0, nrow = K, ncol = K, byrow = TRUE)
 Pi <- c(0.5, 0.5)
 
 for(sim in 1:num_sims){
-  
+  cat("Sim:", sim, "\n")
   Z <- sample(0:(K-1), size = m, prob = Pi, replace = TRUE)
   
   A <- list()
@@ -106,7 +106,7 @@ for(sim in 1:num_sims){
   init_events <- alltimes[alltimes[,3]< n0, ]
   
   batch_data <- tibble(ELBO = 
-                         as.numeric(results_batch$ELBO[1:10]),
+                         as.numeric(results_batch$ELBO),
                        method = "BATCH") %>% 
     mutate(index = row_number(), events_seen = nrow(alltimes) * index)
   
@@ -116,16 +116,59 @@ for(sim in 1:num_sims){
                         events_seen = as.numeric(results_online_init$cum_events) +
                           nrow(init_events)) 
   all_data <- bind_rows(batch_data, online_data) %>% 
-    mutate(sim = sim)
-  results[[sim]] <- all_data
+    mutate(sim = sim, rows = nrow(alltimes))
+  elbo_results <- elbo_results  %>%  bind_rows(all_data)
 }
 
 
 
-saveRDS(results, file = here("Experiments",
+saveRDS(elbo_results, file = here("Experiments",
                              "exp_results", "November",
                              paste0("exp_in_pois_online_elbo",
                                     ".RDS")))
 
-### that's it
+### that's it, then think about percents down here, etc
 
+elbo_results %>% 
+  filter(ELBO != 0) %>%
+  mutate(perc = events_seen/rows) %>% 
+  ggplot(aes(perc, ELBO, colour = method)) +
+  geom_line(aes(group = interaction(method, sim))) +
+  # geom_smooth(se = FALSE) +
+  facet_wrap(~sim, scales = "free") +
+  scale_x_log10() +
+  scale_x_continuous(labels = scales::percent,
+                     breaks = scales::pretty_breaks(n = 2)) +
+  theme(legend.position = "bottom",
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        strip.background = element_blank(),
+        strip.text.x = element_blank()) +
+  labs(colour = "Method", x = "Percent of Total Events") 
+
+## make lines thicker instead of smoothing, only show every 5th point 
+## or something?
+
+good_sims <- c(3, 4, 7, 9, 10, 12, 17, 21, 23)
+
+elbo_results %>% 
+  filter(ELBO != 0) %>%
+  mutate(perc = events_seen/rows) %>% 
+  group_by(sim, method) %>% 
+  mutate(index = row_number()) %>% 
+  ungroup() %>% 
+  mutate(keep = ifelse(method == "ONLINE", index %% 5, 0)) %>% 
+  filter(keep == 0) %>% 
+  ggplot(aes(perc, ELBO, colour = method)) +
+  geom_line(aes(group = interaction(method, sim))) +
+  # geom_smooth(se = FALSE) +
+  facet_wrap(~sim, scales = "free", nrow = 3, ncol = 3) +
+  scale_x_log10() +
+  scale_x_continuous(labels = scales::percent,
+                     breaks = scales::pretty_breaks(n = 2)) +
+  theme(legend.position = "bottom",
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        strip.background = element_blank(),
+        strip.text.x = element_blank()) +
+  labs(colour = "", x = "Percent of Total Events") 

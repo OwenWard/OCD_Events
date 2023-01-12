@@ -32,7 +32,7 @@ line_size <- 1
 
 We first investigate the performance of the proposed initialization scheme. For these experiments we use the initialization routine for the first 10% of data and 50% of the nodes.
 
-Here what happens quite regularly is that we will have a good estimate following the initialization scheme but the community structure after fitting to the rest of the data will be degenerate, leading to the long boxplots going to zero. I'm trying to investigate this as I think it could be a bug.
+
 
 ```{r init-scheme}
 #| echo: false
@@ -45,13 +45,16 @@ files <- list.files(data_path, pattern = "exp_inpois_nodes_fixed_nov_1_rho_15")
 sim_data <- files %>% 
   map_dfr(~readRDS(here("Experiments/exp_results/November", .x))) 
 
-
 sim_data %>% 
+  mutate(init = ifelse(init == "No Init",
+                       "Random Initialization", "Initialized")) %>% 
   group_by(init, nodes) %>% 
+  filter(nodes < 1000) %>% 
   # summarise(mean_ARI = mean(ARI), sd_ARI = sd(ARI)) %>% 
   ggplot(aes(as.factor(nodes), ARI)) +
   geom_boxplot(aes(fill = init)) +
-  labs(x = "Nodes", fill = "Init Scheme")
+  labs(x = "Nodes", fill = "Scheme") +
+  theme(legend.position = "bottom")
 
 ```
 
@@ -173,6 +176,63 @@ sims %>%
   theme(legend.position = "none")
 ```
 
+## Varying the Sparsity
+
+```{r fig-inhom-pois-rho, fig.path= "rev_figure/"}
+#| fig-cap: Community Recovery as we vary the network sparsity
+
+rho_files <- list.files(path = data_path,
+                        pattern = "exp_inpois_sparsity")
+
+rho_sims <- rho_files %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/November", .x))) 
+
+rho_sims %>% 
+  filter(init == "Init") %>% 
+  ggplot(aes(as.factor(sparsity), ARI)) +
+  geom_boxplot() +
+  labs(x = "Network Sparsity") +
+  theme(axis.text = element_text(size = axis_text_size),
+        axis.title = element_text(size = axis_title),
+        legend.text = element_text(size = legend_text))
+  
+
+```
+
+
+## Init Scheme
+
+```{r fig-inhom-pois-init, fig.path = "rev_figure/"}
+
+rho_files <- list.files(path = data_path,
+                        pattern = "exp_inpois_sparsity")
+
+rho_sims <- rho_files %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/November", .x))) 
+
+keep_rho <- c(0.01, 0.02, 0.05, 0.15, 0.25, 1)
+
+rho_sims %>% 
+  # filter(init == "Init") %>% 
+  filter(sparsity %in% keep_rho) %>% 
+  mutate(init = ifelse(init == "Init", "Initialized",
+                       "Random Initialization")) %>% 
+  ggplot(aes(as.factor(sparsity), ARI, fill = init)) +
+  geom_boxplot() +
+  facet_wrap(~init) +
+  labs(x = "Network Sparsity", fill = "Init Scheme") +
+  theme(axis.text = element_text(size = axis_text_size),
+        axis.title = element_text(size = axis_title),
+        legend.text = element_text(size = legend_text),
+        strip.text = element_text(size = axis_text_size),
+        legend.position = "none")
+
+## then just update the titles on this
+
+```
+
+
+
 ## Varying the number of Communities
 
 ```{r fig-inhom-pois-K, fig.path = "rev_figure/"}
@@ -221,6 +281,12 @@ online_sims %>%
   summarise(avg = mean(ARI), sd = sd(ARI)) %>% 
   rowwise() %>% 
   mutate(min = max(avg - sd, 0), max = min(avg + sd, 1)) %>% 
+  mutate(nodes = paste0("Nodes = ", nodes)) %>%
+  mutate(nodes = factor(nodes,
+                        levels = c("Nodes = 100",
+                                   "Nodes = 200",
+                                   "Nodes = 500",
+                                   "Nodes = 1000"))) %>% 
   ggplot(aes(time, avg)) +
   geom_point() +
   geom_line() +
@@ -421,6 +487,7 @@ dT <- 1
 
 
 bind_rows(new_sim_50, new_sim_100, new_sim_200, new_sim_500) %>% 
+  # filter(Time != 500) %>% 
   mutate(form = ifelse(form == "regret", "True Membership", form)) %>% 
   mutate(form = ifelse(form == "emp_regret", "Estimated Membership", form)) %>%
   mutate(Time = paste0("Time = ", Time)) %>% 
@@ -432,18 +499,17 @@ bind_rows(new_sim_50, new_sim_100, new_sim_200, new_sim_500) %>%
   # filter(ARI == 1) %>%
   filter(form == "Estimated Membership") %>%
   group_by(Time, dT, form) %>% 
-  ggplot(aes(dT, regret, colour = form)) +
-  # geom_line(alpha = 0.5) +
-  geom_smooth(se = FALSE, size = 1) +
-  facet_wrap(~Time, scales = "free_x") +
+  ggplot(aes(dT, regret, colour = form, group = Time)) +
+  # geom_line(alpha = 0.5, group = sim) +
+  geom_smooth(se = TRUE, size = 1, colour = "red") +
+  facet_wrap(~Time, scales = "free_x", nrow = 1) +
   labs(y = "Regret", x = "Time", colour = "") +
   scale_x_continuous(breaks = equal_breaks(n = 3, s = 0.05),
                      expand = c(0, max(dT) - 1)) +
   theme(axis.text = element_text(size = axis_text_size),
         axis.title = element_text(size = axis_title),
         strip.text.x = element_text(size = axis_title),
-        legend.text = element_text(size = legend_text),
-        legend.position = "none")
+        legend.text = element_text(size = legend_text))
 
 ```
 
@@ -502,6 +568,74 @@ loss_plot <- loss_data %>%
 loss_plot
 
 ```
+
+## ELBO Plot
+
+```{r fig-inpois-elbo, fig.path= "rev_figure/"}
+
+elbo_results <- readRDS(file = here("Experiments",
+                             "exp_results", "November",
+                             paste0("exp_in_pois_online_elbo",
+                                    ".RDS")))
+
+sample_sims <- c(3, 7, 9, 10, 12, 17, 21, 23)
+
+
+elbo_results %>% 
+  filter(ELBO != 0) %>%
+  filter(sim %in% sample_sims) %>% 
+  mutate(perc = events_seen/rows) %>%
+  ggplot(aes(perc, ELBO, colour = method)) +
+  # geom_line(aes(group = interaction(method, sim))) +
+  geom_smooth(se = FALSE) +
+  facet_wrap(~sim, scales = "free", nrow = 2) +
+  scale_x_log10() +
+  scale_x_continuous(labels = scales::percent,
+                     breaks = scales::pretty_breaks(n = 2)) +
+  labs(colour = "", x = "Percent of Total Events") +
+  theme(legend.position = "bottom",
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        strip.background = element_blank(),
+        strip.text.x = element_blank()) +
+  theme(panel.spacing = unit(2, "lines"))
+```
+
+```{r}
+## working on this
+
+online_Data <- elbo_results %>% 
+    filter(ELBO != 0) %>%
+    filter(sim %in% sample_sims) %>% 
+    mutate(perc = events_seen/rows) %>% 
+    filter(method == "ONLINE") %>% 
+    group_by(sim) %>% 
+    mutate(index = row_number()) 
+
+batch_data <- elbo_results %>% 
+    filter(ELBO != 0) %>%
+    filter(sim %in% sample_sims) %>% 
+    mutate(perc = events_seen/rows) %>% 
+    filter(method == "BATCH")
+
+bind_rows(online_Data, batch_data) %>% 
+  ggplot(aes(perc, ELBO, colour = method)) +
+  geom_line(aes(group = interaction(method, sim))) +
+  # geom_smooth(se = FALSE) +
+  facet_wrap(~sim, scales = "free", nrow = 2) +
+  scale_x_log10() +
+  scale_x_continuous(labels = scales::percent,
+                     breaks = scales::pretty_breaks(n = 2)) +
+  labs(colour = "", x = "Percent of Total Events") +
+  theme(legend.position = "bottom",
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        strip.background = element_blank(),
+        strip.text.x = element_blank()) 
+
+```
+
+
 
 # Hawkes Plots
 
