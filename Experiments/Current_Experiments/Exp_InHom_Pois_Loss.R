@@ -96,6 +96,10 @@ vem_loss <- inhom_batch_loss(full_data = proc_sim$events,
                              true_z = z_vem, window, H)
 batch_average <- mean(vem_loss$Batch_loss/1:Time)
 
+## sum of the losses divided by the number of windows, which 
+## is equal to the time here
+actual_average <- sum(vem_loss$Batch_loss)/Time
+
 new_batch <- cumsum(vem_loss$Batch_loss)/1:Time
 
 for(sim in 1:nsims) {
@@ -205,7 +209,7 @@ for(sim in 1:nsims) {
     clust = clust_est,
     regret = regret,
     card_A = card_A,
-    batch_ave_loss = batch_average,
+    batch_ave_loss = actual_average,
     new_batch_loss = new_batch,
     online_loss = tidy_loss,
     pred_llh = ave_pred_ll,
