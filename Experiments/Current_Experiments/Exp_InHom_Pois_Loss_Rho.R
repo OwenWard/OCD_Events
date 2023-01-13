@@ -19,7 +19,7 @@ sim_id <- jobid
 Time <- 200
 # Time <- Times[sim_id]
 
-sparsity <- c(0.1, 0.25, 0.5, 1)
+sparsity <- c(0.1, 0.25, 0.5, 0.75, 1)
 
 rho <- sparsity[sim_id]
 
