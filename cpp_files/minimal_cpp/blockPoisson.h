@@ -497,7 +497,7 @@ Rcpp::List estimate_Poisson_minimal(
   full_elbo.zeros(N);
   int cum_events = 0;
   for(int n = 0; n < N; ++n){
-    cout<<n<<endl;
+    // cout<<n<<endl;
     double Tn = dT*(n+1);
     // double T0 = dT*n;
     arma::rowvec event = full_data.row(start_pos);
