@@ -16,8 +16,8 @@ jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
 jobid <- as.numeric(jobid)
 sim_id <- jobid
 Times <- c(50, 100, 200, 500)
-# Time <- 500
-Time <- Times[sim_id]
+Time <- 500
+# Time <- Times[sim_id]
 
 if(Time == 500){
   nsims <- 10
