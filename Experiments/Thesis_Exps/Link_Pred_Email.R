@@ -6,7 +6,7 @@
 
 library(here)
 ##library(ppsbm)
-source(here("Experiments/", "utils.R"))
+source(here("functions/", "utils.R"))
 source(here("functions/init_fcn.R"))
 
 set.seed(100)
