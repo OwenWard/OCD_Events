@@ -17,7 +17,7 @@
 #include "inhomHawkes.h"
 // #include "link_predict.h"
 // #include "ccrm.h"
-// #include "new_predict.h"
+#include "new_predict.h"
 // #include "test.h"
 #include "init_Poisson.h"
 #include "Poisson_loss.h"

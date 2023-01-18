@@ -519,7 +519,7 @@ bind_rows(new_sim_50, new_sim_100, new_sim_200, new_sim_500) %>%
 #| echo: false
 
 loss_files <- list.files(path = here("Experiments/exp_results/November/"), 
-                          pattern = "exp_in_pois_online_loss")
+                          pattern = "exp_in_pois_online_loss_jan_12")
 
 loss_data <- loss_files %>% 
   map(~readRDS(here("Experiments/exp_results/November/", .x))) %>% 
@@ -542,7 +542,8 @@ batch_loss <-
   mutate(Time = factor(Time, levels = c("Time = 50",
                                   "Time = 100",
                                   "Time = 200",
-                                  "Time = 500")))
+                                  "Time = 500"))) %>% 
+  distinct(Time, .keep_all = TRUE)
 
 loss_plot <- loss_data %>% 
   # filter(Sim == 1) %>% 
