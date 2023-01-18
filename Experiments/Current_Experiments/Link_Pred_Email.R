@@ -404,10 +404,7 @@ a <- bench::mark(
     lam = 1,
     T = email_train_time,
     dT,
-    gravity = 0.001,
-    MuA_start = MuA_start,
-    tau_start = tau_start,
-    B_start = B_start), iterations = 1 )
+    gravity = 0.001), iterations = 1 )
 
 ## batch estimator
 b <- bench::mark(
