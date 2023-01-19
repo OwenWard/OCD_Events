@@ -570,6 +570,68 @@ loss_plot
 
 ```
 
+
+### Repeating the above plot with varying rho
+
+```{r fig-inpois-loss-rho, fig.path = "rev_figure/"}
+
+loss_files <- list.files(path = here("Experiments/exp_results/November/"), 
+                          pattern = "exp_in_pois_online_loss_rho")
+
+
+loss_data <- loss_files %>% 
+  map(~readRDS(here("Experiments/exp_results/November/", .x))) %>% 
+  flatten() %>% 
+  imap(~update_list(., sim = .y)) %>% 
+  map_dfr(`[`, c("online_loss", "batch_ave_loss",
+                 "sim", "clust", "sparsity")) %>% 
+  reduce(data.frame) %>% 
+  as_tibble() %>% 
+  rename(Batch_Loss = elt, Sim = elt.1, ARI = elt.2, sparsity = elt.3) %>% 
+  group_by(Sim, sparsity) %>% 
+  mutate(Time = max(dT)) 
+  
+
+batch_loss <- loss_data %>% 
+  group_by(sparsity) %>% 
+  filter(sparsity > 0.1) %>% 
+  summarise(batch = unique(Batch_Loss)) %>% 
+  mutate(sparsity = paste0("rho = ", sparsity)) %>% 
+  mutate(sparsity = factor(sparsity, levels = c("rho = 0.1",
+                                  "rho = 0.25",
+                                  "rho = 0.5",
+                                  "rho = 0.75",
+                                  "rho = 1"))) %>% 
+  distinct(sparsity, .keep_all = TRUE)
+
+loss_plot <- loss_data %>% 
+  # filter(Sim == 1) %>% 
+  filter(Z == "Est_Z") %>% 
+  filter(sparsity > 0.1) %>%
+  mutate(sparsity = paste0("rho = ", sparsity)) %>%
+  mutate(sparsity = factor(sparsity,
+                       levels = c("rho = 0.1",
+                                  "rho = 0.25",
+                                  "rho = 0.5",
+                                  "rho = 0.75",
+                                  "rho = 1"))) %>%
+  ggplot(aes(dT, Loss)) +
+  geom_line(aes(group = interaction(Sim, Z)), alpha = 0.2) +
+  geom_hline(data = batch_loss, aes(yintercept =  batch), colour = "red") +
+  facet_wrap(~sparsity) +
+  labs(x = "Time") +
+  theme(legend.position = "null",
+        axis.text = element_text(size = axis_text_size),
+        axis.title = element_text(size = axis_title),
+        strip.text.x = element_text(size = axis_title),
+        legend.text = element_text(size = legend_text))
+
+loss_plot
+
+```
+
+
+
 ## ELBO Plot
 
 ```{r fig-inpois-elbo, fig.path= "rev_figure/"}
