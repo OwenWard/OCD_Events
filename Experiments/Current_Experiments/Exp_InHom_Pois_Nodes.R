@@ -18,7 +18,7 @@ dT <- 1
 inter_T <- 1
 K <- 2
 
-m_vec <- c(100, 200, 500, 1000)
+m_vec <- c(1000, 5000, 10000, 50000)
 
 sparsity <- 0.15 # prop of edges which can have events
 
@@ -190,6 +190,6 @@ results <- curr_dt_sims
 
 ### then save these somewhere
 saveRDS(results, file = here("Experiments",
-                             "exp_results", "November",
-                             paste0("exp_inpois_nodes_fixed_nov_1_rho_",
+                             "exp_results", "June_23",
+                             paste0("exp_inpois_nodes_fixed_june_22_rho_",
                                     100 * sparsity, "_", sim_id, ".RDS")))

@@ -198,11 +198,20 @@ Rcpp::List update_lam_trunc(
           intensity_lam2 += (t_current - t1) * trigger(t1, t_current, lam);
         }
         P2_B_tp = P2_B_tp + integral(t_current, t_end, lam);
+        // removing this term to see if that fixes it
+        // cout<<"What is integral like, this should be < 1? \n"<<endl;
+        // cout<<integral(t_current, t_end, lam)<<"\n"<<endl;
+        // 
+        // cout<<t_current<<endl;
+        // cout<<t_end<<endl;
+        // cout<<"------"<<endl;
+        
         for (k = 0; k < K; k++){
           for (l = 0; l < K; l++){
             Lambda(k,l) = Mu(k,l) + B(k,l) * intensity;
           }
         }
+
         lam_store = lam_store + B * (intensity_lam1 - intensity_lam2) / Lambda;
         lam_store = lam_store - B * ((t_end - t_current) * exp(-lam*(t_end - t_current)));
 
@@ -215,13 +224,13 @@ Rcpp::List update_lam_trunc(
         }
       } else {
         P2_B_tp = P2_B_tp + integral2(t_current, t_start, t_end, lam);
-        lam_store = lam_store + B * ((t_start - t_current) * exp(-lam*(t_start - t_current)) - (t_end - t_current) * exp(-lam*(t_end - t_current)));
-
+        lam_store = lam_store + 
+          B * ((t_start - t_current) * exp(-lam*(t_start - t_current)) - 
+          (t_end - t_current) * exp(-lam*(t_end - t_current)));
       }
     }
-    // Rprintf("lam store \n");
-    // sum(lam_store, 0).print();
-    // lam_store.fill(1.0);
+    // cout<<"lam store \n"<<endl;
+    // cout<<lam_store<<"\n"<<endl;
     for (k = 0; k < K; k++) {
       for (l = 0; l < K; l++) {
         grad_lam += tau(i,k) * tau(j,l) * lam_store(k,l);
@@ -241,20 +250,8 @@ Rcpp::List update_lam_trunc(
         S_tp(i,k) += tau(j,l) * (P_S_tp(k,l) - B(k,l) * P2_B_tp(k,l));
       }
     }
-    // cout<<grad_lam<<endl;
-    // Rprintf("Check S_tp here \n");
-    // sum(S_tp, 0).print();
-    // // Rprintf("Check tau \n");
-    // // sum(tau, 0).print();
-    // // Rprintf("Check P_S_tp \n");
-    // // sum(P_S_tp, 0).print();
-    // Rprintf("Check P2_B_tp \n");
-    // sum(P2_B_tp, 0).print();
+
   }
-
-
-  // Rprintf("Check B \n");
-  // B.print();
   // update S, second part
   for (int i = 0; i < m; i++) {
     arma::rowvec edge = A[i];
@@ -268,24 +265,22 @@ Rcpp::List update_lam_trunc(
       }
     }
   }
-
+  // S_tp.fill(0.0);
   // update parameters
-  S = S + S_tp;
+  // S = S + S_tp;
+  // should we be adding to S here?
+  // trying this
+  S = S_tp;
+
   arma::mat grad_B = P1_B - P2_B;
-  // Rprintf("P1_B \n");
-  // P1_B.print();
-  // Rprintf("P2_B \n");
-  // P2_B.print();
-  // Rprintf("------- \n");
-  // grad_B.print();
+
   arma::mat grad_mu = P1_mu - P2_mu;
   //grad_mu.print();
   arma::mat B_new = B + eta * grad_B;
   // Rprintf("B new is: \n");
   // B_new.print();
   arma::mat Mu_new = Mu + eta * grad_mu;
-  //Rprintf("Mu new is: \n");
-  //Mu_new.print();
+
 
   // handle negative values and large gradient
   for (k = 0; k < K; k++) {
@@ -300,15 +295,18 @@ Rcpp::List update_lam_trunc(
         Mu_new(k,l) = Mu(k,l) * 2.0;
     }
   }
+  // fix B_new and grad_lam
+  // B_new.fill(1.0);
+  
   // Rprintf("Grad lambda \n");
   // cout << grad_lam << endl;
-  // double lam_new = lam + eta * grad_lam;
-  // if (lam_new > 1.5*lam) {
-  //     lam_new = 1.5 * lam;
-  // } else if (lam_new <= 0.0) {
-  //     lam_new = lam/2.0;
-  // }
-  double lam_new = 0.15;
+  double lam_new = lam + eta * grad_lam / m;
+  if (lam_new > 1.5*lam) {
+      lam_new = 1.5 * lam;
+  } else if (lam_new <= 0.0) {
+      lam_new = lam/2.0;
+  }
+  // lam_new = 0.15;
 
   arma::mat tau_new(m,K);
 
@@ -323,6 +321,11 @@ Rcpp::List update_lam_trunc(
   for (k = 0; k < K; k++) {
     Pi(k) = sum(tau_new.col(k)) / (m + 0.0);
   }
+  
+  // // debugging places group collapse?
+  // cout<<"What is S? \n"<<endl;
+  // cout<<sum(S, 0)<<"\n"<<endl;
+  
   return Rcpp::List::create(Rcpp::Named("tau") = tau_new,
                             Rcpp::Named("Mu") = Mu_new,
                             Rcpp::Named("B") = B_new,
@@ -1029,6 +1032,8 @@ Rcpp::List batch_estimator(
   
   int nall = alltimes.n_rows;
   int ncol = alltimes.n_cols;
+  
+
   //int trunc_pos = 0, start_pos = 0, curr_pos = 0, end_pos = 0, ln_prev = 0, ln_curr, n_t;
   //int N = floor(T / dT);
   //int nsave = floor(5.0 / dT);
@@ -1042,20 +1047,33 @@ Rcpp::List batch_estimator(
   //arma::rowvec event; 
   //arma::mat truncdata;
   Rcpp::List paralist;
+  
+  // changing this
+  // unordered_map<string, std::deque<double>> datamap;
+  // datamap = transfer_create_empty();
+  //
   unordered_map<string, arma::vec> datamap;
   datamap = transfer(alltimes);
   
+  // changing this here to try it 
+  // arma::mat truncdata;
+  // truncdata = alltimes;
+  // double R = 5.0;
+  // transfer_dynamic(datamap, truncdata, R, T);
+  //
   
   double gap = 2147483647;
   double eta = 1.0/nall * (K * K);
   
   double t_start = 0.0, Tn;
   Tn = alltimes(nall - 1, ncol - 1);
+  cout<<Tn << endl;
+  cout<<"This is the end time"<<endl;
   
   double trunc_length = 5.0;
   for (int iter = 0; iter < itermax; iter++) {
     eta = 1.0/nall * (K * K) /(iter + 1.0);
-    // S.fill(0.0);
+    S.fill(0.0);
     paralist = update_lam_trunc(tau, Mu, B, Pi, S, datamap,
                                 t_start,
                                 Tn,
@@ -1065,6 +1083,14 @@ Rcpp::List batch_estimator(
                                 lam,
                                 eta,
                                 trunc_length);
+    // paralist = update_lam_eff_revised(tau, Mu, B, Pi, S, datamap,
+    //                                   t_start,
+    //                                   Tn,
+    //                                   m,
+    //                                   K,
+    //                                   A,
+    //                                   lam,
+    //                                   eta);
     arma::mat tau_new = paralist["tau"];
     arma::mat Mu_new = paralist["Mu"];
     arma::mat B_new = paralist["B"];
@@ -1086,6 +1112,8 @@ Rcpp::List batch_estimator(
       break;
     }
   }
+  
+
   
   return Rcpp::List::create(
     Rcpp::Named("Mu") = Mu,
