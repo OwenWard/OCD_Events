@@ -20,7 +20,7 @@ K <- 2
 
 m_vec <- c(1000, 5000, 10000, 50000)
 
-sparsity <- 0.15 # prop of edges which can have events
+sparsity <- 0.01 # prop of edges which can have events
 
 jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
 jobid <- as.numeric(jobid)
@@ -39,7 +39,7 @@ m <- m_vec[sim_id]
 # 
 # m0_curr <- m/4
 n0 <- 40
-m0 <- m/2
+m0 <- m/10
 
 
 # for(exp_num in seq_along(m_vec)) {
@@ -118,7 +118,7 @@ for(sim in 1:no_sims){
     #     
     #     ### will need to modify to account for the decreased number
     #     ### of events also...
-    a <- capture.output(results_online_init <- nonhomoPois_est_init(
+    a <- capture.output(results_online_init <- nonhomo_Pois_est_init(
       alltimes = result$rest_events,
       A,
       m,
@@ -131,6 +131,7 @@ for(sim in 1:no_sims){
       MuA_start = Mu_est,
       init_tau,
       start = result$cut_off,
+      full_data = result$rest_events, ## won't be used, doesn't matter
       is_elbo = FALSE))
     z_est <- apply(results_online_init$tau, 1, which.max)
     clust_est_init <- aricode::ARI(Z, z_est)
