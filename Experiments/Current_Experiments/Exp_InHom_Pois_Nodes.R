@@ -91,7 +91,7 @@ for(sim in 1:no_sims){
   
   
   ### then do random init down here, bind it to curr_dt_sims
-  for(curr_wind in 1:10) {
+  for(curr_wind in 1) {
     # result <- dense_inhom_Poisson(alltimes, K,
     #                               H = H,
     #                               window = curr_wind,
