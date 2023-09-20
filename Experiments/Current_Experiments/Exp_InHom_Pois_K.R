@@ -120,7 +120,7 @@ for(sim in 1:no_sims){
     #     
     #     ### will need to modify to account for the decreased number
     #     ### of events also...
-    a <- capture.output(results_online_init <- nonhomoPois_est_init(
+    a <- capture.output(results_online_init <- nonhomo_Pois_est_init(
       alltimes = result$rest_events,
       A,
       m,
@@ -133,6 +133,7 @@ for(sim in 1:no_sims){
       MuA_start = Mu_est,
       init_tau,
       start = result$cut_off,
+      full_data = result$rest_events,
       is_elbo = FALSE))
     z_est <- apply(results_online_init$tau, 1, which.max)
     clust_est_init <- aricode::ARI(Z, z_est)
