@@ -1,6 +1,6 @@
 library(here)
-source(here("Experiments/", "utils.R"))
-source(here("functions/init_fcn.R"))
+source(here("functions", "utils.R"))
+source(here("functions","init_fcn.R"))
 
 m <- 200
 Time <- 200
@@ -51,7 +51,7 @@ aricode::ARI(result$est_clust, Z)
 
 ### will need to modify to account for the decreased number
 ### of events also...
-results_online_init <- estimate_Poisson_init(full_data = 
+results_online_hom <- estimate_Poisson_init(full_data = 
                                                result$rest_events,
                                              A,
                                              m,
@@ -65,10 +65,10 @@ results_online_init <- estimate_Poisson_init(full_data =
                                              is_elbo = TRUE)
 
 
-plot(results_online_init$full_ELBO, type = "l")
-plot(200 * results_online_init$wind_elbo, type = "l")
-plot(results_online_init$Cum_ELBO, type = "l")
-table(Z, apply(results_online_init$tau, 1, which.max))
+plot(results_online_hom$full_ELBO, type = "l")
+plot(200 * results_online_hom$wind_elbo, type = "l")
+plot(results_online_hom$Cum_ELBO, type = "l")
+table(Z, apply(results_online_hom$tau, 1, which.max))
 
 ## what about random init
 
@@ -81,8 +81,9 @@ results_online <- estimate_Poisson(full_data =
                                         K,
                                         Time,
                                         dT = dT,
+                                        step_size = 0.01,
                                         B = Mu_est,
-                                        inter_T,
+                                        inter_T = 1,
                                         # init_tau,
                                         # start = 0,
                                         is_elbo = TRUE)
@@ -104,7 +105,7 @@ plot(results_online$logL, type = "l")
 
 
 #### what other sort of ELBO makes sense
-summary(diff(results_online_init$full_ELBO)/max(results_online_init$full_ELBO))
+summary(diff(results_online_hom$full_ELBO)/max(results_online_hom$full_ELBO))
 
 
 ### compare this to the elbo from the corresponding batch estimator,
@@ -127,7 +128,7 @@ plot(result_batch$ELBO, type = "l")
 ### then make a nice plot of the two of these together
 elbos <- tibble(ELBO = as.numeric(result_batch$ELBO[result_batch$ELBO != 0]),
                 method = "BATCH") %>% 
-  bind_rows(tibble(ELBO = as.numeric(results_online_init$full_ELBO),
+  bind_rows(tibble(ELBO = as.numeric(results_online_hom$full_ELBO),
                    method = "ONLINE"))
 
 elbos %>% 
@@ -143,9 +144,9 @@ batch_data <- tibble(ELBO = as.numeric(result_batch$ELBO[result_batch$ELBO != 0]
 
 init_events <- alltimes[alltimes[,3] < result$cut_off,]
 
-online_data <- tibble(ELBO = as.numeric(results_online_init$full_ELBO),
+online_data <- tibble(ELBO = as.numeric(results_online_hom$full_ELBO),
                       method = "ONLINE",
-                      events_seen = as.numeric(results_online_init$Cum_Events)+
+                      events_seen = as.numeric(results_online_hom$Cum_Events)+
                         nrow(init_events)) 
 
 online_data
@@ -213,10 +214,10 @@ ggsave("elbo_plot.png",
 
 #### number of events seen
 
-online_data_events <- tibble(ELBO = as.numeric(results_online_init$full_ELBO),
+online_data_events <- tibble(ELBO = as.numeric(results_online_hom$full_ELBO),
                              method = "Online",
                              events_seen = 
-                               as.numeric(results_online_init$Cum_Events) +
+                               as.numeric(results_online_hom$Cum_Events) +
                                               nrow(init_events)) 
 
 batch_events <- tibble(ELBO = result_batch$ELBO[result_batch$ELBO != 0],
@@ -263,12 +264,12 @@ ggsave("elbo_plot_2_slides.png",
 ### how does this compare with the normalised elbo, in terms of when/how
 ### it converges
 
-plot(results_online_init$AveELBO, type = "l")
-results_online_init$full_ELBO
+plot(results_online_hom$AveELBO, type = "l")
+results_online_hom$full_ELBO
 
 
-tibble(full_elbo = as.numeric(results_online_init$full_ELBO),
-       avg_elbo = as.numeric(results_online_init$AveELBO)) %>% 
+tibble(full_elbo = as.numeric(results_online_hom$full_ELBO),
+       avg_elbo = as.numeric(results_online_hom$AveELBO)) %>% 
   mutate(index = row_number()) %>% 
   pivot_longer(cols = full_elbo:avg_elbo) %>% 
   group_by(name) %>% 
@@ -276,17 +277,17 @@ tibble(full_elbo = as.numeric(results_online_init$full_ELBO),
   ggplot(aes(index, norm, colour = name)) +
   geom_line()
 
-tibble(full_elbo = as.numeric(results_online_init$full_ELBO)) %>% 
+tibble(full_elbo = as.numeric(results_online_hom$full_ELBO)) %>% 
   mutate(index = row_number()) %>% 
   mutate(norm = 2 - (full_elbo)/max((full_elbo))) %>% 
   ggplot(aes(index, norm)) +
   geom_line()
 
 
-results_online_init$full_ELBO
+results_online_hom$full_ELBO
 
-full_elbo <- as.numeric(results_online_init$full_ELBO)
-avg_elbo <- as.numeric(results_online_init$AveELBO)
+full_elbo <- as.numeric(results_online_hom$full_ELBO)
+avg_elbo <- as.numeric(results_online_hom$AveELBO)
 
 plot(2 - full_elbo/max(full_elbo), type = "l")
 

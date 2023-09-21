@@ -6,7 +6,7 @@
 
 library(here)
 ##library(ppsbm)
-source(here("Experiments/", "utils.R"))
+source(here("functions/", "utils.R"))
 source(here("functions/init_fcn.R"))
 
 set.seed(100)
@@ -28,7 +28,8 @@ email_data <- data %>%
   mutate(Time = as.numeric(Time)) %>% 
   mutate(Time = Time - min(Time)) %>% 
   mutate(Time = Time/(3600*24)) %>% 
-  filter(Send != Rec)
+  filter(Send != Rec) %>% 
+  arrange(Time)
 
 ## in the right format now
 
@@ -92,14 +93,13 @@ S <- matrix(0, nrow = m_email, ncol = K)
 
 # online estimate
 a <- bench::mark(
-  results_pois_train <- estimate_Poisson(full_data = as.matrix(email_train),
+  results_pois_train <- estimate_Poisson_minimal(full_data = as.matrix(email_train),
                                          A_test_email,
                                          m_email,
                                          K,
                                          T = email_train_time,
                                          dT,
-                                         B,
-                                         inter_T = 5),
+                                         B),
   iterations = 1)
 
 
@@ -206,6 +206,7 @@ a <- bench::mark(
                                                      B,
                                                      Mu,
                                                      tau,
+                                                     S,
                                                      inter_T = 1),
   iterations = 1)
 #### this is crashing...
@@ -287,7 +288,7 @@ hawkes_results <- bind_rows(hawkes_pred,
 
 
 #### Inhom Poisson ####
-window <- 1/7
+window <- 1
 K <- 4 # 4 for email, 2 for college, 3 for math
 H <- 7
 dT <- 2 # 2 for email, 0.5 for college, 6 for math
