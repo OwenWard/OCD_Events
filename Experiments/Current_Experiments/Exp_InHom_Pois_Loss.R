@@ -8,26 +8,26 @@ library(ppsbm)
 source(here("functions", "utils.R"))
 source(here("functions", "init_fcn.R"))
 
-nsims <- 100
+nsims <- 50
 
-prob_edge <- 0.5
+prob_edge <- 0.15
 
 jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
 jobid <- as.numeric(jobid)
 sim_id <- jobid
 Times <- c(50, 100, 200, 500)
-Time <- 500
-# Time <- Times[sim_id]
+# Time <- 500
+Time <- Times[sim_id]
 
-if(Time == 500){
-  nsims <- 10
-}
+# if(Time == 500){
+#   nsims <- 10
+# }
 
 results <- list()
 
 ### modify to just use a single simulated dataset 
 ### and so common "batch optimum"
-n <- 100
+n <- 200
 
 H <- 2
 
@@ -228,13 +228,13 @@ for(sim in 1:nsims) {
 
 if(Time == 500){
   saveRDS(results, file = here("Experiments",
-                               "exp_results", "November",
-                               paste0("exp_in_pois_online_loss_jan_12_",
+                               "exp_results", "Sept_23",
+                               paste0("exp_in_pois_online_loss_",
                                       Time, "_", sim_id, ".RDS")))
 }else{
   saveRDS(results, file = here("Experiments",
-                               "exp_results", "November",
-                               paste0("exp_in_pois_online_loss_jan_12_",
+                               "exp_results", "Sept_23",
+                               paste0("exp_in_pois_online_loss_",
                                       Time, ".RDS")))
 }
 
