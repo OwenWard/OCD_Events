@@ -6,7 +6,7 @@ library(here)
 
 source(here("Experiments/", "utils.R"))
 source(here("functions/init_fcn.R"))
-
+source(here("functions/init_fcn_Hawkes.R"))
 
 ### simulate some data, see how the performance changes with the
 ### init function
@@ -19,33 +19,35 @@ inter_T <- 1
 K <- 2
 # m_vec <- c(rep(100, 3), rep(200, 3), rep(500, 3), rep(1000, 3),
 #            rep(5000, 3))
-m_vec <- c(rep(100, 3), rep(200, 3), rep(500, 3), rep(1000, 3), rep(5000, 3))
+# m_vec <- c(rep(100, 3), rep(200, 3), rep(500, 3), rep(1000, 3), rep(5000, 3))
+m_vec <- c(100, 200, 500, 1000)
 
-sparsity <- 0.05 # prop of edges which can have events
+sparsity <- 0.15 # prop of edges which can have events
 
 jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
 jobid <- as.numeric(jobid)
 sim_id <- jobid
 
 model <- "Hawkes"
-# if(sim_id <= 3){
-#   model = "Poisson"
-# }
 
 results <- list()
 m <- m_vec[sim_id]
-m0_vec <- c( 100*c(1/10, 1/4, 1/2),
-             200*c(1/10, 1/4, 1/2),
-             500*c(1/10, 1/4, 1/2),
-             1000*c(1/10, 1/4, 1/2))
-m0_curr <- m0_vec[sim_id]
+# m0_vec <- c( 100*c(1/10, 1/4, 1/2),
+#              200*c(1/10, 1/4, 1/2),
+#              500*c(1/10, 1/4, 1/2),
+#              1000*c(1/10, 1/4, 1/2))
+# m0_vec <- c(10, 20, 50, 100)
+# m0_curr <- m0_vec[sim_id]
 
 
-m0_curr <- m/4
-n0_vals <- 20
+m0 <- m/4
+n0 <- 40
+inter_T <- 1
 
 # for(exp_num in seq_along(m_vec)) {
 #   dT <- 1
+init_results <- tibble()
+
 curr_dt_sims <- tibble()
 cat("Current K:", K, "\n")
 cat("Current m:", m, "\n")
@@ -76,10 +78,33 @@ for(sim in 1:no_sims){
   alltimes <- sampleBlockHak(Time, A, Z, Mu = true_Mu, B = true_B, lam = 1)
   print("Simulated Data")
   
+  result <- sparse_Hawkes(alltimes,
+                          K,
+                          n0 = n0,
+                          m, m0)
+  Mu_est <- result$est_B
+  ## need to pass the estimated clustering also
+  init_tau <- matrix(0, nrow = m, ncol = K)
+  for(i in seq_along(result$est_clust)){
+    init_tau[i, result$est_clust[i]] <- 1
+  }
+  ### check the initial ARI
+  cat("Init Scheme \n")
+  print(aricode::ARI(result$est_clust, Z))
+  init_results <- init_results %>% bind_rows(tibble(init = "Scheme",
+                                    ARI = aricode::ARI(result$est_clust, Z)))
+  cat("-------\n")
+  init_tau <- matrix(0, nrow = m, ncol = K)
+  for(i in seq_along(result$est_clust)){
+    init_tau[i, result$est_clust[i]] <- 1
+  }
+  Mu_init <- result$est_B[, , 1]
+  B_init <- result$est_B[, , 2]
   ## random initialization for now
   Mu <- matrix(runif(K * K), K, K)
   B <- matrix(runif(K * K), K, K)
   tau <- matrix(1/K, nrow = m, ncol = K)
+  S <- matrix(1/K, nrow = m, ncol = K)
   results_online <- online_estimator_eff_revised(alltimes, 
                                                  A,
                                                  m,
@@ -87,21 +112,26 @@ for(sim in 1:no_sims){
                                                  Time,
                                                  dT = dT,
                                                  lam = 1,
-                                                 B, 
-                                                 Mu,
-                                                 tau,
+                                                 B_init, 
+                                                 Mu_init,
+                                                 init_tau,
+                                                 S,
                                                  inter_T, 
                                                  is_elbo = FALSE)
   
-  
   stan_est <- apply(results_online$tau, 1, which.max)
+  cat("Random \n")
   (clust_est_norm <- aricode::ARI(stan_est, Z))
+  print(clust_est_norm)
+  # init_results <- init_results %>% 
+  #   bind_rows(tibble(init = "Random", ARI = clust_est_norm))
+  cat("-----\n")
   # print("Random Worked")
   curr_sim_rand <- tibble(ARI = clust_est_norm,
                           K = K, 
                           nodes = m,
                           model = model,
-                          init = "No Init",
+                          init = "Init",
                           n0 = NA,
                           m0 = NA,
                           sparsity = sparsity,
@@ -111,10 +141,13 @@ for(sim in 1:no_sims){
   
 }
 
+# init_results_curr <- init_results
+# init_results_prev <- init_results
+
 results <- curr_dt_sims
 
 ### then save these somewhere
 saveRDS(results, file = here("Experiments",
-                             "thesis_output",
-                             paste0("exp_hawkes_new_nodes_rho_",
-                                    100*sparsity, "_", sim_id, ".RDS")))
+                             "exp_results", "Sept_23",
+                             paste0("exp_hawkes_nodes_",
+                                    m, "_", sim_id, ".RDS")))
