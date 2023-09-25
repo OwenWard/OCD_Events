@@ -30,6 +30,7 @@ for(sim in 1:no_sims) {
   Time <- 200
   n0 <- 40
   m0 <- m/10
+  window <- 10
   inter_T <- 1
   K <- 2
   H <- 2
@@ -82,9 +83,9 @@ for(sim in 1:no_sims) {
     m,
     K,
     H,
-    curr_dT,
+    window = window, ## this is the window argument, assume known here
     Time,
-    dT = dT,
+    dT = curr_dT,
     gravity = 0.01,
     MuA_start = Mu_est,
     init_tau,
