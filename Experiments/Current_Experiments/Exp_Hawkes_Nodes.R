@@ -21,7 +21,7 @@ K <- 2
 #            rep(5000, 3))
 # m_vec <- c(rep(100, 3), rep(200, 3), rep(500, 3), rep(1000, 3), rep(5000, 3))
 m_vec <- c(100, 200, 500, 1000)
-m <- 1000
+
 
 sparsity <- 0.15 # prop of edges which can have events
 
@@ -33,6 +33,7 @@ model <- "Hawkes"
 
 results <- list()
 m <- m_vec[sim_id]
+m <- 1000
 # m0_vec <- c( 100*c(1/10, 1/4, 1/2),
 #              200*c(1/10, 1/4, 1/2),
 #              500*c(1/10, 1/4, 1/2),
