@@ -6,7 +6,7 @@ library(here)
 
 source(here("functions/utils.R"))
 source(here("functions/init_fcn.R"))
-
+source(here("functions/init_fcn_Hawkes.R"))
 
 ### simulate some data, see how the performance changes with the
 ### init function
