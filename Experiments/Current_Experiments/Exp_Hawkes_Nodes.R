@@ -21,6 +21,7 @@ K <- 2
 #            rep(5000, 3))
 # m_vec <- c(rep(100, 3), rep(200, 3), rep(500, 3), rep(1000, 3), rep(5000, 3))
 m_vec <- c(100, 200, 500, 1000)
+m <- 1000
 
 sparsity <- 0.15 # prop of edges which can have events
 
@@ -38,6 +39,10 @@ m <- m_vec[sim_id]
 #              1000*c(1/10, 1/4, 1/2))
 # m0_vec <- c(10, 20, 50, 100)
 # m0_curr <- m0_vec[sim_id]
+
+if(m == 1000){
+  no_sims <- 5
+}
 
 
 m0 <- m/4
@@ -147,7 +152,15 @@ for(sim in 1:no_sims){
 results <- curr_dt_sims
 
 ### then save these somewhere
-saveRDS(results, file = here("Experiments",
-                             "exp_results", "Sept_23",
-                             paste0("exp_hawkes_nodes_",
-                                    m, "_", sim_id, ".RDS")))
+if(m < 1000){
+  saveRDS(results, file = here("Experiments",
+                               "exp_results", "Sept_23",
+                               paste0("exp_hawkes_nodes_",
+                                      m, "_", sim_id, ".RDS")))
+}
+if(m == 1000){
+  saveRDS(results, file = here("Experiments",
+                               "exp_results", "Sept_23",
+                               paste0("exp_hawkes_nodes_1k_",
+                                      m, "_", sim_id, ".RDS")))
+}
