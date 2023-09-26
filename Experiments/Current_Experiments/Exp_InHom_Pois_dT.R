@@ -7,7 +7,7 @@ library(here)
 
 source(here("functions/", "utils.R"))
 source(here("functions/init_fcn.R"))
-
+library(rbenchmark)
 
 ### simulate some data, see how the performance changes with the
 ### init function
