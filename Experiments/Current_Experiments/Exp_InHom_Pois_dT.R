@@ -19,7 +19,7 @@ dT <- 1
 inter_T <- 1
 K <- 2
 
-m <- 500
+m <- 100
 
 sparsity <- 0.15 # prop of edges which can have events
 
