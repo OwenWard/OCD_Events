@@ -101,9 +101,9 @@ for(sim in 1:no_sims){
                           K = K, 
                           nodes = m,
                           model = model,
-                          init = "No Init",
-                          n0 = NA,
-                          m0 = NA,
+                          init = "Init",
+                          n0 = n0,
+                          m0 = m0,
                           sparsity = sparsity,
                           sim = sim_id)
   curr_dt_sims <- curr_dt_sims %>% 
