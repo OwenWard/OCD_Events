@@ -98,7 +98,7 @@ for(sim in 1:no_sims){
   result <- sparse_inhom_Poisson(alltimes,
                                  K,
                                  H,
-                                 window = curr_wind,
+                                 window = window,
                                  t_start = 0,
                                  n0 = n0,
                                  m, m0)
@@ -121,7 +121,7 @@ for(sim in 1:no_sims){
     m,
     K,
     H,
-    curr_wind,
+    window,
     Time,
     dT = curr_dT,
     gravity = 0.01,
@@ -143,7 +143,7 @@ for(sim in 1:no_sims){
                           nodes = m,
                           time = sim_time$elapsed,
                           dT = curr_dT,
-                          window = curr_wind,
+                          window = window,
                           sparsity = sparsity,
                           winds = (Time - n0)/curr_dT,
                           sim = sim)
