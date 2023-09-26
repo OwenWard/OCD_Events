@@ -68,11 +68,18 @@ for(sim in 1:no_sims){
   }
   alltimes <- sampleBlockHak(Time, A, Z, Mu = true_Mu, B = true_B, lam = 1)
   print("Simulated Data")
-  
-  ## random initialization for now
-  Mu <- matrix(runif(K * K), K, K)
-  B <- matrix(runif(K * K), K, K)
-  tau <- matrix(1/K, nrow = m, ncol = K)
+  result <- sparse_Hawkes(alltimes,
+                          K,
+                          n0 = n0,
+                          m, m0)
+  Mu_init <- result$est_B[, , 1]
+  B_init <- result$est_B[, , 2]
+  ## need to pass the estimated clustering also
+  init_tau <- matrix(0, nrow = m, ncol = K)
+  for(i in seq_along(result$est_clust)){
+    init_tau[i, result$est_clust[i]] <- 1
+  }
+  S <- matrix(1/K, nrow = m, ncol = K)
   results_online <- online_estimator_eff_revised(alltimes, 
                                                  A,
                                                  m,
@@ -80,9 +87,10 @@ for(sim in 1:no_sims){
                                                  Time,
                                                  dT = dT,
                                                  lam = 1,
-                                                 B, 
-                                                 Mu,
-                                                 tau,
+                                                 B_init, 
+                                                 Mu_init,
+                                                 init_tau,
+                                                 S,
                                                  inter_T, 
                                                  is_elbo = FALSE)
   
@@ -107,7 +115,7 @@ results <- curr_dt_sims
 
 ### then save these somewhere
 saveRDS(results, file = here("Experiments",
-                             "thesis_output",
-                             paste0("exp_hawkes_k_rho_",
-                                    100*sparsity, "_", sim_id, ".RDS")))
+                             "exp_results", "Sept_23",
+                             paste0("exp_hawkes_k_",
+                                    K, "_", sim_id, ".RDS")))
 
