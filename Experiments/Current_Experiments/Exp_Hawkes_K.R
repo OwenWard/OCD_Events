@@ -36,8 +36,8 @@ results <- list()
 K <- K_vec[sim_id]
 
 
-m0_curr <- m/4
-n0_vals <- 20
+m0 <- m/4
+n0 <- 20
 
 # for(exp_num in seq_along(m_vec)) {
 #   dT <- 1
