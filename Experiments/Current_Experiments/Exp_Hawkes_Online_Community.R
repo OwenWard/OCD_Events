@@ -30,6 +30,13 @@ model <- "Hawkes"
 
 results <- list()
 m <- m_vec[sim_id]
+
+m <- 1000
+if(m == 1000){
+  no_sims <- 5
+}
+
+
 m0 <- m/4
 n0 <- 20
 
@@ -116,7 +123,18 @@ for(sim in 1:no_sims){
 results <- curr_dt_sims
 
 ### then save these somewhere
-saveRDS(results, file = here("Experiments",
-                             "exp_results", "Sept_23",
-                             paste0("exp_hawkes_online_community_",
-                                    sim_id, ".RDS")))
+if(m != 1000){
+  
+  saveRDS(results, file = here("Experiments",
+                               "exp_results", "Sept_23",
+                               paste0("exp_hawkes_online_community_",
+                                      sim_id, ".RDS")))
+  
+}
+
+if(m == 1000){
+  saveRDS(results, file = here("Experiments",
+                               "exp_results", "Sept_23",
+                               paste0("exp_hawkes_online_community_1000_",
+                                      sim_id, ".RDS")))
+}
