@@ -27,7 +27,7 @@ jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
 jobid <- as.numeric(jobid)
 sim_id <- jobid
 
-dT_vec <- seq(from = 0.25, to = 5, by = 0.25)
+dT_vec <- seq(from = 5, to = 10, by = 0.25)
 ## 50 scenarios here now
 
 sparsity <- 0.15
