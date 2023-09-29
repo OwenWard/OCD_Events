@@ -31,10 +31,10 @@ model <- "Hawkes"
 results <- list()
 m <- m_vec[sim_id]
 
-m <- 1000
-if(m == 1000){
-  no_sims <- 5
-}
+# m <- 1000
+# if(m == 1000){
+#   no_sims <- 5
+# }
 
 
 m0 <- m/4
