@@ -12,6 +12,7 @@ library(rbenchmark)
 ### simulate some data, see how the performance changes with the
 ### init function
 
+set.seed(100)
 
 Time <- 200
 no_sims <- 50

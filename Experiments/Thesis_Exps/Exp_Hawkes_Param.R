@@ -20,7 +20,7 @@ K <- 2
 Time_vec <- c(50, 100, 200, 500)
 m <- 200
 
-sparsity <- 0.1 # prop of edges which can have events
+sparsity <- 0.15 # prop of edges which can have events
 
 jobid <- Sys.getenv("SLURM_ARRAY_TASK_ID")
 jobid <- as.numeric(jobid)
