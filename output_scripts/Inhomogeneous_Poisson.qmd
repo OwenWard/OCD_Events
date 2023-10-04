@@ -255,6 +255,31 @@ k_sims %>%
 
 ```
 
+
+
+```{r}
+
+new_data_path <- here("Experiments", "exp_results", "Sept_23")
+
+k_sims_path <- list.files(path = new_data_path, pattern = "exp_inpois_k")
+
+
+k_sims <- k_sims_path %>%
+  map_dfr(~readRDS(here("Experiments/exp_results/Sept_23", .x))) 
+
+k_sims %>% 
+  filter(init == "Init") %>% 
+  ggplot(aes(as.factor(K), ARI)) +
+  geom_boxplot() +
+  labs(x = "K") +
+  theme(axis.text = element_text(size = axis_text_size),
+        axis.title = element_text(size = axis_title),
+        legend.text = element_text(size = legend_text))
+
+
+```
+
+
 ## Online Community Recovery
 
 ```{r fig-inhom-pois-online, fig.path = "rev_figure/"}
@@ -341,7 +366,8 @@ recov_plot <- param_data %>%
   mutate(diff = abs(sum_Mu - 4.7)/8) %>% 
   ggplot(aes(index, diff)) +
   # geom_line(aes(group = sim), alpha = 0.2) +
-  geom_smooth(se = FALSE, method = "loess", size = 1) +
+
+  geom_smooth(se = TRUE, method = "gam", size = 1) +
   facet_wrap(~Time, scales = "free_x") +
   labs(x = "Time", y = "Difference") +
   scale_y_continuous(expand = c(0, 0), limits = c(0, NA)) +
@@ -353,6 +379,59 @@ recov_plot <- param_data %>%
 recov_plot
 
 ```
+
+
+
+```{r fig-inhom-pois-param-recov-new, fig.path = "rev_figure/"}
+#| echo: false
+
+loss_files <- list.files(path = here("Experiments/exp_results/Sept_23/"), 
+                          pattern = "exp_in_pois_online_loss")
+
+param_data <- loss_files %>% 
+     map(~read_rds(here("Experiments",
+                        "exp_results",
+                        "Sept_23",
+                         .x))) %>% 
+  flatten() %>% 
+  imap(~update_list(., sim = .y)) %>% 
+  map(`[`, c("sim", "Time", "Mu_ests", "clust")) %>% 
+  imap(~update_list(., sum_Mu = apply(.x$Mu, 1, sum))) %>% 
+  map_dfr(`[`, c("sum_Mu","sim", "Time", "clust")) %>% 
+  group_by(sim, Time) %>% 
+  mutate(index = row_number() + 21)
+
+# param_data %>% 
+#   ggplot(aes(index, sum_Mu,)) +
+#   geom_line(aes(group = sim))
+
+## true total = 4.7, 8 pars
+
+recov_plot <- param_data %>% 
+  ### add time here!
+  mutate(Time = paste0("Time = ", Time)) %>% 
+  mutate(Time = factor(Time, 
+                       levels = c("Time = 50",
+                                  "Time = 100",
+                                  "Time = 200",
+                                  "Time = 500"))) %>% 
+  # filter(clust == 1) %>% 
+  mutate(diff = abs(sum_Mu - 4.7)/8) %>% 
+  ggplot(aes(index, diff)) +
+  # geom_line(aes(group = sim), alpha = 0.2) +
+  geom_smooth(se = TRUE, method = "gam", size = 1) +
+  facet_wrap(~Time, scales = "free_x") +
+  labs(x = "Time", y = "Difference") +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, NA)) +
+  theme(axis.text = element_text(size = axis_text_size),
+        axis.title = element_text(size = axis_title),
+        strip.text.x = element_text(size = axis_title),
+        legend.text = element_text(size = legend_text))
+
+recov_plot
+
+```
+
 
 ## Online Regret
 
@@ -700,6 +779,81 @@ bind_rows(online_Data, batch_data) %>%
 
 
 
+
+## Investigating the effect of $dT$
+
+New plot to check this.
+
+```{r fig-inpois-window, fig.path= "rev_figure/"}
+
+window_files <- list.files(path = here("Experiments/exp_results/Sept_23"),
+                   pattern = "exp_pois_wind")
+
+wind_sims <- window_files %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/Sept_23", .x)))
+
+
+# wind_sims %>% 
+#   mutate(window = as.factor(window)) %>% 
+#   ggplot(aes(window, ARI)) +
+#   geom_boxplot(outlier.colour = "red")
+# 
+# 
+# wind_sims %>% 
+#   group_by(window) %>% 
+#   mutate(diff = ifelse(ARI < 0.05, 1, 0)) %>% 
+#   summarise(avg_diff = sum(diff)) %>% 
+#   ggplot(aes(window, avg_diff)) +
+#   geom_point()
+
+
+wind_sims %>%
+  mutate(window = as.factor(window)) %>% 
+  # group_by(window) %>% 
+  # summarise(avg_ari = mean(ARI), se = sd(ARI),
+  #           lower = avg_ari - 2 * se,
+  #           upper = avg_ari + 2 *se) %>% 
+  ggplot(aes(x = window, y = ARI)) +
+  geom_boxplot() +
+  # ggplot(aes(x = window, y = avg_ari)) +
+  # geom_point() +
+  # geom_boxplot(aes(lower = avg_ari - se, upper = avg_ari + se)) +
+  ylim(c(-0.1, 1)) +
+  labs(x = "Window of Observations", y = "ARI")
+
+
+```
+
+## Computation Time Investigation
+
+```{r fig-in-pois-dt, fig.path = "rev_figure/"}
+#| echo: false
+
+dt_files <- list.files(path = here("Experiments/exp_results/Sept_23"),
+                       pattern = "exp_inhom_pois_time")
+
+dt_sims <- dt_files %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/Sept_23", .x)))
+
+dt_sims %>% 
+  ggplot(aes(as.factor(dT), time)) +
+  geom_boxplot() +
+  labs(x = "Window Size", y = "Computation Time") +
+  scale_x_discrete(breaks = seq(from = 0.25, to = 10, by = 0.5))
+
+# dt_sims %>% 
+#   mutate(time_per_wind = time/winds) %>% 
+#   ggplot(aes(as.factor(dT), time_per_wind)) +
+#   geom_boxplot()
+
+## makes sense that as the number of windows increases the time per window
+## increases even though total computation time essentially constant
+
+```
+
+
+
+
 # Hawkes Plots
 
 ## Number of Nodes
@@ -731,6 +885,36 @@ hawkes_nodes <- hawkes_sims %>%
 #        units = "in", dpi = 300)
 ```
 
+
+
+
+```{r fig-hawkes-nodes-new, fig.path = "rev_figure/"}
+#| echo: false
+
+hawkes_files <- list.files(path = here("Experiments/exp_results/Sept_23"),
+                   pattern = "exp_hawkes_nodes")
+
+
+hawkes_sims <- hawkes_files %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/Sept_23", .x)))
+
+
+hawkes_nodes <- hawkes_sims %>% 
+  ggplot(aes(as.factor(nodes), ARI)) +
+  geom_boxplot() +
+  labs(x = "Nodes") +
+  theme(axis.text = element_text(size = axis_text_size),
+        axis.title = element_text(size = axis_title),
+        legend.title = element_text(size = axis_title),
+        legend.text = element_text(size = legend_text))
+
+
+hawkes_nodes
+
+```
+
+
+
 ## Number of Communities
 
 ```{r fig-hawkes-k, fig.path = "rev_figure/"}
@@ -757,6 +941,35 @@ hawkes_k <- hawkes_sims %>%
 hawkes_k
 
 ```
+
+
+
+```{r fig-hawkes-k-new, fig.path = "rev_figure/"}
+#| echo: false
+
+hawkes_files <- list.files(path = here("Experiments/exp_results/Sept_23"),
+                   pattern = "exp_hawkes_k")
+
+
+hawkes_sims <- hawkes_files %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/Sept_23/", .x)))
+
+
+hawkes_k <- hawkes_sims %>% 
+  ggplot(aes(as.factor(K), ARI)) +
+  geom_boxplot() +
+  labs(x = "K") +
+  ylim(c(-0.1, 1)) +
+  theme(axis.text = element_text(size = axis_text_size),
+        axis.title = element_text(size = axis_title),
+        legend.title = element_text(size = axis_title),
+        legend.text = element_text(size = legend_text))
+
+hawkes_k
+
+```
+
+
 
 ## Parameter Recovery
 
@@ -817,6 +1030,68 @@ hawkes_par
 
 ```
 
+
+
+```{r fig-hawkes-param-recov-new, fig.path = "rev_figure/"}
+#| echo: false
+
+hawkes_par_files <- list.files(path =
+                                 here("Experiments/exp_results/Sept_23/"),
+                   pattern = "exp_hawkes_param")
+
+hawkes_pars <- hawkes_par_files %>% 
+  map(~readRDS(here("Experiments/exp_results/Sept_23/", .x))) %>% 
+  flatten() %>% 
+  imap(~update_list(., sim = .y)) %>% 
+  map(`[`, c("sim", "Time", "B_ests", "clust", "Mu_ests", "lambda")) %>% 
+  imap(~update_list(., sum_B = apply(.x$B_ests, 3, sum),
+                       sum_Mu = apply(.x$Mu_ests, 3, sum))) %>% 
+  map_dfr(`[`, c("sim", "Time", "clust", "sum_Mu", "sum_B", "lambda"))
+
+
+names <- colnames(hawkes_pars)
+
+new_hawkes <- hawkes_pars %>% 
+  reduce(data.frame) %>% as_tibble()
+
+colnames(new_hawkes) <- names
+
+hawkes_par <- new_hawkes %>% 
+  rename(lam_est = lambda) %>% 
+  group_by(sim, Time) %>% 
+  mutate(index = row_number()) %>% 
+  ### add time here!
+  mutate(Time = paste0("Time = ", Time)) %>% 
+  mutate(Time = factor(Time, 
+                       levels = c("Time = 50",
+                                  "Time = 100",
+                                  "Time = 200",
+                                  "Time = 500"))) %>% 
+  mutate(Mu = abs(sum_Mu - 3.65)/4,
+         B = abs(sum_B - 1)/4,
+         lambda = abs(lam_est - 1)) %>% 
+  pivot_longer(cols = Mu:lambda, names_to = "Parameter",
+               values_to = "diff") %>% 
+  filter(clust == 1) %>% 
+  ggplot(aes(index, diff, colour = Parameter)) +
+  geom_smooth(se = FALSE, method = "loess", size = line_size) +
+  # geom_line(aes(group = interaction(sim, param)), alpha = 0.2) +
+  facet_wrap(~Time, scales = "free_x") +
+  labs(x = "Time", y = "Difference") +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, NA)) +
+  scale_fill_discrete(name = "Parameter") +
+  theme(axis.text = element_text(size = axis_text_size),
+        axis.title = element_text(size = axis_title),
+        legend.title = element_text(size = axis_title),
+        legend.text = element_text(size = legend_text))
+
+hawkes_par
+### looks good
+```
+
+
+
+
 ## Online Community Recovery
 
 ```{r fig-hawkes-online, fig.path = "rev_figure/"}
@@ -855,3 +1130,43 @@ hawkes_online <- hawkes_data %>%
 
 hawkes_online
 ```
+
+
+
+```{r fig-hawkes-online-new, fig.path = "rev_figure/"}
+#| echo: false
+
+hawkes_files <- list.files(path = here("Experiments/exp_results/Sept_23/"),
+                   pattern = "exp_hawkes_online")
+
+hawkes_data <- hawkes_files %>% 
+  map_dfr(~readRDS(here("Experiments/exp_results/Sept_23/", .x)))
+
+
+## match above plot
+hawkes_online <- hawkes_data %>% 
+  group_by(time, nodes) %>% 
+  summarise(mean_ARI = mean(ARI), sd_ARI = sd(ARI)) %>% 
+  group_by(time) %>% 
+  mutate(nodes = paste0("n = ", nodes)) %>% 
+  mutate(nodes = factor(nodes, 
+                       levels = c("n = 100", "n = 200", "n = 500",
+                                  "n = 1000"))) %>% 
+  mutate(lower = max(0, mean_ARI - sd_ARI),
+         upper = min(1, mean_ARI + sd_ARI)) %>% 
+  ggplot(aes(time, mean_ARI)) +
+  geom_line(size = 1) +
+  geom_point() +
+  geom_errorbar(aes(ymin = lower, ymax = upper), alpha = 0.4) +
+  ylim(c(0, 1)) +
+  labs(colour = "Number of Nodes", y = "ARI", x = "Time", width = 0.2) +
+  facet_wrap(~nodes) +
+  theme(axis.text = element_text(size = axis_text_size),
+        axis.title = element_text(size = axis_title),
+        legend.title = element_text(size = axis_title),
+        legend.text = element_text(size = legend_text)) 
+
+
+hawkes_online
+```
+
