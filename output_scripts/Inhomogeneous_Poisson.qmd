@@ -256,7 +256,6 @@ k_sims %>%
 ```
 
 
-
 ```{r}
 
 new_data_path <- here("Experiments", "exp_results", "Sept_23")
@@ -366,7 +365,6 @@ recov_plot <- param_data %>%
   mutate(diff = abs(sum_Mu - 4.7)/8) %>% 
   ggplot(aes(index, diff)) +
   # geom_line(aes(group = sim), alpha = 0.2) +
-
   geom_smooth(se = TRUE, method = "gam", size = 1) +
   facet_wrap(~Time, scales = "free_x") +
   labs(x = "Time", y = "Difference") +
@@ -379,7 +377,6 @@ recov_plot <- param_data %>%
 recov_plot
 
 ```
-
 
 
 ```{r fig-inhom-pois-param-recov-new, fig.path = "rev_figure/"}
@@ -431,6 +428,7 @@ recov_plot <- param_data %>%
 recov_plot
 
 ```
+
 
 
 ## Online Regret
@@ -779,7 +777,6 @@ bind_rows(online_Data, batch_data) %>%
 
 
 
-
 ## Investigating the effect of $dT$
 
 New plot to check this.
@@ -853,7 +850,6 @@ dt_sims %>%
 
 
 
-
 # Hawkes Plots
 
 ## Number of Nodes
@@ -887,7 +883,6 @@ hawkes_nodes <- hawkes_sims %>%
 
 
 
-
 ```{r fig-hawkes-nodes-new, fig.path = "rev_figure/"}
 #| echo: false
 
@@ -912,7 +907,6 @@ hawkes_nodes <- hawkes_sims %>%
 hawkes_nodes
 
 ```
-
 
 
 ## Number of Communities
@@ -941,7 +935,6 @@ hawkes_k <- hawkes_sims %>%
 hawkes_k
 
 ```
-
 
 
 ```{r fig-hawkes-k-new, fig.path = "rev_figure/"}
@@ -1091,7 +1084,6 @@ hawkes_par
 
 
 
-
 ## Online Community Recovery
 
 ```{r fig-hawkes-online, fig.path = "rev_figure/"}
@@ -1132,7 +1124,6 @@ hawkes_online
 ```
 
 
-
 ```{r fig-hawkes-online-new, fig.path = "rev_figure/"}
 #| echo: false
 
@@ -1169,4 +1160,3 @@ hawkes_online <- hawkes_data %>%
 
 hawkes_online
 ```
-
