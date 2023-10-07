@@ -1067,7 +1067,7 @@ hawkes_par <- new_hawkes %>%
                values_to = "diff") %>% 
   filter(clust == 1) %>% 
   ggplot(aes(index, diff, colour = Parameter)) +
-  geom_smooth(se = FALSE, method = "loess", size = line_size) +
+  geom_smooth(se = TRUE, method = "gam", size = line_size) +
   # geom_line(aes(group = interaction(sim, param)), alpha = 0.2) +
   facet_wrap(~Time, scales = "free_x") +
   labs(x = "Time", y = "Difference") +
